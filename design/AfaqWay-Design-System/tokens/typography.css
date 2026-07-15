@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+:root{
+--font-sans:'Poppins', system-ui, sans-serif;
+--text-page-title:700 27px/34px var(--font-sans);
+--text-section-title:600 18px/24px var(--font-sans);
+--text-body-md:400 15px/24px var(--font-sans);
+--text-label:500 13px/20px var(--font-sans);
+--text-eyebrow:600 11.5px/16px var(--font-sans);
+--text-section-eyebrow:600 10.5px/14px var(--font-sans);
+--text-button:600 14.5px/20px var(--font-sans);
+--text-pill:600 10.5px/1 var(--font-sans);
+--text-hint-sm:400 12px/17px var(--font-sans);
+--text-micro:600 10px/14px var(--font-sans);
+}
+body{font-family:var(--font-sans);color:var(--ink);}

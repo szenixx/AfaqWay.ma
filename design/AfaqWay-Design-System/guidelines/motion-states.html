@@ -1,0 +1,8 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Motion & states" subtitle="120–200ms cubic-bezier(.4,0,.2,1) · indigo wash hover · 2.5px focus ring" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>body{margin:0;background:var(--paper);font-family:var(--font-sans);padding:16px 20px}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.sw{flex:1;min-width:70px;border-radius:12px;padding:10px 12px;border:1px solid var(--line)}.sw b{display:block;font:600 11px/16px var(--font-sans)}.sw span{font:400 10px/14px var(--font-sans);opacity:.75}</style></head><body><div class="row" style="gap:16px">
+<button style="font:600 14px/20px var(--font-sans);height:40px;padding:0 20px;border-radius:12px;border:none;background:var(--indigo-100);color:var(--indigo-600);cursor:pointer">Hover wash</button>
+<button style="font:600 14px/20px var(--font-sans);height:40px;padding:0 20px;border-radius:12px;border:none;background:var(--indigo-600);color:#fff;outline:2.5px solid var(--indigo-600);outline-offset:2px">Focus-visible</button>
+<button style="font:600 14px/20px var(--font-sans);height:40px;padding:0 20px;border-radius:12px;border:none;background:var(--indigo-600);color:#fff;opacity:.4;cursor:not-allowed">Disabled 40%</button>
+<div style="width:120px;height:40px;border-radius:12px;background:linear-gradient(90deg,var(--subtle) 25%,#fff 50%,var(--subtle) 75%);background-size:200% 100%;animation:sh 1.4s infinite"></div>
+<style>@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
+</div></body></html>
