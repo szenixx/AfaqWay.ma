@@ -1,49 +1,118 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "./ds.css";
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 html,
 body {
+  margin: 0;
+  padding: 0;
   max-width: 100vw;
-  overflow-x: hidden;
 }
 
 body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
 a {
-  color: inherit;
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+/* ── Motion keyframes (from the homepage design mockup) ─────────────── */
+@keyframes afChev {
+  0%, 45%, 100% { transform: translateY(0); }
+  18% { transform: translateY(7px); }
+}
+@keyframes afPulse {
+  0% { box-shadow: 0 0 0 0 rgba(37,107,73,.4); }
+  70% { box-shadow: 0 0 0 9px rgba(37,107,73,0); }
+  100% { box-shadow: 0 0 0 0 rgba(37,107,73,0); }
+}
+@keyframes afMarquee {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+@keyframes afFloatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+@keyframes afPulseScale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.09); }
+}
+@keyframes afDashFlow {
+  to { stroke-dashoffset: -32; }
+}
+
+/* ── Interaction helpers (real CSS hovers; the mockup used a design-tool attr) ── */
+.af-navlink { color: var(--ink-soft); transition: color 120ms var(--ease); }
+.af-navlink:hover { color: var(--ink); }
+
+.af-btn-primary { background: var(--indigo-600); color: #fff; transition: background 120ms var(--ease); }
+.af-btn-primary:hover { background: var(--indigo-500); color: #fff; }
+
+.af-btn-ghost { transition: background 120ms var(--ease); }
+.af-btn-ghost:hover { background: var(--indigo-100); }
+
+.af-marquee:hover .af-marquee-track { animation-play-state: paused; }
+
+/* Decorative hero widgets — shown on wide screens only, never cause horizontal scroll */
+.af-hero-widgets { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.af-hero-widgets > * { pointer-events: auto; }
+@media (max-width: 1279px) {
+  .af-hero-widgets { display: none; }
+}
+
+/* Top bar: desktop nav vs mobile hamburger */
+.af-nav-desktop { display: inline-flex; }
+.af-hamburger { display: none; }
+@media (max-width: 760px) {
+  .af-nav-desktop { display: none; }
+  .af-hamburger { display: inline-flex; }
+}
+
+/* Two-column section (map + copy) → stacks on narrow screens */
+.af-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+  gap: 48px;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+@media (max-width: 900px) {
+  .af-two-col { grid-template-columns: 1fr; }
+}
+
+/* Destinations grid: 3 across → 2 → 1 (slim bars on phone) */
+.af-dest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .af-dest-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .af-dest-grid { grid-template-columns: 1fr; }
+}
+
+/* Footer columns collapse on small screens */
+@media (max-width: 720px) {
+  .af-footer-grid { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 460px) {
+  .af-footer-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

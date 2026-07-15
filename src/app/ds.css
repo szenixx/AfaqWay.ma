@@ -1,0 +1,63 @@
+/* AfaqWay Design System — tokens + base classes.
+   Source of truth: design/AfaqWay-Design-System/tokens/{colors,typography,spacing,base}.css
+   Copied VERBATIM. Never invent colours, fonts, radii, or spacing — add them to the
+   design system first. This file is the app's binding style contract. */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ── tokens/colors.css ─────────────────────────────────────────────── */
+:root{
+--paper:#ECEFF3; --card:#FFFFFF; --subtle:#F3F5F9;
+--ink:#17233A; --ink-soft:#5A6B85; --ink-faint:#8695AB;
+--line:#DCE2EA; --line-soft:#E7ECF1;
+--shadow-card:0 2px 10px rgba(23,35,58,.04);
+--indigo-700:#22407F; --indigo-600:#2B4C9B; --indigo-500:#3D63B4; --indigo-100:#EAEFFA;
+--grey:#8695AB; --grey-tint:#F1F4F7; --grey-line:#DCE2EA;
+--indigo-text:#2B4C9B; --indigo-tint:#EAEFFA; --indigo-line:#BFCDEB;
+--amber:#8A5A0C; --amber-tint:#FBF0DA; --amber-line:#E7C583;
+--red:#B23B27; --red-tint:#FBE7E2; --red-line:#EDB3A6;
+--green:#256B49; --green-tint:#E3F0E9; --green-line:#9CCBB2;
+/* semantic aliases */
+--text-body:var(--ink); --text-secondary:var(--ink-soft); --text-hint:var(--ink-faint);
+--surface-page:var(--paper); --surface-card:var(--card); --surface-input:var(--subtle);
+--border-default:var(--line); --border-divider:var(--line-soft);
+--accent:var(--indigo-600); --accent-hover:var(--indigo-500); --accent-pressed:var(--indigo-700); --accent-tint:var(--indigo-100);
+}
+
+/* ── tokens/typography.css ─────────────────────────────────────────── */
+:root{
+--font-sans:'Poppins', system-ui, sans-serif;
+--text-page-title:700 27px/34px var(--font-sans);
+--text-section-title:600 18px/24px var(--font-sans);
+--text-body-md:400 15px/24px var(--font-sans);
+--text-label:500 13px/20px var(--font-sans);
+--text-eyebrow:600 11.5px/16px var(--font-sans);
+--text-section-eyebrow:600 10.5px/14px var(--font-sans);
+--text-button:600 14.5px/20px var(--font-sans);
+--text-pill:600 10.5px/1 var(--font-sans);
+--text-hint-sm:400 12px/17px var(--font-sans);
+--text-micro:600 10px/14px var(--font-sans);
+}
+
+/* ── tokens/spacing.css ────────────────────────────────────────────── */
+:root{
+--space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
+--radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
+--ease:cubic-bezier(.4,0,.2,1);
+--dur-fast:120ms;
+--dur-slow:200ms;
+}
+
+/* ── tokens/base.css ───────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:24px;}
+.pill{font:600 10.5px/1 var(--font-sans);letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid;display:inline-flex;align-items:center;gap:6px;}
+.pill-grey{color:var(--grey);background:var(--grey-tint);border-color:var(--grey-line);}
+.pill-indigo{color:var(--indigo-text);background:var(--indigo-tint);border-color:var(--indigo-line);}
+.pill-amber{color:var(--amber);background:var(--amber-tint);border-color:var(--amber-line);}
+.pill-red{color:var(--red);background:var(--red-tint);border-color:var(--red-line);}
+.pill-green{color:var(--green);background:var(--green-tint);border-color:var(--green-line);}
+.status-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;}
+input.af,select.af,textarea.af{font-family:var(--font-sans);font-size:14.5px;color:var(--ink);background:var(--subtle);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;transition:border-color 120ms var(--ease),background 120ms var(--ease),box-shadow 120ms var(--ease);}
+input.af:focus,select.af:focus,textarea.af:focus{outline:none;border-color:var(--indigo-600);background:var(--card);box-shadow:0 0 0 3px var(--indigo-100);}
+a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
+:focus-visible{outline:2.5px solid var(--indigo-600);outline-offset:2px;}
