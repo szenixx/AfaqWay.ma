@@ -1,6 +1,6 @@
-/* AfaqWay Design System — tokens + base classes.
+/* AfaqWay Design System, tokens + base classes.
    Source of truth: design/AfaqWay-Design-System/tokens/{colors,typography,spacing,base}.css
-   Copied VERBATIM. Never invent colours, fonts, radii, or spacing — add them to the
+   Copied VERBATIM. Never invent colours, fonts, radii, or spacing, add them to the
    design system first. This file is the app's binding style contract. */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');

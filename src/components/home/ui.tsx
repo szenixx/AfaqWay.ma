@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-/* Shared homepage primitives — all values come from the design-system tokens. */
+/* Shared homepage primitives, all values come from the design-system tokens. */
 
 export function Container({
   children,
@@ -40,7 +40,7 @@ export function SectionHead({
   );
 }
 
-/* Circle-housed status badge — the DS's one icon signature. */
+/* Circle-housed status badge, the DS's one icon signature. */
 export type Tone = "grey" | "indigo" | "amber" | "green" | "red";
 const TONES: Record<Tone, { tint: string; line: string; color: string }> = {
   grey: { tint: "var(--grey-tint)", line: "var(--grey-line)", color: "var(--grey)" },
@@ -59,7 +59,7 @@ export function StatusCircle({ size, tone, children }: { size: number; tone: Ton
   );
 }
 
-/* Outline glyphs — DS: 1.75px stroke, rounded caps/joins, 20x20 grid. */
+/* Outline glyphs, DS: 1.75px stroke, rounded caps/joins, 20x20 grid. */
 function Glyph({ size = 22, children }: { size?: number; children: ReactNode }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -80,7 +80,7 @@ export const IconChat = ({ size }: { size?: number }) => <Glyph size={size}><pat
 export const IconVideo = ({ size }: { size?: number }) => <Glyph size={size}><rect x="3" y="4.5" width="14" height="11" rx="2" /><path d="M9 8.2v3.6l3-1.8Z" /></Glyph>;
 export const IconArrow = ({ size }: { size?: number }) => <Glyph size={size}><path d="M4 10h12M11 5l5 5-5 5" /></Glyph>;
 
-/* CSS tricolor flags — real flags, never recoloured (DS exception). */
+/* CSS tricolor flags, real flags, never recoloured (DS exception). */
 export const FLAGS: Record<string, string> = {
   Lithuania: "linear-gradient(#FDB913 0 33.33%, #006A44 33.33% 66.66%, #C1272D 66.66%)",
   Germany: "linear-gradient(#111 0 33.33%, #DD0000 33.33% 66.66%, #FFCE00 66.66%)",

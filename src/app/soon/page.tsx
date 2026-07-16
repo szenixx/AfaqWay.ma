@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Coming soon — AfaqWay",
+  title: "Coming soon, AfaqWay",
 };
 
 export default function Soon() {

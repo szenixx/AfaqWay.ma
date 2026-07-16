@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import SiteHeader from "./SiteHeader";
 import { StatusCircle, IconCheck, IconClock, IconArrow } from "./ui";
 
@@ -8,9 +9,23 @@ const eyebrow = {
   textTransform: "uppercase" as const,
   color: "var(--ink-faint)",
 };
-const floatShadow = "0 10px 30px rgba(23,35,58,.10)";
+/* iOS-26 "liquid glass", translucent frosted panels for the hero widgets. */
+const glassCard = {
+  background: "rgba(255,255,255,0.5)",
+  backdropFilter: "blur(16px) saturate(1.6)",
+  WebkitBackdropFilter: "blur(16px) saturate(1.6)",
+  border: "1px solid rgba(255,255,255,0.65)",
+  boxShadow: "0 10px 30px rgba(23,35,58,.12), inset 0 1px 0 rgba(255,255,255,.75)",
+} as const;
+const glassAmber = {
+  background: "rgba(251,240,218,0.45)",
+  backdropFilter: "blur(16px) saturate(1.6)",
+  WebkitBackdropFilter: "blur(16px) saturate(1.6)",
+  border: "1px solid rgba(231,197,131,0.6)",
+  boxShadow: "0 10px 30px rgba(23,35,58,.12), inset 0 1px 0 rgba(255,255,255,.6)",
+} as const;
 
-/* iOS-style app-icon tile — crisp SVG, white squircle + soft shadow.
+/* iOS-style app-icon tile, crisp SVG, white squircle + soft shadow.
    Style reference: floating productivity-app icons (white tile, coloured glyph). */
 function TileFrame({ size, radius, children }: { size: number; radius: number; children: React.ReactNode }) {
   return (
@@ -20,29 +35,16 @@ function TileFrame({ size, radius, children }: { size: number; radius: number; c
   );
 }
 
-/* Coloured inner badge with a white glyph (for the status tiles). */
-function GlyphBadge({ size, color, children }: { size: number; color: string; children: React.ReactNode }) {
+/* Generated iOS-style photo icon (Higgsfield), pre-cropped tight to the tile
+   (checkerboard removed at the source), so it sits pixel-crisp at native size.
+   The container rounds the square crop into an app-icon tile + float shadow. */
+function ImgTile({ src, size, radius }: { src: string; size: number; radius: number }) {
   return (
-    <div style={{ width: size, height: size, borderRadius: size * 0.29, background: color, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 8px rgba(23,35,58,.20)" }}>
-      {children}
+    <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", boxShadow: "0 10px 28px rgba(23,35,58,.16)", position: "relative", flex: "none" }}>
+      <Image src={src} alt="" fill sizes={`${size * 2}px`} style={{ objectFit: "cover" }} />
     </div>
   );
 }
-
-const TileApproved = () => (
-  <TileFrame size={84} radius={20}>
-    <GlyphBadge size={46} color="var(--green)">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 12.5 10 17 18.5 7.5" /></svg>
-    </GlyphBadge>
-  </TileFrame>
-);
-const TileReview = () => (
-  <TileFrame size={84} radius={20}>
-    <GlyphBadge size={46} color="var(--amber)">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="7.6" /><path d="M12 7.6v4.7l3 2" /></svg>
-    </GlyphBadge>
-  </TileFrame>
-);
 const TileSmall = ({ children }: { children: React.ReactNode }) => (
   <TileFrame size={48} radius={13}>{children}</TileFrame>
 );
@@ -80,7 +82,7 @@ export default function Hero() {
         textAlign: "center",
       }}
     >
-      {/* Full-bleed background — spans the whole hero, behind the top bar */}
+      {/* Full-bleed background, spans the whole hero, behind the top bar */}
       <div
         aria-hidden
         style={{
@@ -112,23 +114,33 @@ export default function Hero() {
 
       {/* ── Floating widgets (decorative; hidden on narrow screens) ── */}
       <div className="af-hero-widgets" aria-hidden>
+        <div style={{ position: "absolute", left: 120, top: 92, transform: "rotate(-6deg)" }}>
+          <div style={{ animation: "afFloatY 8.2s ease-in-out .2s infinite" }}>
+            <ImgTile src="/icons/ic-timer.png" size={64} radius={16} />
+          </div>
+        </div>
+        <div style={{ position: "absolute", right: 340, bottom: 320, transform: "rotate(5deg)" }}>
+          <div style={{ animation: "afFloatY 7.6s ease-in-out .8s infinite" }}>
+            <ImgTile src="/icons/ic-flag.png" size={64} radius={16} />
+          </div>
+        </div>
         <div style={{ position: "absolute", left: 56, top: 150, transform: "rotate(-5deg)" }}>
-          <div style={{ width: 212, background: "var(--amber-tint)", border: "1px solid var(--amber-line)", borderRadius: 12, padding: "14px 18px 16px", boxShadow: floatShadow, textAlign: "left", animation: "afFloatY 7s ease-in-out infinite" }}>
+          <div style={{ width: 212, ...glassAmber, borderRadius: 12, padding: "14px 18px 16px", textAlign: "left", animation: "afFloatY 7s ease-in-out infinite" }}>
             <div style={{ width: 10, height: 10, borderRadius: 999, background: "var(--red)", margin: "0 auto" }} />
             <div style={{ font: "italic 500 13px/19px var(--font-sans)", color: "var(--amber)", marginTop: 8 }}>
-              Every document, deadline and step — tracked in one dossier.
+              Every document, deadline and step, tracked in one dossier.
             </div>
           </div>
         </div>
 
         <div style={{ position: "absolute", left: 150, top: 372, transform: "rotate(-8deg)" }}>
           <div style={{ animation: "afFloatY 8s ease-in-out .6s infinite" }}>
-            <TileApproved />
+            <ImgTile src="/icons/ic-20.png" size={84} radius={20} />
           </div>
         </div>
 
         <div style={{ position: "absolute", left: 48, bottom: 210, transform: "rotate(3deg)" }}>
-          <div style={{ width: 262, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "18px 20px", boxShadow: floatShadow, textAlign: "left", animation: "afFloatY 7.5s ease-in-out .3s infinite" }}>
+          <div style={{ width: 262, ...glassCard, borderRadius: 16, padding: "18px 20px", textAlign: "left", animation: "afFloatY 7.5s ease-in-out .3s infinite" }}>
             <div style={eyebrow}>Your journey</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
               <StatusCircle size={28} tone="green"><IconCheck size={15} /></StatusCircle>
@@ -149,12 +161,12 @@ export default function Hero() {
 
         <div style={{ position: "absolute", right: 170, top: 128, transform: "rotate(6deg)" }}>
           <div style={{ animation: "afFloatY 8.5s ease-in-out .9s infinite" }}>
-            <TileReview />
+            <ImgTile src="/icons/ic-calendar.png" size={84} radius={20} />
           </div>
         </div>
 
         <div style={{ position: "absolute", right: 44, top: 206, transform: "rotate(4deg)" }}>
-          <div style={{ width: 250, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "18px 20px", boxShadow: floatShadow, textAlign: "left", animation: "afFloatY 7.2s ease-in-out .45s infinite" }}>
+          <div style={{ width: 250, ...glassCard, borderRadius: 16, padding: "18px 20px", textAlign: "left", animation: "afFloatY 7.2s ease-in-out .45s infinite" }}>
             <div style={eyebrow}>Timetable</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
               <span style={{ color: "var(--indigo-600)", display: "flex" }}>
@@ -176,7 +188,7 @@ export default function Hero() {
         </div>
 
         <div style={{ position: "absolute", right: 52, bottom: 210, transform: "rotate(-3deg)" }}>
-          <div style={{ width: 240, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, padding: "18px 20px", boxShadow: floatShadow, textAlign: "left", animation: "afFloatY 7.8s ease-in-out 1.1s infinite" }}>
+          <div style={{ width: 240, ...glassCard, borderRadius: 16, padding: "18px 20px", textAlign: "left", animation: "afFloatY 7.8s ease-in-out 1.1s infinite" }}>
             <div style={eyebrow}>10+ universities</div>
             <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
               <TileSmall><GlyphCap /></TileSmall>
@@ -203,7 +215,7 @@ export default function Hero() {
           Study abroad, guided every step of the way.
         </h1>
         <p style={{ font: "400 var(--font-sans)", fontSize: "clamp(15px, 2.2vw, 17px)", lineHeight: 1.65, color: "var(--ink-soft)", maxWidth: 600, margin: "20px 0 0" }}>
-          One clear plan from application to arrival — human-reviewed documents, a live tracker, and real people behind every step.
+          One clear plan from application to arrival, human-reviewed documents, a live tracker, and real people behind every step.
         </p>
 
         <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap", justifyContent: "center" }}>

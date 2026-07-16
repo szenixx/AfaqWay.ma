@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const navLink = { font: "600 14px/20px var(--font-sans)" };
 const MOBILE_LINKS: { label: string; href: string }[] = [
@@ -94,11 +95,15 @@ export default function SiteHeader() {
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--ink-faint)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M8 5l5 5-5 5" /></svg>
               </Link>
             ))}
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line-soft)" }}>
+              <div style={{ font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 8 }}>Language</div>
+              <LanguageSwitcher variant="list" />
+            </div>
             <Link
               className="af-btn-primary"
               href="/signup"
               onClick={() => setOpen(false)}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 44, borderRadius: 12, marginTop: 16, font: "600 15px/1 var(--font-sans)" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 44, borderRadius: 12, marginTop: 12, font: "600 15px/1 var(--font-sans)" }}
             >
               Sign up
             </Link>

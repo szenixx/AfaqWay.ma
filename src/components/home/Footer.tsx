@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FLAGS } from "./ui";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const COLS: { head: string; links: string[] }[] = [
   { head: "Platform", links: ["Pricing", "How it works", "Destinations", "Templates", "FAQ"] },
@@ -58,11 +58,7 @@ export default function Footer() {
           <span style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}>
             © 2026 AfaqWay. Built for students, not agencies.
           </span>
-          <Link href="/soon" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, padding: "5px 12px" }}>
-            <span style={{ width: 24, height: 18, borderRadius: 3, background: FLAGS.Lithuania, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.08)" }} />
-            <span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--ink)" }}>EN</span>
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="var(--ink-faint)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M5 8l5 5 5-5" /></svg>
-          </Link>
+          <LanguageSwitcher />
         </div>
       </div>
     </footer>

@@ -3,8 +3,8 @@ import { Container, SectionHead, StatusCircle, IconRing, IconPlane, IconClock, I
 const STEPS: { tone: Tone; icon: React.ReactNode; step: string; title: string; desc: string }[] = [
   { tone: "grey", icon: <IconRing />, step: "Step 01", title: "Build your profile", desc: "Tell us about your background, target country, and budget. Takes 5 minutes." },
   { tone: "indigo", icon: <IconPlane />, step: "Step 02", title: "Get your roadmap", desc: "A step-by-step plan built for your country, program, and intake date." },
-  { tone: "amber", icon: <IconClock />, step: "Step 03", title: "Human reviews your file", desc: "A real expert checks every document before it goes anywhere official." },
-  { tone: "green", icon: <IconCheck />, step: "Step 04", title: "Accepted & departure-ready", desc: "Admission letter, visa prep, and a post-arrival checklist — all covered." },
+  { tone: "amber", icon: <IconClock />, step: "Step 03", title: "Get your file ready", desc: "Complete each document with step-by-step guidance and expert checks along the way." },
+  { tone: "green", icon: <IconCheck />, step: "Step 04", title: "Accepted & departure-ready", desc: "Admission letter, visa prep, and a post-arrival checklist, all covered." },
 ];
 
 export default function HowItWorks() {
@@ -13,8 +13,8 @@ export default function HowItWorks() {
       <Container>
         <SectionHead eyebrow="How it works" title="Four steps. One clear path." />
         <div style={{ position: "relative", marginTop: 40 }}>
-          {/* Animated dashed connector — shows the four steps are linked */}
-          <div aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 24, height: 2, zIndex: 0 }}>
+          {/* Animated dashed connector, shows the four steps are linked */}
+          <div aria-hidden className="af-step-connector" style={{ position: "absolute", left: 0, right: 0, top: 24, height: 2, zIndex: 0 }}>
             <svg width="100%" height="2" style={{ display: "block", overflow: "visible" }}>
               <line x1="12%" y1="1" x2="88%" y2="1" stroke="var(--indigo-line)" strokeWidth="1.5" strokeDasharray="6 8" style={{ animation: "afDashFlow 1.1s linear infinite" }} />
             </svg>

@@ -1,5 +1,5 @@
 const STORIES = [
-  { quote: "AfaqWay turned a mountain of paperwork into a simple checklist — I always knew the next step.", name: "Youssef A.", route: "Casablanca → TU Berlin", initials: "YA" },
+  { quote: "AfaqWay turned a mountain of paperwork into a simple checklist, I always knew the next step.", name: "Youssef A.", route: "Casablanca → TU Berlin", initials: "YA" },
   { quote: "Having a real person review my documents before submission gave me real confidence.", name: "Salma M.", route: "Rabat → Vilnius University", initials: "SM" },
   { quote: "The tracker kept every deadline in front of me. Nothing slipped, and I got in.", name: "Omar B.", route: "Marrakesh → TU Delft", initials: "OB" },
 ];
@@ -16,7 +16,7 @@ function MoroccoChip() {
 
 const eyebrow = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--indigo-600)" };
 
-/* Slim band — story bars drift left → right. */
+/* Slim band, story bars drift left → right. */
 export default function Stories() {
   const items = [...STORIES, ...STORIES];
   return (

@@ -8,19 +8,19 @@ type Pin = { name: string; left: number; top: number; dot: string; pulse?: boole
 const PINS: Pin[] = [
   {
     name: "Lithuania",
-    left: 52,
-    top: 45,
+    left: 51,
+    top: 46,
     dot: "var(--green)",
     pulse: true,
-    facts: ["10+ universities", "Tuition ~€4,000 / year", "2 intakes per year", "Programs taught in English", "Bachelor & Master degrees"],
+    facts: ["10+ universities", "Tuition ~€4,000 / year", "2 intakes per year", "Taught in English", "Bachelor & Master degrees"],
   },
-  { name: "Latvia", left: 56, top: 39, dot: "var(--red)" },
-  { name: "Poland", left: 47, top: 52, dot: "var(--red)" },
-  { name: "Germany", left: 38, top: 51, dot: "var(--red)" },
-  { name: "Hungary", left: 50, top: 60, dot: "var(--red)" },
-  { name: "Russia", left: 79, top: 38, dot: "var(--red)" },
+  { name: "Latvia", left: 55, top: 38, dot: "var(--red)" },
+  { name: "Poland", left: 45, top: 54, dot: "var(--red)" },
+  { name: "Germany", left: 36, top: 53, dot: "var(--red)" },
+  { name: "Hungary", left: 50, top: 62, dot: "var(--red)" },
+  { name: "Russia", left: 78, top: 36, dot: "var(--red)" },
 ];
-const YOU = { left: 22, top: 82 };
+const YOU = { left: 22, top: 83 };
 
 const em = { color: "var(--indigo-600)", fontWeight: 600, fontStyle: "normal" as const };
 
@@ -35,7 +35,7 @@ export default function HowItFeels() {
       <div className="af-two-col">
         {/* Map card */}
         <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "var(--shadow-card)", padding: 24 }}>
-          <div style={{ position: "relative", height: 560, background: "var(--subtle)", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ position: "relative", width: "100%", aspectRatio: "1264 / 848", background: "var(--subtle)", borderRadius: 12, overflow: "hidden" }}>
             <Image src="/europe-map.png" alt="Outline map of Europe and Morocco" fill style={{ objectFit: "cover" }} sizes="(max-width: 900px) 100vw, 680px" />
 
             <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
@@ -95,7 +95,7 @@ export default function HowItFeels() {
                   </div>
                 ) : (
                   <div style={{ font: "400 11.5px/17px var(--font-sans)", color: "#C9D3E4", marginTop: 6 }}>
-                    Coming soon — programs, tuition and requirements unlock at launch.
+                    Coming soon, programs, tuition and requirements unlock at launch.
                   </div>
                 )}
               </div>
@@ -107,7 +107,7 @@ export default function HowItFeels() {
         <div>
           <div style={{ font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--indigo-600)" }}>How it feels</div>
           <h2 style={{ font: "700 var(--font-sans)", fontSize: "clamp(26px, 3vw, 34px)", lineHeight: 1.25, color: "var(--ink)", margin: "12px 0 0" }}>
-            From your living room to a European campus — guided, every step.
+            From your living room to a European campus, guided, every step.
           </h2>
           <p style={{ font: "400 16px/28px var(--font-sans)", color: "var(--ink-soft)", maxWidth: 460, margin: "20px 0 0" }}>
             You <em style={em}>start with a profile</em>. AfaqWay builds your <em style={em}>personalized roadmap</em>. A real reviewer <em style={em}>checks each document</em>. Your tracker shows what is done, what is next, and what needs your attention. By the time your visa appointment arrives, <em style={em}>nothing is missing</em>.

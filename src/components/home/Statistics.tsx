@@ -5,7 +5,7 @@ const STATS = [
   { value: "85%+", label: "Visa approved", note: "Depends on your documents" },
 ];
 
-/* Slim marquee band — stats drift left → right like the hero trust strip. */
+/* Slim marquee band, stats drift left → right like the hero trust strip. */
 export default function Statistics() {
   const items = [...STATS, ...STATS];
   return (

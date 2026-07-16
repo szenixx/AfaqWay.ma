@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Get started — AfaqWay" };
+export const metadata = { title: "Get started, AfaqWay" };
 
 export default function SignupGate() {
   return (

@@ -28,6 +28,11 @@ export default function Destinations() {
                 {d.open ? <span className="pill pill-green">Available now</span> : <span className="pill pill-grey">Coming soon</span>}
               </div>
               {d.open && (
+                <div style={{ font: "600 11.5px/16px var(--font-sans)", color: "var(--green)" }}>
+                  Academic study, Bachelor &amp; Master degrees
+                </div>
+              )}
+              {d.open && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, font: "500 12px/17px var(--font-sans)", color: "var(--ink-soft)", flexWrap: "wrap" }}>
                   <span>10+ universities</span>
                   <span style={{ color: "var(--ink-faint)" }}>·</span>

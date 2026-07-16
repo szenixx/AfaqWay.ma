@@ -64,7 +64,7 @@ a {
 
 .af-marquee:hover .af-marquee-track { animation-play-state: paused; }
 
-/* Decorative hero widgets — shown on wide screens only, never cause horizontal scroll */
+/* Decorative hero widgets, shown on wide screens only, never cause horizontal scroll */
 .af-hero-widgets { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .af-hero-widgets > * { pointer-events: auto; }
 @media (max-width: 1279px) {
@@ -90,6 +90,11 @@ a {
 }
 @media (max-width: 900px) {
   .af-two-col { grid-template-columns: 1fr; }
+}
+
+/* How-it-works connector line: desktop only */
+@media (max-width: 720px) {
+  .af-step-connector { display: none; }
 }
 
 /* Destinations grid: 3 across → 2 → 1 (slim bars on phone) */
