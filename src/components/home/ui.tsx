@@ -79,6 +79,7 @@ export const IconCalendar = ({ size }: { size?: number }) => <Glyph size={size}>
 export const IconChat = ({ size }: { size?: number }) => <Glyph size={size}><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-3 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /></Glyph>;
 export const IconVideo = ({ size }: { size?: number }) => <Glyph size={size}><rect x="3" y="4.5" width="14" height="11" rx="2" /><path d="M9 8.2v3.6l3-1.8Z" /></Glyph>;
 export const IconArrow = ({ size }: { size?: number }) => <Glyph size={size}><path d="M4 10h12M11 5l5 5-5 5" /></Glyph>;
+export const IconSpark = ({ size }: { size?: number }) => <Glyph size={size}><path d="M12 2 6 11h4l-2 7 7-10h-4z" /></Glyph>;
 
 /* CSS tricolor flags, real flags, never recoloured (DS exception). */
 export const FLAGS: Record<string, string> = {

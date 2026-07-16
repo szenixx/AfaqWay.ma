@@ -16,19 +16,31 @@ function MoroccoChip() {
 
 const eyebrow = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--indigo-600)" };
 
-/* Slim band, story bars drift left → right. */
+/* iOS-26 liquid-glass story cards, frosted over a dot backdrop. */
+const glass = {
+  background: "rgba(255,255,255,0.45)",
+  backdropFilter: "blur(16px) saturate(1.5)",
+  WebkitBackdropFilter: "blur(16px) saturate(1.5)",
+  border: "1px solid rgba(255,255,255,0.6)",
+  boxShadow: "0 10px 30px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.7)",
+} as const;
+
 export default function Stories() {
-  const items = [...STORIES, ...STORIES];
+  // Four copies so one loop-unit is always wider than the viewport, seamless (no visible restart).
+  const items = [...STORIES, ...STORIES, ...STORIES, ...STORIES];
   return (
-    <div style={{ background: "var(--card)", padding: "48px 0" }}>
-      <div style={{ textAlign: "center", padding: "0 24px", marginBottom: 28 }}>
+    <div style={{ position: "relative", overflow: "hidden", background: "var(--paper)", padding: "48px 0" }}>
+      <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(90,107,133,.14) 1.1px, transparent 1.1px)", backgroundSize: "22px 22px", pointerEvents: "none" }} />
+
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", padding: "0 24px", marginBottom: 28 }}>
         <div style={eyebrow}>Student stories</div>
         <h2 style={{ font: "700 var(--font-sans)", fontSize: "clamp(24px, 3vw, 32px)", lineHeight: 1.25, color: "var(--ink)", margin: "8px 0 0" }}>They made it. You can too.</h2>
       </div>
-      <div className="af-marquee" style={{ position: "relative", overflow: "hidden", width: "100%" }}>
-        <div className="af-marquee-track" style={{ display: "flex", alignItems: "stretch", gap: 20, width: "max-content", animation: "afMarquee 46s linear infinite" }}>
+
+      <div className="af-marquee" style={{ position: "relative", zIndex: 1, overflow: "hidden", width: "100%" }}>
+        <div className="af-marquee-track" style={{ display: "flex", alignItems: "stretch", gap: 20, width: "max-content", animation: "afMarquee 55s linear infinite" }}>
           {items.map((s, i) => (
-            <div key={i} style={{ width: 380, background: "var(--subtle)", border: "1px solid var(--line-soft)", borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14, flex: "none", boxSizing: "border-box" }}>
+            <div key={i} style={{ width: 380, ...glass, borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14, flex: "none", boxSizing: "border-box" }}>
               <p style={{ font: "400 14px/22px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{s.quote}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "auto" }}>
                 <span style={{ width: 36, height: 36, borderRadius: 999, background: "var(--indigo-100)", color: "var(--indigo-600)", display: "inline-flex", alignItems: "center", justifyContent: "center", font: "600 13px/1 var(--font-sans)", flex: "none" }}>{s.initials}</span>

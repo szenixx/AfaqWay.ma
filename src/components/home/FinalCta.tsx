@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export default function FinalCta() {
   return (
-    <div style={{ position: "relative", overflow: "hidden", background: "var(--indigo-600)", padding: "64px 24px", textAlign: "center" }}>
+    <div style={{ position: "relative", overflow: "hidden", background: "var(--indigo-600)", padding: "40px 24px", textAlign: "center" }}>
       {/* Hero-style backdrop, blue theme */}
-      <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: "url(/hero-ambient.png)", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.12, mixBlendMode: "overlay", pointerEvents: "none" }} />
+      <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: "url(/hero-ambient.webp)", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.12, mixBlendMode: "overlay", pointerEvents: "none" }} />
       <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,.10) 1.1px, transparent 1.1px)", backgroundSize: "22px 22px", pointerEvents: "none" }} />
 
       {/* Liquid-glass panel */}
@@ -14,8 +14,8 @@ export default function FinalCta() {
           zIndex: 1,
           maxWidth: 720,
           margin: "0 auto",
-          padding: "40px 32px",
-          borderRadius: 24,
+          padding: "30px 28px",
+          borderRadius: 22,
           background: "rgba(255,255,255,0.12)",
           backdropFilter: "blur(14px) saturate(1.4)",
           WebkitBackdropFilter: "blur(14px) saturate(1.4)",

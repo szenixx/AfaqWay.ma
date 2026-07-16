@@ -8,19 +8,19 @@ type Pin = { name: string; left: number; top: number; dot: string; pulse?: boole
 const PINS: Pin[] = [
   {
     name: "Lithuania",
-    left: 51,
-    top: 46,
+    left: 50,
+    top: 40,
     dot: "var(--green)",
     pulse: true,
     facts: ["10+ universities", "Tuition ~€4,000 / year", "2 intakes per year", "Taught in English", "Bachelor & Master degrees"],
   },
-  { name: "Latvia", left: 55, top: 38, dot: "var(--red)" },
-  { name: "Poland", left: 45, top: 54, dot: "var(--red)" },
-  { name: "Germany", left: 36, top: 53, dot: "var(--red)" },
-  { name: "Hungary", left: 50, top: 62, dot: "var(--red)" },
-  { name: "Russia", left: 78, top: 36, dot: "var(--red)" },
+  { name: "Latvia", left: 52, top: 34, dot: "var(--red)" },
+  { name: "Poland", left: 55, top: 52, dot: "var(--red)" },
+  { name: "Germany", left: 41, top: 49, dot: "var(--red)" },
+  { name: "Hungary", left: 52, top: 57, dot: "var(--red)" },
+  { name: "Russia", left: 85, top: 48, dot: "var(--red)" },
 ];
-const YOU = { left: 22, top: 83 };
+const YOU = { left: 24, top: 83 };
 
 const em = { color: "var(--indigo-600)", fontWeight: 600, fontStyle: "normal" as const };
 
@@ -34,9 +34,9 @@ export default function HowItFeels() {
     <div style={{ padding: "56px 24px" }}>
       <div className="af-two-col">
         {/* Map card */}
-        <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "var(--shadow-card)", padding: 24 }}>
-          <div style={{ position: "relative", width: "100%", aspectRatio: "1264 / 848", background: "var(--subtle)", borderRadius: 12, overflow: "hidden" }}>
-            <Image src="/europe-map.png" alt="Outline map of Europe and Morocco" fill style={{ objectFit: "cover" }} sizes="(max-width: 900px) 100vw, 680px" />
+        <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "var(--shadow-card)", padding: 14 }}>
+          <div onClick={() => setPinned(null)} style={{ position: "relative", width: "100%", aspectRatio: "1264 / 848", background: "var(--subtle)", borderRadius: 12, overflow: "hidden" }}>
+            <Image src="/europe-map.webp" alt="Outline map of Europe and Morocco" fill style={{ objectFit: "cover" }} sizes="(max-width: 900px) 100vw, 680px" />
 
             <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
               <line x1={`${YOU.left}%`} y1={`${YOU.top}%`} x2={`${PINS[0].left}%`} y2={`${PINS[0].top}%`} stroke="var(--indigo-600)" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.55" />
@@ -47,7 +47,7 @@ export default function HowItFeels() {
                 key={i}
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
-                onClick={() => setPinned(pinned === i ? null : i)}
+                onClick={(e) => { e.stopPropagation(); setPinned(pinned === i ? null : i); }}
                 style={{ position: "absolute", left: `${pin.left}%`, top: `${pin.top}%`, transform: "translate(-50%,-50%)", display: "inline-flex", alignItems: "center", gap: 6, background: "var(--card)", border: `1px solid ${active === i ? "var(--indigo-line)" : "var(--line)"}`, borderRadius: 999, padding: "4px 10px", boxShadow: "var(--shadow-card)", cursor: "pointer", zIndex: 2, font: "500 11px/14px var(--font-sans)", color: "var(--ink)" }}
               >
                 <span style={{ width: 9, height: 9, borderRadius: 999, background: pin.dot, animation: pin.pulse ? "afPulse 2s infinite" : undefined }} />

@@ -3,11 +3,13 @@ const STATS = [
   { value: "24/7", label: "Support", note: "Real humans, not a bot" },
   { value: "48h", label: "Avg. document review", note: "By a human expert" },
   { value: "85%+", label: "Visa approved", note: "Depends on your documents" },
+  { value: "-50%", label: "Agency expenses", note: "vs a traditional agency" },
 ];
 
 /* Slim marquee band, stats drift left → right like the hero trust strip. */
 export default function Statistics() {
-  const items = [...STATS, ...STATS];
+  // Four copies so one loop-unit stays wider than any viewport, seamless (no gap/jump).
+  const items = [...STATS, ...STATS, ...STATS, ...STATS];
   return (
     <div style={{ background: "var(--card)", padding: "32px 0", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
       <div className="af-marquee" style={{ position: "relative", overflow: "hidden", width: "100%" }}>

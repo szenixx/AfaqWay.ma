@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Container, SectionHead, IconCompass, IconDoc, IconTracker, IconCalendar, IconArrow } from "./ui";
+import { Container, SectionHead, IconCompass, IconDoc, IconTracker, IconCalendar, IconChat, IconSpark, IconArrow } from "./ui";
 
 /* A neutral subset of what the platform does, full list lives on the service page. */
 const FEATURES: { icon: React.ReactNode; title: string; desc: string }[] = [
@@ -7,6 +7,8 @@ const FEATURES: { icon: React.ReactNode; title: string; desc: string }[] = [
   { icon: <IconDoc />, title: "Document Review", desc: "Your key documents checked and refined so they are ready to submit." },
   { icon: <IconTracker />, title: "Live Progress Tracker", desc: "Every task shows one of five statuses, so you always know what is next." },
   { icon: <IconCalendar />, title: "Deadline Engine", desc: "Every deadline for your intake, tracked and surfaced before it matters." },
+  { icon: <IconSpark />, title: "Our system is our power", desc: "The engine runs on real, up-to-date rules for every country, so it never forgets a step and never guesses. Your file is checked the same careful way, every single time." },
+  { icon: <IconChat />, title: "Human support, anytime", desc: "When you want a person, real people back the system up. No bots, no scripts, just clear answers." },
 ];
 
 export default function Platform() {

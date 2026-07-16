@@ -89,7 +89,7 @@ export default function Hero() {
           position: "absolute",
           inset: 0,
           zIndex: 0,
-          backgroundImage: "url(/hero-ambient.png)",
+          backgroundImage: "url(/hero-ambient.webp)",
           backgroundSize: "cover",
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
@@ -244,6 +244,9 @@ export default function Hero() {
             ))}
           </div>
         </div>
+        <span style={{ font: "600 13px/20px var(--font-sans)", color: "var(--indigo-600)", marginTop: 4 }}>
+          AfaqWay is built for students, not agencies.
+        </span>
       </div>
     </section>
   );
