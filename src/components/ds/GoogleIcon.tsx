@@ -1,4 +1,4 @@
-/* Official multicolor Google "G". A real brand mark — the DS treats brand marks
+/* Official multicolor Google "G". A real brand mark, the DS treats brand marks
    (like flags, §6) as the one exception to the closed palette; never recoloured. */
 export function GoogleIcon({ size = 18 }: { size?: number }) {
   return (
