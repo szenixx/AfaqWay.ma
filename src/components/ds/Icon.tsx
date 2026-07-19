@@ -26,6 +26,8 @@ const P: Record<string, string> = {
   // --- new (approved for auth page) ---
   eye: '<path d="M10 4.5c-4.6 0-7.5 5.5-7.5 5.5s2.9 5.5 7.5 5.5 7.5-5.5 7.5-5.5-2.9-5.5-7.5-5.5Z"/><circle cx="10" cy="10" r="2.5"/>',
   "eye-off": '<path d="M10 4.5c-4.6 0-7.5 5.5-7.5 5.5a13.4 13.4 0 0 0 2.1 2.6M7.1 14.8c.9.4 1.9.7 2.9.7 4.6 0 7.5-5.5 7.5-5.5a13.4 13.4 0 0 0-1.7-2.3"/><path d="M8.2 8.2a2.5 2.5 0 0 0 3.6 3.6"/><path d="M4 4l12 12"/>',
+  // --- new (approved for profile-setup: bare check for the stepper) ---
+  check: '<path d="M4.5 10.5 8.5 14.5 15.5 6"/>',
 };
 
 export const ICON_NAMES = Object.keys(P);

@@ -2,72 +2,146 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
-import { Button } from "@/components/ds";
-import { StatusCircle, IconCheck } from "@/components/home/ui";
+import { fetchAdminRole } from "@/lib/admin";
+import StudentTopBar from "@/components/student/StudentTopBar";
+import { planById } from "@/lib/plans";
 
-/* Temporary post-auth landing, only confirms auth works end to end.
-   Delete this once the real onboarding/dashboard is built. */
+type Nav = "dashboard" | "roadmap" | "chat" | "profile" | "help";
+type Profile = { full_name: string | null; plan: string | null; user_number: number | null };
+
+const STAGES = ["University Application", "University Interview", "Migration Office (Migris)", "VFS Application", "Migris Interview", "Residence Permit (TRP)"];
+
+function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "var(--shadow-card)", padding: 24, ...style }}>{children}</div>;
+}
+
+function Header({ eyebrow, title, sub }: { eyebrow: string; title: string; sub: string }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--indigo-600)" }}>{eyebrow}</div>
+      <h1 style={{ font: "700 27px/34px var(--font-sans)", color: "var(--ink)", margin: "4px 0 0" }}>{title}</h1>
+      <p style={{ font: "400 14px/22px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0", maxWidth: 640 }}>{sub}</p>
+    </div>
+  );
+}
+
+function ProgressBar({ stage }: { stage: number }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", font: "500 12px/16px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 6 }}><span>Stage {stage} of 6</span><span>{Math.round((stage / 6) * 100)}%</span></div>
+      <div style={{ height: 8, borderRadius: 999, background: "var(--subtle)", overflow: "hidden" }}><div style={{ width: `${(stage / 6) * 100}%`, height: "100%", background: "var(--indigo-600)", borderRadius: 999 }} /></div>
+    </div>
+  );
+}
+
+function StageList({ full }: { full: boolean }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+      {STAGES.map((s, i) => (
+        <div key={s} style={{ display: "flex", alignItems: "center", gap: 12, border: "1px solid var(--line)", borderRadius: 12, background: "var(--card)", padding: "12px 14px" }}>
+          <span style={{ width: 30, height: 30, borderRadius: 999, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", font: "600 13px/1 var(--font-sans)", background: i === 0 ? "var(--indigo-600)" : "var(--subtle)", color: i === 0 ? "#fff" : "var(--ink-faint)" }}>{i + 1}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{s}</div>
+            <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{i === 0 ? "In progress" : "Not started"}</div>
+          </div>
+          <span className={i === 0 ? "pill pill-amber" : "pill pill-grey"}>{i === 0 ? "Under review" : "Not started"}</span>
+        </div>
+      ))}
+      {full && <div style={{ position: "relative", border: "1px solid var(--line)", borderRadius: 12, padding: 16, overflow: "hidden" }}>
+        <div style={{ filter: "blur(3px)", opacity: 0.6 }}><div style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>Post-Arrival Support</div><div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>Bank account, SIM, registration, insurance, housing.</div></div>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,.4)", font: "600 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="4" y="9" width="12" height="8" rx="2" /><path d="M7 9V6a3 3 0 0 1 6 0v3" /></svg>Unlocks after your residence permit is approved</div>
+      </div>}
+    </div>
+  );
+}
+
+function Shell({ nav, plan, name }: { nav: Nav; plan: string | null; name: string | null }) {
+  const full = plan === "full_service";
+  const planName = planById(plan)?.name ?? "your plan";
+  if (nav === "dashboard") {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }} className="af-dash-grid">
+        <div>
+          <Header eyebrow={full ? "Your tracker" : "Your dashboard"} title={`Welcome${name ? `, ${name.split(" ")[0]}` : ""}`} sub={full ? "Your application is being handled for you. Track its progress here." : "Your step-by-step plan. You drive it, we review every document you upload."} />
+          <Panel><ProgressBar stage={1} /></Panel>
+          <div style={{ marginTop: 16 }}><Panel><div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)", marginBottom: 10 }}>Calendar</div><div style={{ height: 120, borderRadius: 10, background: "var(--subtle)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-faint)", font: "400 13px var(--font-sans)" }}>Upcoming deadlines & appointments</div></Panel></div>
+        </div>
+        <div>
+          <Panel style={{ padding: 18 }}>
+            <span className={full ? "pill pill-indigo" : "pill pill-green"}>{planName}</span>
+            <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 10 }}>{full ? "A dedicated admin manages your file. Reach them anytime from Messages." : "Human review on every upload, average 48h. Need help? 24/7 support."}</div>
+          </Panel>
+        </div>
+      </div>
+    );
+  }
+  if (nav === "roadmap") {
+    return (
+      <div>
+        <Header eyebrow={full ? "Your tracker" : "Your roadmap"} title={full ? "Your application, handled for you" : "Your path to studying in Lithuania"} sub={full ? "Follow each stage as our team drives it. Documents are handled through Messages." : "Six stages, each with its own checklist. Tick them off, upload, and we review."} />
+        <Panel><ProgressBar stage={1} /><StageList full={full} /></Panel>
+      </div>
+    );
+  }
+  if (nav === "chat") {
+    return (
+      <div>
+        <Header eyebrow="Messages" title={full ? "Chat with your admin" : "Support"} sub={full ? "Your dedicated admin drives your file and answers here." : "Reach 24/7 support. Live chat is coming soon."} />
+        <Panel style={{ padding: 0, overflow: "hidden", height: 460, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+            <div style={{ alignSelf: "flex-start", maxWidth: "72%", background: "var(--subtle)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>Welcome! Send us any document or question here.</div>
+          </div>
+          <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12, display: "flex", gap: 8 }}>
+            <button type="button" style={{ height: 42, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Upload</button>
+            <input className="af" placeholder="Type a message…" style={{ flex: 1 }} />
+            <button type="button" style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 14px/1 var(--font-sans)", cursor: "pointer" }}>Send</button>
+          </div>
+        </Panel>
+      </div>
+    );
+  }
+  if (nav === "profile") {
+    return <div><Header eyebrow="Account" title="Your profile" sub="Your personal details and program choices. Editing here is coming next." /><Panel><div style={{ color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>Profile settings (edit personal details and program choice) are coming next.</div></Panel></div>;
+  }
+  return <div><Header eyebrow="Help" title="Help center" sub="Guides and support for every step." /><Panel><div style={{ color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>Help articles are coming soon. For now, reach us from Messages.</div></Panel></div>;
+}
+
 export default function Dashboard() {
   const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileId, setProfileId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [nav, setNav] = useState<Nav>("dashboard");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? null);
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace("/signup"); return; }
+      const { role } = await fetchAdminRole(user.email);
+      if (cancelled) return;
+      if (role) { router.replace("/admin"); return; }
+      const { data } = await supabase.from("profiles").select("full_name, onboarding_completed_at, plan, plan_status, user_number").eq("id", user.id).single();
+      if (cancelled) return;
+      const row = (data ?? {}) as Record<string, unknown>;
+      if (!row.onboarding_completed_at) { router.replace("/profile-setup"); return; }
+      setProfile({ full_name: (row.full_name as string) ?? null, plan: (row.plan as string) ?? null, user_number: (row.user_number as number) ?? null });
+      if (typeof row.user_number === "number") setProfileId("AWU-" + String(row.user_number).padStart(3, "0"));
       setLoading(false);
-    });
-  }, []);
+    })();
+    return () => { cancelled = true; };
+  }, [router]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    router.push("/signup");
+  if (loading) {
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)", color: "var(--ink-faint)", font: "400 15px/24px var(--font-sans)" }}>Loading…</div>;
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--paper)" }}>
-      <header style={{ height: 60, flex: "none", background: "var(--card)", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 8, padding: "0 20px" }}>
-        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <svg width="30" height="30" viewBox="0 0 96 96" style={{ color: "var(--indigo-600)" }}>
-            <g fill="none" stroke="currentColor" strokeWidth="13" strokeLinecap="square" strokeLinejoin="miter">
-              <path d="M29 28 48 45 67 28" />
-              <path d="M29 54 48 71 67 54" />
-            </g>
-          </svg>
-          <span style={{ font: "700 20px/1 var(--font-sans)", color: "var(--ink)", letterSpacing: "-0.01em" }}>AfaqWay</span>
-        </Link>
-      </header>
-
-      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="card" style={{ width: "100%", maxWidth: 440, textAlign: "center" }}>
-          <span className="pill pill-grey">Temporary page, will be removed</span>
-          {loading ? (
-            <p style={{ font: "400 15px/24px var(--font-sans)", color: "var(--ink-soft)", margin: "16px 0 0" }}>Loading your session…</p>
-          ) : email ? (
-            <>
-              <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-                <StatusCircle size={48} tone="green"><IconCheck size={24} /></StatusCircle>
-              </div>
-              <h1 style={{ font: "700 24px/32px var(--font-sans)", color: "var(--ink)", margin: "16px 0 0" }}>Login successful!</h1>
-              <p style={{ font: "400 14px/22px var(--font-sans)", color: "var(--ink-soft)", margin: "8px 0 0" }}>
-                Signed in as <strong style={{ color: "var(--ink)" }}>{email}</strong>. This confirmation page is temporary, it will be replaced once we build the real onboarding.
-              </p>
-              <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
-                <Button variant="neutral" onClick={signOut}>Sign out</Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h1 style={{ font: "700 24px/32px var(--font-sans)", color: "var(--ink)", margin: "16px 0 0" }}>You are not signed in</h1>
-              <p style={{ font: "400 14px/22px var(--font-sans)", color: "var(--ink-soft)", margin: "8px 0 0" }}>Log in or create an account to continue.</p>
-              <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
-                <Link href="/signup"><Button variant="primary">Go to sign in</Button></Link>
-              </div>
-            </>
-          )}
-        </div>
+    <div style={{ minHeight: "100vh", background: "var(--paper)" }}>
+      <StudentTopBar nav={nav} onNav={setNav} userId={profileId} plan={profile?.plan} fullName={profile?.full_name} />
+      <main style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 20px 64px" }}>
+        <Shell nav={nav} plan={profile?.plan ?? null} name={profile?.full_name ?? null} />
       </main>
     </div>
   );
