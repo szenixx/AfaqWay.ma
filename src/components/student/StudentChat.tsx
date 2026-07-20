@@ -80,7 +80,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
   }
 
   return (
-    <div className="stu-chat-texture" style={{ padding: 0, overflow: "hidden", height: "min(70vh, 480px)", minHeight: 340, display: "flex", flexDirection: "column", borderRadius: 20, border: "1px solid var(--line)", boxShadow: "0 10px 30px rgba(23,35,58,.08)" }}>
+    <div className="stu-chat-texture" style={{ padding: 0, overflow: "hidden", height: "min(68dvh, 480px)", minHeight: 320, display: "flex", flexDirection: "column", borderRadius: 20, border: "1px solid var(--line)", boxShadow: "0 10px 30px rgba(23,35,58,.08)" }}>
       <div ref={threadRef} style={{ flex: 1, minHeight: 0, padding: 16, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
         <div style={{ alignSelf: "flex-start", maxWidth: "78%", background: "rgba(255,255,255,.92)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>
           {full ? "Welcome. Your dedicated admin answers here, send any document or question." : "Welcome. Send a document or a question and our team will reply here."}
@@ -134,11 +134,13 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
           </div>
         )}
         {file && <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}><span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Attached: {file.name}</span><button type="button" onClick={() => setFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button></div>}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={blocked} style={{ height: 42, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: blocked ? "not-allowed" : "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)", opacity: blocked ? 0.5 : 1 }}>Upload</button>
+        <div style={{ display: "flex", gap: 8, minWidth: 0, alignItems: "center" }}>
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={blocked} aria-label="Upload a file" title="Upload" style={{ height: 42, width: 42, flex: "none", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: blocked ? "not-allowed" : "pointer", color: "var(--ink)", opacity: blocked ? 0.5 : 1 }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13V4m0 0 3.5 3.5M10 4 6.5 7.5M4 14v2h12v-2" /></svg>
+          </button>
           <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <input className="af" placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: 1 }} />
-          <button type="button" disabled={sending || blocked} onClick={send} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 14px/1 var(--font-sans)", cursor: sending || blocked ? "not-allowed" : "pointer", opacity: sending || blocked ? 0.5 : 1 }}>{sending ? "…" : "Send"}</button>
+          <input className="af" placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0 }} />
+          <button type="button" disabled={sending || blocked} onClick={send} style={{ height: 42, flex: "none", padding: "0 16px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 14px/1 var(--font-sans)", cursor: sending || blocked ? "not-allowed" : "pointer", opacity: sending || blocked ? 0.5 : 1 }}>{sending ? "…" : "Send"}</button>
         </div>
       </div>
 
