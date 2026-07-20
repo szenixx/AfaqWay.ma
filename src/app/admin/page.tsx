@@ -300,7 +300,7 @@ export default function AdminPage() {
           <nav className="adm-nav">
             {!collapsed && <div className="adm-group-label">Workspace</div>}
             {pages.map((p) => (
-              <button key={p.id} type="button" onClick={() => setPage(p.id)} title={lbl(p.label)} className={cls(p.id === page)}>
+              <button key={p.id} type="button" onClick={() => p.id === "dashboard" ? router.push("/admin/dashboard/overview") : setPage(p.id)} title={lbl(p.label)} className={cls(p.id === page)}>
                 <span className="adm-item-ico">{PAGE_ICONS[p.id]}</span>{!collapsed && p.label}
               </button>
             ))}
