@@ -147,7 +147,18 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)" }}>
       <StudentTopBar nav={nav} onNav={setNav} userId={profileId} plan={profile?.plan} fullName={profile?.full_name} chatUnread={chatUnread} />
-      <main style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 20px 64px" }}>
+      <div className="dash-advice" style={{ maxWidth: 1120, margin: "0 auto", padding: "14px 16px 0" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 11, background: "var(--red-tint)", border: "1px solid var(--red-line)", borderRadius: 18, boxShadow: "0 10px 30px rgba(23,35,58,.10)", padding: "14px 16px" }}>
+          <span style={{ width: 34, height: 34, borderRadius: 12, flex: "none", background: "#fff", border: "1px solid var(--red-line)", color: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="4" width="15" height="10" rx="1.5" /><path d="M7 17h6M10 14v3" /></svg>
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ font: "600 13px/19px var(--font-sans)", color: "var(--red)" }}>For a smoother experience, we advise using a laptop, desktop, or tablet, your workspace feels more comfortable there.</div>
+            <div dir="rtl" style={{ font: "500 12.5px/20px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>ننصحك باستخدام حاسوب محمول أو مكتبي أو جهاز لوحي للحصول على تجربة أكثر سلاسة وراحة في مساحة عملك.</div>
+          </div>
+        </div>
+      </div>
+      <main style={{ maxWidth: 1120, margin: "0 auto", padding: "16px 20px 64px" }}>
         <Shell nav={nav} plan={profile?.plan ?? null} name={profile?.full_name ?? null} userId={userId} />
       </main>
     </div>

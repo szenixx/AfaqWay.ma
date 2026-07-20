@@ -404,6 +404,12 @@ export default function ProfileSetup() {
   }, [router]);
 
   useEffect(() => { setProgSub(0); setPriceSub(cRef.current.pricing?.plan ? 1 : 0); setShowErrors(false); }, [view]); // restart sub-steps on main-step change (resume checkout if a plan was already chosen)
+  // Move the view to the top of the new step / sub-step (desktop frame scroll + mobile page scroll).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.scrollTo(0, 0);
+    document.querySelector(".af-frame-body")?.scrollTo({ top: 0 });
+  }, [view, progSub, priceSub]);
 
   async function save(retry = true) {
     const id = uidRef.current;
@@ -524,7 +530,7 @@ export default function ProfileSetup() {
               <div className={`af-frame ${isPricing && priceSub === 0 ? "af-frame-open" : "af-frame-card"}${isRoadmap ? " af-frame-video" : ""}`}>
                 {isRoadmap && (
                   <>
-                    <video autoPlay muted loop playsInline aria-hidden className="af-roadmap-video">
+                    <video autoPlay muted loop playsInline aria-hidden className="af-roadmap-video" onLoadedMetadata={(e) => { e.currentTarget.playbackRate = 0.5; }}>
                       <source src="/onboarding/step-2.mp4" type="video/mp4" />
                     </video>
                     <div aria-hidden className="af-roadmap-veil" />

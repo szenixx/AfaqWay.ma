@@ -6,6 +6,7 @@ import { Flag } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl } from "@/lib/r2";
+import { parseAsk } from "@/lib/chat";
 
 type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null };
 type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
@@ -23,6 +24,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
   const [file, setFile] = useState<File | null>(null);
   const [emailOn, setEmailOn] = useState(false);
   const [pinOn, setPinOn] = useState(false);
+  const [whatsappOn, setWhatsappOn] = useState(false);
   const [showQ, setShowQ] = useState(false);
   const [qText, setQText] = useState("");
   const [qOpts, setQOpts] = useState(["", ""]);
@@ -117,7 +119,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
     setSending(true); setStatus("");
     try {
       let finalBody = body.trim();
-      if (hasQ) finalBody = `${qText.trim()}\n${qOpts.filter((o) => o.trim()).map((o, i) => `${i + 1}. ${o.trim()}`).join("\n")}${finalBody ? `\n\n${finalBody}` : ""}`;
+      if (hasQ) finalBody = "ASK::" + JSON.stringify({ q: qText.trim(), opts: qOpts.filter((o) => o.trim()).map((o) => o.trim()) });
       let file_path: string | null = null, file_name: string | null = null, attachUrl: string | null = null;
       if (file) {
         const path = `${sel}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
@@ -136,7 +138,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
         else if (res.ok) setStatus("Sent and emailed");
         else setStatus("Sent to chat. Email failed: " + (res.error ?? "unknown error"));
       } else setStatus("Sent");
-      setBody(""); setFile(null); setPinOn(false); setShowQ(false); setQText(""); setQOpts(["", ""]); setReplyTo(null);
+      setBody(""); setFile(null); setPinOn(false); setWhatsappOn(false); setShowQ(false); setQText(""); setQOpts(["", ""]); setReplyTo(null);
       void loadMsgs(sel);
     } catch (e) { setStatus("Failed: " + (e instanceof Error ? e.message : "error")); } finally { setSending(false); }
   }
@@ -209,6 +211,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                 {msgs.map((m) => {
                   const mine = m.sender === "admin";
                   const quoted = m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null;
+                  const ask = parseAsk(m.body);
                   return (
                     <div key={m.id} style={{ display: "flex", flexDirection: mine ? "row-reverse" : "row", alignItems: "center", gap: 6, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "90%" }}
                       onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "msg" }); }}>
@@ -216,10 +219,18 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                         {quoted && (
                           <div style={{ borderLeft: "3px solid var(--indigo-600)", background: "rgba(43,76,155,.06)", borderRadius: 6, padding: "4px 8px", marginBottom: 6 }}>
                             <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: "var(--indigo-600)" }}>{quoted.sender === "admin" ? "You" : selUser?.full_name || "Student"}</span>
-                            <span style={{ display: "block", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{quoted.body?.slice(0, 60) || quoted.file_name || "Attachment"}</span>
+                            <span style={{ display: "block", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{parseAsk(quoted.body)?.q ?? quoted.body?.slice(0, 60) ?? quoted.file_name ?? "Attachment"}</span>
                           </div>
                         )}
-                        {m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
+                        {ask ? (
+                          <div>
+                            <div style={{ font: "600 13px/19px var(--font-sans)", color: "var(--ink)" }}>{ask.q}</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
+                              {ask.opts.map((o, i) => <div key={i} style={{ border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", font: "500 12.5px/17px var(--font-sans)", color: "var(--indigo-text)", background: "var(--card)" }}>{i + 1}. {o}</div>)}
+                            </div>
+                            <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 5 }}>Interactive question, the student taps an answer to reply.</div>
+                          </div>
+                        ) : m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
                         {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>{m.file_name || "file"}</button>}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, font: "400 10px/14px var(--font-sans)", color: "var(--ink-faint)" }}>
                           <span>{new Date(m.created_at).toLocaleString()}</span>
@@ -248,12 +259,14 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><span style={{ width: 7, height: 7, borderRadius: 999, background: emailOn ? "var(--green)" : "var(--ink-faint)" }} />Email</button>
-                  <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}>Pin</button>
-                  <button type="button" onClick={() => fileRef.current?.click()} style={opt(false)}>Upload</button>
-                  <button type="button" onClick={() => setShowQ((v) => !v)} style={opt(showQ)}>Question</button>
+                  <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="14" height="10" rx="2" /><path d="M3.5 6 10 10.5 16.5 6" /></svg>Email</button>
+                  <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h6l-1 6 3 2v1H5v-1l3-2-1-6z" /><path d="M10 12v5" /></svg>Pin</button>
+                  <button type="button" onClick={() => setWhatsappOn((v) => !v)} title="WhatsApp alert (coming soon)" style={opt(whatsappOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3a7 7 0 0 0-6 10.5L3 17l3.7-1A7 7 0 1 0 10 3z" /><path d="M7.5 7.5c0 3 2 5 5 5 .6 0 1-.6.7-1.1l-1-1.2-1.4.6-1.6-1.6.6-1.4-1.2-1c-.5-.3-1.1.1-1.1.7z" /></svg>WhatsApp</button>
+                  <button type="button" onClick={() => fileRef.current?.click()} style={opt(false)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13V4m0 0 3.5 3.5M10 4 6.5 7.5M4 14v2h12v-2" /></svg>Upload</button>
+                  <button type="button" onClick={() => setShowQ((v) => !v)} style={opt(showQ)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7.5 7.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.7-.9 1.4v.3" /><path d="M10 15v.4" /></svg>Question</button>
                   <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                 </div>
+                {whatsappOn && <div style={{ font: "500 11.5px/16px var(--font-sans)", color: "var(--amber)", marginBottom: 8 }}>WhatsApp alerts are coming soon, this message posts to the chat for now.</div>}
                 {replyTo && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--subtle)", borderLeft: "3px solid var(--indigo-600)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -280,7 +293,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
             {!selUser ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>—</div> : pinned.length === 0 ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>Nothing pinned.</div> : pinned.map((m) => (
               <div key={m.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, marginBottom: 8 }}>
                 <div style={{ display: "flex", gap: 6, marginBottom: 6 }}><span className="pill pill-indigo">Pinned</span>{m.emailed && <span className="pill pill-green">Emailed</span>}</div>
-                <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body || m.file_name}</div>
+                <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{parseAsk(m.body)?.q ?? m.body ?? m.file_name}</div>
               </div>
             ))}
           </div>

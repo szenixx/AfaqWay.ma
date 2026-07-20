@@ -128,7 +128,13 @@ export default function AuthPage() {
         });
         if (error) setError(error.message);
         else if (data.session) router.push(POST_AUTH);
-        else setNotice("Almost there, check your email to confirm your account, then log in.");
+        else {
+          // Accounts are auto-confirmed, so log the user in right away instead of
+          // waiting on a confirmation email.
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInErr) setNotice("Your account is ready. Please log in to continue.");
+          else router.push(POST_AUTH);
+        }
       }
     } finally {
       setLoading(false);

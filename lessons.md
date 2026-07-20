@@ -21,3 +21,19 @@
   client saw "Failed to send a request to the Edge Function". Always return HTTP 200 with
   {ok,error} so the chat shows the real SMTP reason. Actual delivery depends on Zoho account
   SMTP settings (app-specific password / region), which is outside the code.
+
+## Email provider = ZeptoMail (2026-07-20)
+- `send-update` sends via **ZeptoMail** (Zoho transactional): host smtp.zeptomail.com, port 587
+  (STARTTLS) / 465 (SSL), username is the LITERAL string `emailapikey`, password = the ZeptoMail
+  API token, From = a verified afaqway.com sender (noreply@afaqway.com). Verified working ({ok,sent:1}).
+  Plain Zoho SMTP (smtp/smtppro.zoho.com) returned 535 — do not use it; use ZeptoMail.
+- Auth emails (signup verification / invitation) should ALSO use this ZeptoMail SMTP with
+  noreply@afaqway.com, set in Supabase Dashboard → Authentication → SMTP Settings (removes the
+  built-in "email rate limit exceeded"). That's a dashboard setting — not changeable via tools.
+- Edge-function boot: import mailer via `npm:nodemailer`, NOT `deno.land/x/denomailer` (the
+  deno.land import is flaky at cold start → 503 "Failed to send a request to the Edge Function").
+
+## Design system directive (2026-07-20)
+- From now on, ALL new UI follows the **/admin floating design system** (scoped `.adm-*`: rounded
+  floating modules, soft elevation, blurred logo canvas, generous whitespace, pill controls) — even
+  outside /admin. E.g. the dashboard desktop-advice banner is a floating rounded module (phone-only).

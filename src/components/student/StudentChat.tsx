@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { glassPanelStyle } from "./GlassCard";
 import { notify, requestNotify } from "@/lib/notify";
 import { uploadUserFile, fileUrl } from "@/lib/r2";
+import { parseAsk } from "@/lib/chat";
 
 type Msg = { id: string; sender: string; body: string; file_path: string | null; file_name: string | null; created_at: string; reply_to: string | null };
 
@@ -80,25 +80,36 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
   }
 
   return (
-    <div style={{ ...glassPanelStyle, padding: 0, overflow: "hidden", height: 480, display: "flex", flexDirection: "column" }}>
+    <div className="stu-chat-texture" style={{ padding: 0, overflow: "hidden", height: "min(70vh, 480px)", minHeight: 340, display: "flex", flexDirection: "column", borderRadius: 20, border: "1px solid var(--line)", boxShadow: "0 10px 30px rgba(23,35,58,.08)" }}>
       <div ref={threadRef} style={{ flex: 1, minHeight: 0, padding: 16, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-        <div style={{ alignSelf: "flex-start", maxWidth: "78%", background: "rgba(255,255,255,.7)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>
+        <div style={{ alignSelf: "flex-start", maxWidth: "78%", background: "rgba(255,255,255,.92)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>
           {full ? "Welcome. Your dedicated admin answers here, send any document or question." : "Welcome. Send a document or a question and our team will reply here."}
         </div>
         {msgs.map((m) => {
           const mine = m.sender === "user";
           const quoted = m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null;
+          const ask = parseAsk(m.body);
           return (
             <div key={m.id} style={{ display: "flex", flexDirection: mine ? "row-reverse" : "row", alignItems: "center", gap: 6, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "90%" }}
               onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m }); }}>
-              <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "rgba(255,255,255,.7)", borderRadius: 12, padding: "9px 12px" }}>
+              <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "rgba(255,255,255,.92)", borderRadius: 12, padding: "9px 12px" }}>
                 {quoted && (
                   <div style={{ borderLeft: "3px solid var(--indigo-600)", background: "rgba(43,76,155,.06)", borderRadius: 6, padding: "4px 8px", marginBottom: 6 }}>
                     <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: "var(--indigo-600)" }}>{quoted.sender === "user" ? "You" : "AfaqWay"}</span>
                     <span style={{ display: "block", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{quoted.body?.slice(0, 60) || quoted.file_name || "Attachment"}</span>
                   </div>
                 )}
-                {m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
+                {ask ? (
+                  <div>
+                    <div style={{ font: "600 13px/19px var(--font-sans)", color: "var(--ink)" }}>{ask.q}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 7 }}>
+                      {ask.opts.map((o, i) => (
+                        <button key={i} type="button" onClick={() => setBody(o)} title="Tap to put this answer in your message box" style={{ textAlign: "left", border: "1px solid var(--indigo-line)", borderRadius: 9, padding: "8px 11px", cursor: "pointer", background: "var(--card)", font: "500 12.5px/17px var(--font-sans)", color: "var(--indigo-text)" }}>{i + 1}. {o}</button>
+                      ))}
+                    </div>
+                    <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>Tap an answer, then press Send.</div>
+                  </div>
+                ) : m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
                 {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>{m.file_name || "file"}</button>}
                 <div style={{ font: "400 10px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 5 }}>{new Date(m.created_at).toLocaleString()}</div>
               </div>
@@ -112,7 +123,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
         })}
       </div>
       {notice && <div style={{ padding: "8px 16px", font: "500 12.5px/18px var(--font-sans)", color: notice.kind === "error" ? "var(--red)" : "var(--amber)", background: notice.kind === "error" ? "var(--red-tint)" : "var(--amber-tint)", borderTop: "1px solid var(--line-soft)" }}>{notice.text}</div>}
-      <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12 }}>
+      <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12, background: "var(--card)" }}>
         {replyTo && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,.6)", borderLeft: "3px solid var(--indigo-600)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
