@@ -37,3 +37,9 @@
 - From now on, ALL new UI follows the **/admin floating design system** (scoped `.adm-*`: rounded
   floating modules, soft elevation, blurred logo canvas, generous whitespace, pill controls) — even
   outside /admin. E.g. the dashboard desktop-advice banner is a floating rounded module (phone-only).
+
+## /admin/dashboard uses iOS-26 Liquid Glass (2026-07-20)
+- Dashboard cards/sidebar/header are translucent "Liquid Glass" (rgba white ~.5 + backdrop-blur
+  ~26px saturate + inset highlight + soft shadow) floating over a refractive backdrop (gradient +
+  two blurred colour blobs on .dash-root). This is the dashboard-only system; do not flatten it.
+- Admin sidebar "Dashboard" is an expandable group → Overview + Wallet (routes /admin/dashboard/*).

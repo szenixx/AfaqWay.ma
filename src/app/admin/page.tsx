@@ -16,7 +16,6 @@ import { notify, requestNotify } from "@/lib/notify";
 
 type Page = { id: string; label: string; superOnly?: boolean };
 const PAGES: Page[] = [
-  { id: "dashboard", label: "Dashboard", superOnly: true },
   { id: "admins", label: "Admin Management", superOnly: true },
   { id: "reviews", label: "Payment Reviews", superOnly: true },
   { id: "methods", label: "Payment Methods", superOnly: true },
@@ -299,8 +298,25 @@ export default function AdminPage() {
 
           <nav className="adm-nav">
             {!collapsed && <div className="adm-group-label">Workspace</div>}
+            {isSuper && (() => {
+              const open = openGroups.DASH;
+              return (
+                <div>
+                  <button type="button" onClick={() => { if (collapsed) { setCollapsed(false); setOpenGroups((o) => ({ ...o, DASH: true })); } else setOpenGroups((o) => ({ ...o, DASH: !o.DASH })); }} title={lbl("Dashboard")} className={cls(false)} style={{ justifyContent: collapsed ? "center" : "space-between" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}><span className="adm-item-ico">{PAGE_ICONS.dashboard}</span>{!collapsed && "Dashboard"}</span>
+                    {!collapsed && <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }}><path d="M7 5l5 5-5 5" /></svg>}
+                  </button>
+                  {open && !collapsed && (
+                    <>
+                      <button type="button" onClick={() => router.push("/admin/dashboard/overview")} className={cls(false, "sub")}><span className="adm-item-ico">{PAGE_ICONS.dashboard}</span>Overview</button>
+                      <button type="button" onClick={() => router.push("/admin/dashboard/wallet")} className={cls(false, "sub")}><span className="adm-item-ico">{PAGE_ICONS.methods}</span>Wallet</button>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             {pages.map((p) => (
-              <button key={p.id} type="button" onClick={() => p.id === "dashboard" ? router.push("/admin/dashboard/overview") : setPage(p.id)} title={lbl(p.label)} className={cls(p.id === page)}>
+              <button key={p.id} type="button" onClick={() => setPage(p.id)} title={lbl(p.label)} className={cls(p.id === page)}>
                 <span className="adm-item-ico">{PAGE_ICONS[p.id]}</span>{!collapsed && p.label}
               </button>
             ))}
