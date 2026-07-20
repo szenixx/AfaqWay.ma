@@ -261,7 +261,8 @@ a {
    /admin — floating dashboard design system (self-contained, scoped .adm-*).
    Rounded floating modules, blurred logo canvas, soft elevation, whitespace.
    ========================================================================== */
-.adm-root { min-height: 100vh; position: relative; background: #EBEEF4; overflow-x: hidden; }
+/* Admin workspace always renders 10% larger than the browser zoom (100% browser = 110% here) */
+.adm-root { zoom: 1.1; min-height: 100vh; position: relative; background: #EBEEF4; overflow-x: hidden; }
 .adm-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; }
 .adm-bg > span { width: 80vmin; height: 80vmin; filter: blur(7px); opacity: .18; display: block; transform: translate(4%, 6%); }
 .adm-bg svg { width: 100%; height: 100%; }
@@ -317,7 +318,7 @@ a {
 .dash-content { flex: 1; min-height: 0; overflow: hidden; }
 
 /* Dashboard embedded inside the /admin content area (no separate shell) */
-.dash-embed { position: relative; height: calc(100dvh - 84px); overflow: hidden; border-radius: 22px; }
+.dash-embed { position: relative; height: calc((100dvh - 84px) / 1.1); overflow: hidden; border-radius: 22px; }
 .dash-embed > .dash-grid { position: relative; z-index: 1; height: 100%; }
 @media (max-width: 1279px) { .dash-embed { height: auto; overflow: visible; } }
 
