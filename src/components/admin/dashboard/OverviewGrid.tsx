@@ -1,6 +1,6 @@
 "use client";
 
-import { DashCard, StatCard, Donut, Bars, MiniTable, Pill, useOverviewData } from "@/components/admin/dashboard/kit";
+import { DashCard, StatCard, Donut, Bars, MiniTable, Pill, SuperAdminBar, ACCENTS, useOverviewData } from "@/components/admin/dashboard/kit";
 import { countryByCode } from "@/components/profile-setup/countries";
 
 const i = (d: React.ReactNode) => <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
@@ -9,14 +9,15 @@ export default function OverviewGrid() {
   const d = useOverviewData();
   return (
     <div className="dash-grid ov-grid">
+      <div className="span4"><SuperAdminBar /></div>
       <div className="span4">
         <div className="dash-stats-row">
-          <StatCard label="Total students" value={d.totalStudents} loading={d.loading} icon={i(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>)} delta={8} />
-          <StatCard label="Active students" value={d.activeStudents} loading={d.loading} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} delta={5} />
-          <StatCard label="New today" value={d.newToday} loading={d.loading} icon={i(<><path d="M10 4v12M4 10h12" /></>)} />
-          <StatCard label="Countries" value={d.countryDist.length} loading={d.loading} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M3 10h14M10 3c2 2.4 2 11.6 0 14" /></>)} />
-          <StatCard label="Applications" value={d.journey[3]?.value ?? 0} loading={d.loading} icon={i(<><rect x="4" y="3" width="12" height="14" rx="2" /><path d="M7 8h6M7 11h4" /></>)} delta={12} />
-          <StatCard label="Arrived" value={d.journey[5]?.value ?? 0} loading={d.loading} icon={i(<><path d="M3 10l7-6 7 6M5 9v7h10V9" /></>)} />
+          <StatCard label="Total students" value={d.totalStudents} loading={d.loading} accent={ACCENTS[0]} icon={i(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>)} delta={8} />
+          <StatCard label="Active students" value={d.activeStudents} loading={d.loading} accent={ACCENTS[1]} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} delta={5} />
+          <StatCard label="New today" value={d.newToday} loading={d.loading} accent={ACCENTS[2]} icon={i(<><path d="M10 4v12M4 10h12" /></>)} />
+          <StatCard label="Countries" value={d.countryDist.length} loading={d.loading} accent={ACCENTS[3]} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M3 10h14M10 3c2 2.4 2 11.6 0 14" /></>)} />
+          <StatCard label="Applications" value={d.journey[3]?.value ?? 0} loading={d.loading} accent={ACCENTS[4]} icon={i(<><rect x="4" y="3" width="12" height="14" rx="2" /><path d="M7 8h6M7 11h4" /></>)} delta={12} />
+          <StatCard label="Arrived" value={d.journey[5]?.value ?? 0} loading={d.loading} accent={ACCENTS[5]} icon={i(<><path d="M3 10l7-6 7 6M5 9v7h10V9" /></>)} />
         </div>
       </div>
 

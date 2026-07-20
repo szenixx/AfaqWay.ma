@@ -1,6 +1,6 @@
 "use client";
 
-import { DashCard, StatCard, Donut, Bars, MiniTable, ProgressRow, Pill, useWalletData } from "@/components/admin/dashboard/kit";
+import { DashCard, StatCard, Donut, Bars, MiniTable, ProgressRow, Pill, SuperAdminBar, ACCENTS, useWalletData } from "@/components/admin/dashboard/kit";
 import { methodById } from "@/lib/plans";
 
 const i = (d: React.ReactNode) => <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
@@ -10,14 +10,15 @@ export default function WalletGrid() {
   const d = useWalletData();
   return (
     <div className="dash-grid wa-grid">
+      <div className="span4"><SuperAdminBar /></div>
       <div className="span4">
         <div className="dash-stats-row">
-          <StatCard label="Total revenue" value={d.totalRevenue} suffix=" DH" loading={d.loading} icon={i(<><path d="M10 3v14M6 6h5a2.5 2.5 0 0 1 0 5H6h6" /></>)} delta={14} />
-          <StatCard label="This month" value={d.monthRevenue} suffix=" DH" loading={d.loading} icon={i(<><rect x="3" y="5" width="14" height="12" rx="2" /><path d="M3 9h14M7 3v3M13 3v3" /></>)} delta={9} />
-          <StatCard label="Pending" value={d.pending} loading={d.loading} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 2" /></>)} />
-          <StatCard label="Successful" value={d.successful} loading={d.loading} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} delta={6} />
-          <StatCard label="Failed" value={d.failed} loading={d.loading} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></>)} />
-          <StatCard label="Paying users" value={d.subDist.reduce((s, x) => s + x.value, 0)} loading={d.loading} icon={i(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>)} />
+          <StatCard label="Total revenue" value={d.totalRevenue} suffix=" DH" loading={d.loading} accent={ACCENTS[0]} icon={i(<><path d="M10 3v14M6 6h5a2.5 2.5 0 0 1 0 5H6h6" /></>)} delta={14} />
+          <StatCard label="This month" value={d.monthRevenue} suffix=" DH" loading={d.loading} accent={ACCENTS[1]} icon={i(<><rect x="3" y="5" width="14" height="12" rx="2" /><path d="M3 9h14M7 3v3M13 3v3" /></>)} delta={9} />
+          <StatCard label="Pending" value={d.pending} loading={d.loading} accent={ACCENTS[3]} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 2" /></>)} />
+          <StatCard label="Successful" value={d.successful} loading={d.loading} accent={ACCENTS[5]} icon={i(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} delta={6} />
+          <StatCard label="Failed" value={d.failed} loading={d.loading} accent="#F03E3E" icon={i(<><circle cx="10" cy="10" r="7" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></>)} />
+          <StatCard label="Paying users" value={d.subDist.reduce((s, x) => s + x.value, 0)} loading={d.loading} accent={ACCENTS[4]} icon={i(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>)} />
         </div>
       </div>
 

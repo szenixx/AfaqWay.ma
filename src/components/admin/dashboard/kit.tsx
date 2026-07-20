@@ -9,7 +9,9 @@ import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
 
-const PALETTE = ["#2B4C9B", "#4F86C6", "#63B3A6", "#E0A458", "#C56B6B", "#8E7CC3", "#5AA9E6"];
+const PALETTE = ["#3B5BDB", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
+// per-stat accent colours so the KPI row isn't a monochrome block
+export const ACCENTS = ["#3B5BDB", "#20C997", "#F76707", "#845EF7", "#F06595", "#0CA678"];
 
 // ── Base card ───────────────────────────────────────────────────────────────
 export function DashCard({ title, subtitle, action, children, bodyScroll, style }: { title?: string; subtitle?: string; action?: ReactNode; children: ReactNode; bodyScroll?: boolean; style?: CSSProperties }) {
@@ -48,19 +50,62 @@ function useCountUp(value: number) {
   return n;
 }
 
-export function StatCard({ label, value, prefix, suffix, delta, icon, loading }: { label: string; value: number; prefix?: string; suffix?: string; delta?: number; icon?: ReactNode; loading?: boolean }) {
+export function StatCard({ label, value, prefix, suffix, delta, icon, loading, accent = "#3B5BDB" }: { label: string; value: number; prefix?: string; suffix?: string; delta?: number; icon?: ReactNode; loading?: boolean; accent?: string }) {
   const n = useCountUp(loading ? 0 : value);
   return (
-    <div className="dash-card dash-stat">
+    <div className="dash-card dash-stat" style={{ borderTop: `3px solid ${accent}` }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <span style={{ font: "600 11px/15px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</span>
-        {icon && <span style={{ width: 28, height: 28, borderRadius: 9, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>}
+        {icon && <span style={{ width: 28, height: 28, borderRadius: 9, flex: "none", background: `${accent}22`, color: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>}
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
         <span style={{ font: "700 clamp(20px, 2.4vh, 26px)/1.1 var(--font-sans)", color: "var(--ink)" }}>{loading ? "—" : `${prefix ?? ""}${Math.round(n).toLocaleString("en-US")}${suffix ?? ""}`}</span>
         {typeof delta === "number" && !loading && (
           <span style={{ font: "600 11px/1 var(--font-sans)", color: delta >= 0 ? "var(--green)" : "var(--red)" }}>{delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}%</span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Super-admin welcome bar + live Casablanca clock ──────────────────────────
+export function SuperAdminBar() {
+  const [me, setMe] = useState<{ name: string; id: string } | null>(null);
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("admins").select("name").eq("email", (user.email ?? "").toLowerCase()).maybeSingle();
+      setMe({ name: (data?.name as string) || (user.email?.split("@")[0] ?? "Super Admin"), id: user.id });
+    })();
+  }, []);
+  useEffect(() => { setNow(new Date()); const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+
+  const fmt = (o: Intl.DateTimeFormatOptions) => now ? now.toLocaleString("en-US", { timeZone: "Africa/Casablanca", ...o }) : "";
+  const clock = fmt({ hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true }); // e.g. "3:45:12 PM"
+  const [time, ampm] = clock.split(" ");
+  const date = fmt({ weekday: "long", day: "numeric", month: "long" });
+  const shortId = me ? "SA-" + me.id.replace(/-/g, "").slice(0, 6).toUpperCase() : "…";
+
+  return (
+    <div className="dash-card" style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "clamp(9px,1.3vh,15px) clamp(14px,1.5vw,20px)", background: "linear-gradient(120deg, rgba(59,91,219,.14), rgba(32,201,151,.10) 60%, rgba(132,94,247,.12))" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <span style={{ width: 42, height: 42, borderRadius: 14, flex: "none", background: "linear-gradient(135deg,#3B5BDB,#845EF7)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", font: "700 18px/1 var(--font-sans)", boxShadow: "0 6px 16px rgba(59,91,219,.35)" }}>{(me?.name ?? "S").charAt(0).toUpperCase()}</span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ font: "700 clamp(15px,2vh,18px)/1.2 var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me?.name ?? "Super Admin"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+            <span style={{ font: "600 9.5px/1 var(--font-sans)", letterSpacing: ".06em", textTransform: "uppercase", color: "#fff", background: "linear-gradient(135deg,#3B5BDB,#845EF7)", borderRadius: 999, padding: "3px 8px" }}>Super Admin</span>
+            <span style={{ font: "600 11px/1 var(--font-sans)", color: "var(--indigo-600)" }}>{shortId}</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ textAlign: "right", flex: "none" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 6 }}>
+          <span style={{ font: "800 clamp(24px,3.6vh,38px)/1 var(--font-sans)", letterSpacing: "-.5px", background: "linear-gradient(135deg,#3B5BDB,#20C997)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontVariantNumeric: "tabular-nums" }}>{time || "—"}</span>
+          <span style={{ font: "700 clamp(11px,1.5vh,15px)/1 var(--font-sans)", color: "var(--indigo-600)" }}>{ampm}</span>
+        </div>
+        <div style={{ font: "500 10.5px/14px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>{date} · Casablanca, Morocco</div>
       </div>
     </div>
   );

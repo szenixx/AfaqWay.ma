@@ -337,8 +337,8 @@ a {
 /* Desktop no-scroll grids */
 .dash-grid { display: grid; gap: 10px; height: 100%; }
 .dash-stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
-.ov-grid { grid-template-rows: auto minmax(0,1.15fr) minmax(0,1fr); grid-template-columns: repeat(4, 1fr); }
-.wa-grid { grid-template-rows: auto minmax(0,1.15fr) minmax(0,1fr); grid-template-columns: repeat(4, 1fr); }
+.ov-grid { grid-template-rows: auto auto minmax(0,1.08fr) minmax(0,0.92fr); grid-template-columns: repeat(4, 1fr); }
+.wa-grid { grid-template-rows: auto auto minmax(0,1.08fr) minmax(0,0.92fr); grid-template-columns: repeat(4, 1fr); }
 .span2 { grid-column: span 2; } .span3 { grid-column: span 3; } .span4 { grid-column: span 4; }
 
 /* Tablet / mobile: stack and allow normal scrolling */
