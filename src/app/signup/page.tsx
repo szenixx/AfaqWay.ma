@@ -82,9 +82,15 @@ export default function AuthPage() {
   const isSignup = mode === "signup";
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("mode") === "signup") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "signup") {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time UI sync from query param on mount
       setMode("signup");
+    }
+    if (params.get("reason") === "another-device") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time UI sync from query param on mount
+      setNotice("You were signed out because your account was opened on another device. Only one device can be signed in at a time.");
+      return; // stay on the sign-in form; don't auto-redirect
     }
     // Already signed in? Skip the form and go straight to the workspace.
     (async () => {

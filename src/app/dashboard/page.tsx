@@ -8,6 +8,7 @@ import StudentTopBar from "@/components/student/StudentTopBar";
 import StudentChat from "@/components/student/StudentChat";
 import { glassPanelStyle } from "@/components/student/GlassCard";
 import { planById } from "@/lib/plans";
+import { useSingleSession } from "@/lib/useSingleSession";
 
 type Nav = "dashboard" | "roadmap" | "chat" | "profile" | "help";
 type Profile = { full_name: string | null; plan: string | null; user_number: number | null };
@@ -109,6 +110,7 @@ export default function Dashboard() {
   const [nav, setNav] = useState<Nav>("dashboard");
   const [chatUnread, setChatUnread] = useState(false);
   const navRef = useRef<Nav>(nav);
+  useSingleSession(userId);
 
   useEffect(() => { navRef.current = nav; if (nav === "chat") setChatUnread(false); }, [nav]);
   useEffect(() => {

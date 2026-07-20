@@ -11,6 +11,7 @@ import type { StudentProfile } from "@/lib/programs/types";
 import { fetchAdminRole } from "@/lib/admin";
 import { LegalDocModal } from "@/components/legal/LegalContent";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
+import { useSingleSession } from "@/lib/useSingleSession";
 import { getCountryFlow } from "@/lib/onboarding/countryFlows";
 import type { CountryFlow, CountryFlowStep, FieldDef } from "@/lib/onboarding/countryFlows/types";
 import { supabase } from "@/lib/supabase/client";
@@ -106,7 +107,13 @@ function validateField(f: FieldDef, v: string): boolean {
   return true;
 }
 function fieldVisible(f: FieldDef, vals: Record<string, string>): boolean {
-  return !f.showWhen || vals[f.showWhen.field] === f.showWhen.equals;
+  if (!f.showWhen) return true;
+  const conds = Array.isArray(f.showWhen) ? f.showWhen : [f.showWhen];
+  return conds.every((c) => {
+    if (c.equals !== undefined) return vals[c.field] === c.equals;
+    if (c.notEquals !== undefined) return vals[c.field] !== c.notEquals;
+    return true;
+  });
 }
 function fieldInvalid(f: FieldDef, value: string, vals: Record<string, string>): boolean {
   if (!fieldVisible(f, vals)) return false;
@@ -126,7 +133,11 @@ const numOrNull = (v: string | undefined) => { const n = parseFloat(v ?? ""); re
 function sanitize(f: FieldDef, raw: string): string {
   let v = raw;
   if (f.sanitize === "digits") v = v.replace(/[^\d]/g, "");
-  else if (f.sanitize === "decimal") v = v.replace(/[^\d.]/g, "");
+  else if (f.sanitize === "decimal") {
+    v = v.replace(/,/g, ".").replace(/[^\d.]/g, ""); // phone keyboards often type "," for the decimal point
+    const i = v.indexOf(".");
+    if (i !== -1) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, ""); // keep only the first "."
+  }
   if (f.maxLength) v = v.slice(0, f.maxLength);
   return v;
 }
@@ -359,6 +370,7 @@ export default function ProfileSetup() {
   const [personal, setPersonal] = useState<Personal>(EMPTY_P);
   const [cfa, setCfa] = useState<Cfa>({});
   const [userNumber, setUserNumber] = useState<number | null>(null);
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirmCode, setConfirmCode] = useState<string | null>(null);
   const [progSub, setProgSub] = useState(0); // sub-step within the program step (0 = preferences, 1 = pick)
@@ -372,6 +384,8 @@ export default function ProfileSetup() {
   const cRef = useRef(cfa);
   const uidRef = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useSingleSession(sessionUserId);
 
   const flow = getCountryFlow(personal.destination_country);
   const total = 1 + (flow?.steps.length ?? 0);
@@ -387,6 +401,7 @@ export default function ProfileSetup() {
       if (cancelled) return;
       if (admin.role) { router.replace("/admin"); return; }
       uidRef.current = user.id;
+      setSessionUserId(user.id);
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (cancelled) return;
       const row = (data ?? {}) as Record<string, unknown>;

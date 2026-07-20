@@ -154,15 +154,28 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
 
   useEffect(() => {
     if (!underReview || !pricing.payment_id) return;
+    let done = false;
+    const apply = (status?: string, comment?: string) => {
+      if (done) return;
+      if (status === "approved") { done = true; setPricing("status", "approved"); onApproved(); }
+      else if (status === "rejected") { done = true; setPricing("status", "rejected"); setPricing("reject_comment", comment ?? ""); }
+    };
+    // Catch up on the current status now (in case approval happened while the tab
+    // was closed / realtime missed the event), then keep polling as a fallback.
+    const check = async () => {
+      const { data } = await supabase.from("payments").select("status, rejection_comment").eq("id", pricing.payment_id).maybeSingle();
+      if (data) apply(data.status, data.rejection_comment ?? "");
+    };
+    void check();
+    const poll = setInterval(() => { if (done) { clearInterval(poll); return; } void check(); }, 6000);
     const ch = supabase
       .channel(`pay-${pricing.payment_id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "payments", filter: `id=eq.${pricing.payment_id}` }, (payload) => {
         const row = payload.new as { status?: string; rejection_comment?: string };
-        if (row.status === "approved") { setPricing("status", "approved"); onApproved(); }
-        else if (row.status === "rejected") { setPricing("status", "rejected"); setPricing("reject_comment", row.rejection_comment ?? ""); }
+        apply(row.status, row.rejection_comment ?? "");
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, [underReview, pricing.payment_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sub-step 0: choose a plan (iOS glass cards, no outer frame) ──────

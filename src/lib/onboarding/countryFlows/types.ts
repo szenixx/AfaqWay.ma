@@ -28,8 +28,11 @@ export interface FieldDef {
   // generic cross-field rules (interpreted by the wizard, keeps it country-agnostic)
   disableOptionWhen?: { field: string; equals: string; option: string; note?: string };
   forceValueWhen?: { field: string; equals: string; value: string };
-  showWhen?: { field: string; equals: string }; // render + validate only when condition holds
+  // render + validate only when condition(s) hold; an array means ALL must hold
+  showWhen?: ShowCond | ShowCond[];
 }
+
+export type ShowCond = { field: string; equals?: string; notEquals?: string };
 
 export interface FieldSection {
   eyebrow: string;
