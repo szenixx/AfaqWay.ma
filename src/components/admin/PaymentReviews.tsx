@@ -11,8 +11,8 @@ type UserInfo = { full_name: string | null; email: string | null; destination_co
 
 function Stat({ label, value, tone, icon }: { label: string; value: number; tone?: string; icon: React.ReactNode }) {
   return (
-    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderRadius: 14, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
-      <span style={{ width: 38, height: 38, borderRadius: 10, background: "var(--indigo-tint)", color: tone ?? "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
+    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
+      <span style={{ width: 38, height: 38, borderRadius: 14, background: "var(--indigo-tint)", color: tone ?? "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
       <div>
         <div style={{ font: "700 22px/26px var(--font-sans)", color: tone ?? "var(--ink)" }}>{value}</div>
         <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</div>
@@ -108,12 +108,20 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
 
   const statusPill = (s: string) => s === "approved" ? "pill pill-green" : s === "rejected" ? "pill pill-red" : s === "cancelled" ? "pill pill-grey" : "pill pill-amber";
   const statusLabel = (s: string) => s === "under_review" ? "Under review" : s.charAt(0).toUpperCase() + s.slice(1);
+  const statusIcon = (s: string) => {
+    const P = { width: 12, height: 12, viewBox: "0 0 20 20", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+    if (s === "approved") return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M6.5 10.5 9 13l4.5-5" /></svg>;
+    if (s === "rejected") return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></svg>;
+    if (s === "cancelled") return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M6.5 6.5l7 7" /></svg>;
+    return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M10 6v4.3l2.8 1.6" /></svg>;
+  };
+  const badge = (cls: string, children: React.ReactNode) => <span className={cls} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{children}</span>;
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Payment reviews</h1>
-        <button type="button" onClick={() => setAskReset(true)} title="Reset the statistics counters" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
+        <button type="button" onClick={() => setAskReset(true)} title="Reset the statistics counters" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
           <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4v4h-4M4 16v-4h4" /><path d="M15.5 8a6 6 0 0 0-11-1M4.5 12a6 6 0 0 0 11 1" /></svg>
           Reset stats
         </button>
@@ -127,9 +135,9 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>
-        <div style={{ display: "inline-flex", background: "var(--subtle)", border: "1px solid var(--line)", borderRadius: 10, padding: 3 }}>
+        <div style={{ display: "inline-flex", background: "var(--subtle)", border: "1px solid var(--line)", borderRadius: 14, padding: 3 }}>
           {(["pending", "history"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => setTab(t)} style={{ height: 34, padding: "0 16px", borderRadius: 8, border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", background: tab === t ? "var(--card)" : "transparent", color: tab === t ? "var(--ink)" : "var(--ink-soft)", boxShadow: tab === t ? "var(--shadow-card)" : "none" }}>{t === "pending" ? "Pending" : "History"}</button>
+            <button key={t} type="button" onClick={() => setTab(t)} style={{ height: 34, padding: "0 16px", borderRadius: 11, border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", background: tab === t ? "var(--card)" : "transparent", color: tab === t ? "var(--ink)" : "var(--ink-soft)", boxShadow: tab === t ? "var(--shadow-card)" : "none" }}>{t === "pending" ? "Pending" : "History"}</button>
           ))}
         </div>
         <input className="af" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by payment ID, name or email" style={{ flex: "1 1 220px", maxWidth: 340 }} />
@@ -149,7 +157,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       {loading ? (
         <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p>
       ) : list.length === 0 ? (
-        <div style={{ border: "1px dashed var(--line)", borderRadius: 12, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>{tab === "pending" ? "No pending payments right now." : "No processed payments yet."}</div>
+        <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>{tab === "pending" ? "No pending payments right now." : "No processed payments yet."}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {list.map((r) => {
@@ -158,7 +166,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
             const method = methodById(r.method);
             const flash = flashId === r.id;
             return (
-              <div key={r.id} id={`pay-${r.id}`} style={{ border: `1px solid ${flash ? "var(--indigo-600)" : "var(--line)"}`, borderRadius: 14, background: flash ? "var(--indigo-tint)" : "var(--card)", padding: 18, boxShadow: flash ? "0 0 0 4px var(--indigo-tint)" : "var(--shadow-card)", transition: "background 500ms ease, border-color 500ms ease, box-shadow 500ms ease" }}>
+              <div key={r.id} id={`pay-${r.id}`} style={{ border: `1px solid ${flash ? "var(--indigo-600)" : "var(--line)"}`, borderRadius: 18, background: flash ? "var(--indigo-tint)" : "var(--card)", padding: 18, boxShadow: flash ? "0 0 0 4px var(--indigo-tint)" : "var(--shadow-card)", transition: "background 500ms ease, border-color 500ms ease, box-shadow 500ms ease" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                   <div>
                     <div style={{ font: "600 15px/21px var(--font-sans)", color: "var(--ink)" }}>{u?.full_name || "Unnamed user"}</div>
@@ -169,7 +177,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
                     <span className="pill pill-indigo">{plan?.name ?? r.plan}</span>
                     <span className="pill pill-grey">{r.amount.toLocaleString("en-US")} {r.currency === "MAD" ? "DH" : r.currency}</span>
                     <span className="pill pill-grey">{method?.name ?? r.method}</span>
-                    <span className={statusPill(r.status)}>{statusLabel(r.status)}</span>
+                    {badge(statusPill(r.status), <>{statusIcon(r.status)}{statusLabel(r.status)}</>)}
                   </div>
                 </div>
                 <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 8 }}>Submitted {new Date(r.created_at).toLocaleString()}{r.reviewed_at ? ` · reviewed ${new Date(r.reviewed_at).toLocaleString()}` : ""}</div>
@@ -201,7 +209,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
 
       {viewer && (
         <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(23,35,58,.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ position: "relative", width: "100%", maxWidth: 860, height: "88vh", background: "var(--card)", borderRadius: 14, boxShadow: "0 24px 70px rgba(23,35,58,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: 860, height: "88vh", background: "var(--card)", borderRadius: 18, boxShadow: "0 24px 70px rgba(23,35,58,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--line-soft)" }}>
               <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>Receipt</span>
               <button type="button" onClick={() => setViewer(null)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 999, border: "none", cursor: "pointer", background: "var(--subtle)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -224,8 +232,8 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
             <h2 style={{ font: "700 17px/23px var(--font-sans)", color: "var(--ink)", margin: "0 0 8px" }}>Reset the statistics?</h2>
             <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink-soft)", margin: 0 }}>The counters go back to zero from now on. Your pending and history of requests are kept.</p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-              <button type="button" onClick={() => setAskReset(false)} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
-              <button type="button" onClick={() => { setSince(Date.now()); setAskReset(false); }} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--indigo-600)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Reset</button>
+              <button type="button" onClick={() => setAskReset(false)} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
+              <button type="button" onClick={() => { setSince(Date.now()); setAskReset(false); }} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "none", background: "var(--indigo-600)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Reset</button>
             </div>
           </div>
         </div>
@@ -234,7 +242,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
   );
 }
 
-const base = { height: 40, padding: "0 16px", borderRadius: 10, cursor: "pointer", font: "600 13.5px/1 var(--font-sans)" } as const;
+const base = { height: 40, padding: "0 16px", borderRadius: 14, cursor: "pointer", font: "600 13.5px/1 var(--font-sans)" } as const;
 const btnPrimary = { ...base, border: "none", background: "var(--indigo-600)", color: "#fff" };
 const btnGhost = { ...base, border: "1px solid var(--line)", background: "var(--card)", color: "var(--ink)" };
 const btnRed = { ...base, border: "none", background: "var(--red)", color: "#fff" };

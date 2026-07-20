@@ -30,7 +30,7 @@ function MethodRow({ pm, onSaved }: { pm: PM; onSaved: () => void }) {
   const setEx = (i: number, p: Partial<Extra>) => setExtra(extra.map((e, j) => j === i ? { ...e, ...p } : e));
 
   return (
-    <div style={{ border: "1px solid var(--line)", borderRadius: 12, background: "var(--card)", padding: "13px 15px" }}>
+    <div style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--card)", padding: "13px 15px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
           <span style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
@@ -63,17 +63,17 @@ function MethodRow({ pm, onSaved }: { pm: PM; onSaved: () => void }) {
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <input className="af" value={e.title} onChange={(ev) => setEx(i, { title: ev.target.value })} placeholder="Title" style={{ flex: "1 1 120px" }} />
               <input className="af" value={e.value} onChange={(ev) => setEx(i, { value: ev.target.value })} placeholder="Detail" style={{ flex: "2 1 160px" }} />
-              <button type="button" onClick={() => setEx(i, { copyable: !e.copyable })} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 38, padding: "0 12px", borderRadius: 9, cursor: "pointer", font: "600 12px/1 var(--font-sans)", border: e.copyable ? "1px solid var(--green-line)" : "1px solid var(--line)", background: e.copyable ? "var(--green-tint)" : "var(--subtle)", color: e.copyable ? "var(--green)" : "var(--ink-faint)" }}>
+              <button type="button" onClick={() => setEx(i, { copyable: !e.copyable })} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 38, padding: "0 12px", borderRadius: 13, cursor: "pointer", font: "600 12px/1 var(--font-sans)", border: e.copyable ? "1px solid var(--green-line)" : "1px solid var(--line)", background: e.copyable ? "var(--green-tint)" : "var(--subtle)", color: e.copyable ? "var(--green)" : "var(--ink-faint)" }}>
                 <span style={{ width: 8, height: 8, borderRadius: 999, background: e.copyable ? "var(--green)" : "var(--ink-faint)" }} />Copy {e.copyable ? "on" : "off"}
               </button>
-              <button type="button" onClick={() => setExtra(extra.filter((_, j) => j !== i))} style={{ height: 38, width: 38, borderRadius: 9, border: "1px solid var(--red-line)", background: "var(--red-tint)", color: "var(--red)", cursor: "pointer" }}>✕</button>
+              <button type="button" onClick={() => setExtra(extra.filter((_, j) => j !== i))} style={{ height: 38, width: 38, borderRadius: 13, border: "1px solid var(--red-line)", background: "var(--red-tint)", color: "var(--red)", cursor: "pointer" }}>✕</button>
             </div>
           ))}
-          <button type="button" onClick={() => setExtra([...extra, { title: "", value: "", copyable: true }])} style={{ alignSelf: "flex-start", height: 34, padding: "0 12px", borderRadius: 9, border: "1px dashed var(--line)", background: "var(--card)", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}>+ Add detail</button>
+          <button type="button" onClick={() => setExtra([...extra, { title: "", value: "", copyable: true }])} style={{ alignSelf: "flex-start", height: 34, padding: "0 12px", borderRadius: 13, border: "1px dashed var(--line)", background: "var(--card)", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}>+ Add detail</button>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, alignItems: "center", marginTop: 4 }}>
             {saved && <span style={{ font: "500 12px/16px var(--font-sans)", color: "var(--green)" }}>Saved</span>}
-            <button type="button" disabled={saving} onClick={() => save()} style={{ height: 38, padding: "0 16px", borderRadius: 10, border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", background: "var(--indigo-600)", color: "#fff" }}>{saving ? "Saving…" : "Save details"}</button>
+            <button type="button" disabled={saving} onClick={() => save()} style={{ height: 38, padding: "0 16px", borderRadius: 14, border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", background: "var(--indigo-600)", color: "#fff" }}>{saving ? "Saving…" : "Save details"}</button>
           </div>
         </div>
       )}

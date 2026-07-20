@@ -5,7 +5,7 @@ import { countryByCode } from "@/components/profile-setup/countries";
 
 const i = (d: React.ReactNode) => <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
 
-export default function OverviewPage() {
+export default function OverviewGrid() {
   const d = useOverviewData();
   return (
     <div className="dash-grid ov-grid">

@@ -6,7 +6,7 @@ import { methodById } from "@/lib/plans";
 const i = (d: React.ReactNode) => <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
 const dh = (n: number) => `${Math.round(n).toLocaleString("en-US")} DH`;
 
-export default function WalletPage() {
+export default function WalletGrid() {
   const d = useWalletData();
   return (
     <div className="dash-grid wa-grid">

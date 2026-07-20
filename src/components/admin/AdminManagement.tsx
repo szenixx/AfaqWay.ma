@@ -8,7 +8,7 @@ type Form = { id?: string; name: string; email: string; phone: string; role: str
 const EMPTY: Form = { name: "", email: "", phone: "", role: "admin", describe_role: "" };
 const MASTER_EMAIL = "index.abde06@gmail.com"; // primary super-admin — no one can act on this console
 
-const base = { height: 34, minWidth: 78, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 12px", borderRadius: 9, cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", boxSizing: "border-box" } as const;
+const base = { height: 34, minWidth: 78, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 12px", borderRadius: 13, cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", boxSizing: "border-box" } as const;
 const btnPrimary = { ...base, border: "none", background: "var(--indigo-600)", color: "#fff" };
 const btnGhost = { ...base, border: "1px solid var(--line)", background: "var(--card)", color: "var(--ink)" };
 const btnRedGhost = { ...base, border: "1px solid var(--red-line)", background: "var(--red-tint)", color: "var(--red)" };
@@ -53,7 +53,7 @@ export default function AdminManagement() {
     return (
       <div style={{ marginTop: 20 }}>
         <div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)", marginBottom: 8 }}>{title} <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>({list.length})</span></div>
-        <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 14, background: "var(--card)" }}>
+        <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
             <thead>
               <tr style={{ textAlign: "left", font: "600 11px/15px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
@@ -116,8 +116,8 @@ export default function AdminManagement() {
             <div style={{ padding: 20 }}>
               <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{confirm.body}</p>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-                <button type="button" onClick={() => setConfirm(null)} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
-                <button type="button" onClick={confirm.onYes} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--red)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Yes, continue</button>
+                <button type="button" onClick={() => setConfirm(null)} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
+                <button type="button" onClick={confirm.onYes} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "none", background: "var(--red)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Yes, continue</button>
               </div>
             </div>
           </div>

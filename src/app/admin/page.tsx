@@ -10,6 +10,8 @@ import AdminManagement from "@/components/admin/AdminManagement";
 import PaymentMethodsAdmin from "@/components/admin/PaymentMethodsAdmin";
 import UserManagement from "@/components/admin/UserManagement";
 import AdminChat from "@/components/admin/AdminChat";
+import OverviewGrid from "@/components/admin/dashboard/OverviewGrid";
+import WalletGrid from "@/components/admin/dashboard/WalletGrid";
 import { Flag } from "@/components/ds";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
@@ -77,7 +79,7 @@ function PasscodeGate({ onPass, onLogout }: { onPass: () => void; onLogout: () =
             <input key={i} ref={refs[i]} value={d} inputMode="numeric" maxLength={1} autoFocus={i === 0}
               onChange={(e) => setDigit(i, e.target.value)}
               onKeyDown={(e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs[i - 1].current?.focus(); }}
-              style={{ width: 56, height: 64, textAlign: "center", font: "700 26px/1 var(--font-sans)", color: "var(--ink)", borderRadius: 12, border: "1px solid var(--line)", background: "var(--subtle)", outlineColor: "var(--indigo-600)" }} />
+              style={{ width: 56, height: 64, textAlign: "center", font: "700 26px/1 var(--font-sans)", color: "var(--ink)", borderRadius: 16, border: "1px solid var(--line)", background: "var(--subtle)", outlineColor: "var(--indigo-600)" }} />
           ))}
         </div>
         <div style={{ height: 20, marginTop: 12, font: "500 13px/20px var(--font-sans)", color: err ? "var(--red)" : "var(--ink-faint)" }}>{checking ? "Checking…" : err}</div>
@@ -92,7 +94,7 @@ function Placeholder({ title }: { title: string }) {
     <div>
       <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: "0 0 4px" }}>{title}</h1>
       <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "0 0 24px" }}>This page is part of the admin workspace and is coming next.</p>
-      <div style={{ border: "1px dashed var(--line)", borderRadius: 12, padding: 40, textAlign: "center", color: "var(--ink-faint)", font: "500 14px/21px var(--font-sans)" }}>Coming soon</div>
+      <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 40, textAlign: "center", color: "var(--ink-faint)", font: "500 14px/21px var(--font-sans)" }}>Coming soon</div>
     </div>
   );
 }
@@ -133,14 +135,14 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
     <div style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Reports</h1>
-        <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
+        <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
       </div>
       {loading ? <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p> : rows.length === 0 ? (
-        <div style={{ border: "1px dashed var(--line)", borderRadius: 12, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No reports yet.</div>
+        <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No reports yet.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rows.map((r) => (
-            <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid var(--line)", borderRadius: 12, background: r.read ? "var(--card)" : "var(--indigo-tint)", padding: 14 }}>
+            <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid var(--line)", borderRadius: 16, background: r.read ? "var(--card)" : "var(--indigo-tint)", padding: 14 }}>
               {!r.read && <span aria-hidden style={{ flex: "none", width: 8, height: 8, borderRadius: 999, background: "var(--indigo-600)", marginTop: 6 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -151,7 +153,7 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
                 <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 4 }}>{new Date(r.created_at).toLocaleString()}</div>
               </div>
               {r.target_page && (
-                <button type="button" onClick={() => check(r)} title="Go to the related page" style={{ flex: "none", display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)" }}>
+                <button type="button" onClick={() => check(r)} title="Go to the related page" style={{ flex: "none", display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 13, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)" }}>
                   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>Check
                 </button>
               )}
@@ -175,18 +177,18 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
                 <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Status</span><b style={{ color: banPanel.user.banned ? "var(--red)" : "var(--green)" }}>{banPanel.user.banned ? "Banned" : "Active"}</b></div>
               </div>
               {banConfirming ? (
-                <div style={{ marginTop: 18, background: "var(--amber-tint)", border: "1px solid var(--amber-line)", borderRadius: 12, padding: 14 }}>
+                <div style={{ marginTop: 18, background: "var(--amber-tint)", border: "1px solid var(--amber-line)", borderRadius: 16, padding: 14 }}>
                   <div style={{ font: "600 13.5px/20px var(--font-sans)", color: "var(--ink)" }}>Are you sure you want to unban this user?</div>
                   <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>They will immediately regain access to their workspace and messaging.</div>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
-                    <button type="button" onClick={() => setBanConfirming(false)} style={{ height: 38, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>No, keep banned</button>
-                    <button type="button" onClick={unban} style={{ height: 38, padding: "0 14px", borderRadius: 10, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "#fff" }}>Yes, unban</button>
+                    <button type="button" onClick={() => setBanConfirming(false)} style={{ height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>No, keep banned</button>
+                    <button type="button" onClick={unban} style={{ height: 38, padding: "0 14px", borderRadius: 14, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "#fff" }}>Yes, unban</button>
                   </div>
                 </div>
               ) : (
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-                  <button type="button" onClick={closeBan} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Close</button>
-                  {banPanel.user.banned && <button type="button" onClick={() => setBanConfirming(true)} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Unban user</button>}
+                  <button type="button" onClick={closeBan} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Close</button>
+                  {banPanel.user.banned && <button type="button" onClick={() => setBanConfirming(true)} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Unban user</button>}
                 </div>
               )}
             </div>
@@ -308,8 +310,8 @@ export default function AdminPage() {
                   </button>
                   {open && !collapsed && (
                     <>
-                      <button type="button" onClick={() => router.push("/admin/dashboard/overview")} className={cls(false, "sub")}><span className="adm-item-ico">{PAGE_ICONS.dashboard}</span>Overview</button>
-                      <button type="button" onClick={() => router.push("/admin/dashboard/wallet")} className={cls(false, "sub")}><span className="adm-item-ico">{PAGE_ICONS.methods}</span>Wallet</button>
+                      <button type="button" onClick={() => setPage("dash-overview")} className={cls(page === "dash-overview", "sub")}><span className="adm-item-ico">{PAGE_ICONS.dashboard}</span>Overview</button>
+                      <button type="button" onClick={() => setPage("dash-wallet")} className={cls(page === "dash-wallet", "sub")}><span className="adm-item-ico">{PAGE_ICONS.methods}</span>Wallet</button>
                     </>
                   )}
                 </div>
@@ -372,7 +374,9 @@ export default function AdminPage() {
         </aside>
 
         <main className="adm-main">
-          {page === "reviews" ? <PaymentReviews highlightId={highlightPayment} onHighlightDone={() => setHighlightPayment(null)} />
+          {page === "dash-overview" ? <div className="dash-embed"><OverviewGrid /></div>
+            : page === "dash-wallet" ? <div className="dash-embed"><WalletGrid /></div>
+            : page === "reviews" ? <PaymentReviews highlightId={highlightPayment} onHighlightDone={() => setHighlightPayment(null)} />
             : page === "admins" ? <AdminManagement />
             : page === "methods" ? <PaymentMethodsAdmin />
             : page === "users" ? <UserManagement onOpenChat={openChat} />

@@ -7,7 +7,7 @@ import { planById } from "@/lib/plans";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 
-const base = { height: 32, minWidth: 64, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 12px", borderRadius: 9, cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", textDecoration: "none", boxSizing: "border-box" } as const;
+const base = { height: 32, minWidth: 64, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 12px", borderRadius: 13, cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", textDecoration: "none", boxSizing: "border-box" } as const;
 const btnGhost = { ...base, border: "1px solid var(--line)", background: "var(--card)", color: "var(--ink)" };
 const btnBlue = { ...base, border: "1px solid var(--indigo-line)", background: "var(--indigo-tint)", color: "var(--indigo-text)" };
 const btnRed = { ...base, border: "1px solid var(--red-line)", background: "var(--red-tint)", color: "var(--red)" };
@@ -15,8 +15,8 @@ const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 
 function Stat({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderRadius: 14, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
-      <span style={{ width: 38, height: 38, borderRadius: 10, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
+    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
+      <span style={{ width: 38, height: 38, borderRadius: 14, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
       <div>
         <div style={{ font: "700 22px/26px var(--font-sans)", color: "var(--ink)" }}>{value}</div>
         <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</div>
@@ -89,7 +89,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{title ?? "Users management"}</h1>
         {!planLock && (
-          <button type="button" onClick={exportExcel} disabled={rows.length === 0} style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: rows.length ? "pointer" : "not-allowed", opacity: rows.length ? 1 : 0.5, font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
+          <button type="button" onClick={exportExcel} disabled={rows.length === 0} style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: rows.length ? "pointer" : "not-allowed", opacity: rows.length ? 1 : 0.5, font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg>
             Export Excel
           </button>
@@ -122,9 +122,9 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       </div>
 
       {loading ? <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p> : list.length === 0 ? (
-        <div style={{ border: "1px dashed var(--line)", borderRadius: 12, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No paid users yet. They appear here once a payment is approved.</div>
+        <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No paid users yet. They appear here once a payment is approved.</div>
       ) : (
-        <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 14, background: "var(--card)" }}>
+        <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
             <thead>
               <tr style={{ textAlign: "left", font: "600 11px/15px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
@@ -135,7 +135,11 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
               {list.map((u) => (
                 <tr key={u.id} style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink)", opacity: u.banned ? 0.55 : 1 }}>
                   <td style={{ ...td, font: "600 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{awu(u.user_number)}</td>
-                  <td style={td}>{u.full_name || "—"}{u.banned && <span className="pill pill-red" style={{ marginLeft: 6 }}>Banned</span>}</td>
+                  <td style={td}>{u.full_name || "—"}{" "}
+                    {u.banned
+                      ? <span className="pill pill-red" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="10" cy="10" r="7.5" /><path d="M5 5l10 10" /></svg>Banned</span>
+                      : <span className="pill pill-green" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7.5" /><path d="M6.5 10.5 9 13l4.5-5" /></svg>Active</span>}
+                  </td>
                   <td style={td}>{u.email || "—"}</td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</td>
                   <td style={td}>
@@ -178,7 +182,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
             <Row k="City" v={track.city ?? "—"} />
             <Row k="WhatsApp" v={`${track.whatsapp_country_code ?? ""} ${track.whatsapp_number ?? ""}`.trim() || "—"} />
           </div>
-          <div style={{ marginTop: 14, font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", background: "var(--subtle)", borderRadius: 10, padding: "10px 12px" }}>The full application roadmap tracker is coming next.</div>
+          <div style={{ marginTop: 14, font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", background: "var(--subtle)", borderRadius: 14, padding: "10px 12px" }}>The full application roadmap tracker is coming next.</div>
         </Modal>
       )}
       {confirm && (
@@ -191,8 +195,8 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
             <div style={{ padding: 20 }}>
               <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{confirm.body}</p>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-                <button type="button" onClick={() => setConfirm(null)} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
-                <button type="button" onClick={confirm.onYes} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: confirm.tone === "orange" ? "var(--amber)" : "var(--red)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Yes, continue</button>
+                <button type="button" onClick={() => setConfirm(null)} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
+                <button type="button" onClick={confirm.onYes} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "none", background: confirm.tone === "orange" ? "var(--amber)" : "var(--red)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Yes, continue</button>
               </div>
             </div>
           </div>
@@ -213,8 +217,8 @@ function Modal({ title, children, onClose, onSave }: { title: string; children: 
         <h2 style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)", margin: "0 0 16px" }}>{title}</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <button type="button" onClick={onClose} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "var(--ink)" }}>{onSave ? "Cancel" : "Close"}</button>
-          {onSave && <button type="button" onClick={onSave} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "var(--indigo-600)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "#fff" }}>Save</button>}
+          <button type="button" onClick={onClose} style={{ height: 42, padding: "0 18px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "var(--ink)" }}>{onSave ? "Cancel" : "Close"}</button>
+          {onSave && <button type="button" onClick={onSave} style={{ height: 42, padding: "0 18px", borderRadius: 14, border: "none", background: "var(--indigo-600)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "#fff" }}>Save</button>}
         </div>
       </div>
     </div>
