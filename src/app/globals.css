@@ -263,7 +263,7 @@ a {
    ========================================================================== */
 .adm-root { min-height: 100vh; position: relative; background: #EBEEF4; overflow-x: hidden; }
 .adm-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; }
-.adm-bg > span { width: 62vmin; height: 62vmin; filter: blur(13px); opacity: .17; display: block; transform: translate(6%, 8%); }
+.adm-bg > span { width: 80vmin; height: 80vmin; filter: blur(7px); opacity: .18; display: block; transform: translate(4%, 6%); }
 .adm-bg svg { width: 100%; height: 100%; }
 
 .adm-shell { position: relative; z-index: 1; max-width: 100%; width: 100%; margin: 0; padding: 22px; display: flex; gap: 20px; align-items: flex-start; min-height: 100vh; }
@@ -318,8 +318,6 @@ a {
 
 /* Dashboard embedded inside the /admin content area (no separate shell) */
 .dash-embed { position: relative; height: calc(100dvh - 84px); overflow: hidden; border-radius: 22px; }
-.dash-embed::before { content: ""; position: absolute; width: 40vw; height: 40vw; left: -8vw; top: -10vw; border-radius: 50%; background: radial-gradient(circle, rgba(43,76,155,.24), transparent 62%); filter: blur(60px); pointer-events: none; z-index: 0; }
-.dash-embed::after { content: ""; position: absolute; width: 36vw; height: 36vw; right: -6vw; bottom: -12vw; border-radius: 50%; background: radial-gradient(circle, rgba(99,179,166,.22), transparent 62%); filter: blur(60px); pointer-events: none; z-index: 0; }
 .dash-embed > .dash-grid { position: relative; z-index: 1; height: 100%; }
 @media (max-width: 1279px) { .dash-embed { height: auto; overflow: visible; } }
 
@@ -337,8 +335,8 @@ a {
 /* Desktop no-scroll grids */
 .dash-grid { display: grid; gap: 10px; height: 100%; }
 .dash-stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
-.ov-grid { grid-template-rows: auto auto minmax(0,1.08fr) minmax(0,0.92fr); grid-template-columns: repeat(4, 1fr); }
-.wa-grid { grid-template-rows: auto auto minmax(0,1.08fr) minmax(0,0.92fr); grid-template-columns: repeat(4, 1fr); }
+.ov-grid { grid-template-rows: auto auto minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); grid-template-columns: repeat(4, 1fr); }
+.wa-grid { grid-template-rows: auto minmax(0,1.12fr) minmax(0,1fr); grid-template-columns: repeat(4, 1fr); }
 .span2 { grid-column: span 2; } .span3 { grid-column: span 3; } .span4 { grid-column: span 4; }
 
 /* Tablet / mobile: stack and allow normal scrolling */

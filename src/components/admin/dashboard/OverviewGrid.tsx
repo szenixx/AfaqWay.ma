@@ -21,33 +21,32 @@ export default function OverviewGrid() {
         </div>
       </div>
 
-      <div className="span2">
-        <DashCard title="Student Activity" subtitle="New registrations this week">
-          <Bars data={d.weekly} />
-        </DashCard>
-      </div>
-      <DashCard title="Student Journey" subtitle="Stage distribution">
-        <Bars data={d.journey} color="#63B3A6" />
+      {/* Content row 1 (grid row 3) */}
+      <DashCard style={{ gridColumn: "1 / 3", gridRow: 3 }} title="Student Activity" subtitle="New registrations this week">
+        <Bars data={d.weekly} />
       </DashCard>
-      <DashCard title="Destinations" subtitle="Active students by country">
+      <DashCard style={{ gridColumn: 3, gridRow: 3 }} title="Student Journey" subtitle="Stage distribution">
+        <Bars data={d.journey} color="#20C997" />
+      </DashCard>
+      <DashCard style={{ gridColumn: 4, gridRow: 3 }} title="Destinations" subtitle="Active students by country">
         <Donut data={d.countryDist} />
       </DashCard>
 
-      <div className="span2">
-        <DashCard title="Recent Students" subtitle="Latest registrations" bodyScroll>
-          <MiniTable
-            cols={["Name", "Destination", "Plan", "Status"]}
-            rows={d.recent}
-            render={(s) => [
-              s.full_name || "Unnamed",
-              s.destination_country ? (countryByCode(s.destination_country)?.name ?? s.destination_country) : "—",
-              s.plan === "full_service" ? "Full" : s.plan === "self_service" ? "Self" : "—",
-              <Pill key="p" tone={s.plan_status === "active" ? "green" : "grey"} text={s.plan_status === "active" ? "Active" : "Lead"} />,
-            ]}
-          />
-        </DashCard>
-      </div>
-      <DashCard title="Pending Reviews" subtitle="Documents & receipts awaiting action" bodyScroll>
+      {/* Recent Students — large, spans down to the bottom (rows 4-5, left half) */}
+      <DashCard style={{ gridColumn: "1 / 3", gridRow: "4 / 6" }} title="Recent Students" subtitle="Latest registrations" bodyScroll>
+        <MiniTable
+          cols={["Name", "Destination", "Plan", "Status"]}
+          rows={d.recent}
+          render={(s) => [
+            s.full_name || "Unnamed",
+            s.destination_country ? (countryByCode(s.destination_country)?.name ?? s.destination_country) : "—",
+            s.plan === "full_service" ? "Full" : s.plan === "self_service" ? "Self" : "—",
+            <Pill key="p" tone={s.plan_status === "active" ? "green" : "grey"} text={s.plan_status === "active" ? "Active" : "Lead"} />,
+          ]}
+        />
+      </DashCard>
+
+      <DashCard style={{ gridColumn: 3, gridRow: 4 }} title="Pending Reviews" subtitle="Awaiting action" bodyScroll>
         {d.journey.slice(0, 5).map((j, k) => (
           <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line-soft)" }}>
             <span style={{ width: 30, height: 30, borderRadius: 9, flex: "none", background: "var(--amber-tint)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 12px/1 var(--font-sans)" }}>{j.label[0]}</span>
@@ -56,21 +55,20 @@ export default function OverviewGrid() {
           </div>
         ))}
       </DashCard>
-
-      <div className="span2">
-        <DashCard title="Notifications" subtitle="Recent platform activity" bodyScroll>
-          {d.recent.slice(0, 8).map((s, k) => (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--line-soft)" }}>
-              <span style={{ width: 8, height: 8, borderRadius: 999, flex: "none", background: "var(--indigo-600)" }} />
-              <div style={{ flex: 1, minWidth: 0, font: "400 12px/16px var(--font-sans)", color: "var(--ink)" }}><b>{s.full_name || "A student"}</b> registered {s.destination_country ? `· ${countryByCode(s.destination_country)?.name ?? s.destination_country}` : ""}</div>
-              <span style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", flex: "none" }}>{new Date(s.created_at).toLocaleDateString()}</span>
-            </div>
-          ))}
-        </DashCard>
-      </div>
-      <DashCard title="Support Activity" subtitle="This week">
+      <DashCard style={{ gridColumn: 4, gridRow: 4 }} title="Support Activity" subtitle="This week">
         {[["Open conversations", d.activeStudents], ["Waiting for admin", Math.round(d.activeStudents * 0.3)], ["Resolved today", d.newToday], ["Avg response", "2.4h"]].map(([l, v], k) => (
-          <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid var(--line-soft)", font: "500 12.5px/17px var(--font-sans)", color: "var(--ink)" }}><span style={{ color: "var(--ink-soft)" }}>{l}</span><b>{v}</b></div>
+          <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid var(--line-soft)", font: "500 12.5px/17px var(--font-sans)", color: "var(--ink)" }}><span style={{ color: "var(--ink-soft)" }}>{l}</span><b>{v}</b></div>
+        ))}
+      </DashCard>
+
+      {/* Notifications — bottom-right corner */}
+      <DashCard style={{ gridColumn: "3 / 5", gridRow: 5 }} title="Notifications" subtitle="Recent platform activity" bodyScroll>
+        {d.recent.slice(0, 8).map((s, k) => (
+          <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: "1px solid var(--line-soft)" }}>
+            <span style={{ width: 8, height: 8, borderRadius: 999, flex: "none", background: "var(--indigo-600)" }} />
+            <div style={{ flex: 1, minWidth: 0, font: "400 12px/16px var(--font-sans)", color: "var(--ink)" }}><b>{s.full_name || "A student"}</b> registered {s.destination_country ? `· ${countryByCode(s.destination_country)?.name ?? s.destination_country}` : ""}</div>
+            <span style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", flex: "none" }}>{new Date(s.created_at).toLocaleDateString()}</span>
+          </div>
         ))}
       </DashCard>
     </div>

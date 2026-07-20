@@ -1,6 +1,6 @@
 "use client";
 
-import { DashCard, StatCard, Donut, Bars, MiniTable, ProgressRow, Pill, SuperAdminBar, ACCENTS, useWalletData } from "@/components/admin/dashboard/kit";
+import { DashCard, StatCard, Donut, Bars, MiniTable, ProgressRow, Pill, ACCENTS, useWalletData } from "@/components/admin/dashboard/kit";
 import { methodById } from "@/lib/plans";
 
 const i = (d: React.ReactNode) => <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
@@ -10,7 +10,6 @@ export default function WalletGrid() {
   const d = useWalletData();
   return (
     <div className="dash-grid wa-grid">
-      <div className="span4"><SuperAdminBar /></div>
       <div className="span4">
         <div className="dash-stats-row">
           <StatCard label="Total revenue" value={d.totalRevenue} suffix=" DH" loading={d.loading} accent={ACCENTS[0]} icon={i(<><path d="M10 3v14M6 6h5a2.5 2.5 0 0 1 0 5H6h6" /></>)} delta={14} />
