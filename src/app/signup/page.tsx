@@ -86,7 +86,12 @@ export default function AuthPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time UI sync from query param on mount
       setMode("signup");
     }
-  }, []);
+    // Already signed in? Skip the form and go straight to the workspace.
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) router.replace("/dashboard");
+    })();
+  }, [router]);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -387,6 +392,11 @@ export default function AuthPage() {
             <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
               {isSignup ? "Create account" : "Log in"}
             </Button>
+            {isSignup && (
+              <p style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", textAlign: "center", margin: 0 }}>
+                By creating an account you agree to our <a href="/terms" style={{ color: "var(--indigo-600)" }}>Terms of Service</a> and <a href="/refund" style={{ color: "var(--indigo-600)" }}>Refund Policy</a>.
+              </p>
+            )}
           </form>
 
           <Divider label="Or continue with" />

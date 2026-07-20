@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { planById, methodById } from "@/lib/plans";
+import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
+import { fileUrl } from "@/lib/r2";
 
 type Payment = { id: string; user_id: string; plan: string; amount: number; currency: string; method: string; status: string; receipt_path: string | null; reference: string | null; rejection_comment: string | null; created_at: string; reviewed_at: string | null };
-type UserInfo = { full_name: string | null; email: string | null };
+type UserInfo = { full_name: string | null; email: string | null; destination_country: string | null };
 
 function Stat({ label, value, tone, icon }: { label: string; value: number; tone?: string; icon: React.ReactNode }) {
   return (
@@ -20,7 +22,7 @@ function Stat({ label, value, tone, icon }: { label: string; value: number; tone
 }
 const rIcon = (d: React.ReactNode) => <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
 
-export default function PaymentReviews() {
+export default function PaymentReviews({ highlightId, onHighlightDone }: { highlightId?: string | null; onHighlightDone?: () => void } = {}) {
   const [all, setAll] = useState<Payment[]>([]);
   const [users, setUsers] = useState<Record<string, UserInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -30,9 +32,12 @@ export default function PaymentReviews() {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState("");
   const [since, setSince] = useState(0);
+  const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [planFilter, setPlanFilter] = useState<"all" | "self_service" | "full_service">("all");
   const [viewer, setViewer] = useState<{ url: string; pdf: boolean } | null>(null);
   const [askReset, setAskReset] = useState(false);
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const loadedOnce = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,14 +46,28 @@ export default function PaymentReviews() {
     setAll(list);
     const ids = [...new Set(list.map((r) => r.user_id))];
     if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, email, destination_country").in("id", ids);
       const map: Record<string, UserInfo> = {};
-      (profs ?? []).forEach((p) => { const r = p as { id: string; full_name: string | null; email: string | null }; map[r.id] = { full_name: r.full_name, email: r.email }; });
+      (profs ?? []).forEach((p) => { const r = p as { id: string; full_name: string | null; email: string | null; destination_country: string | null }; map[r.id] = { full_name: r.full_name, email: r.email, destination_country: r.destination_country }; });
       setUsers(map);
     }
     setLoading(false);
+    loadedOnce.current = true;
   }, []);
   useEffect(() => { void load(); }, [load]);
+
+  // A7: a report's "Check" jumps here and flashes the matching payment row.
+  useEffect(() => {
+    if (!highlightId || !loadedOnce.current) return;
+    const pay = all.find((r) => r.id === highlightId);
+    if (!pay) return;
+    setTab(pay.status === "under_review" ? "pending" : "history");
+    setCountryFilter("all"); setPlanFilter("all"); setQuery("");
+    setFlashId(highlightId);
+    const t1 = setTimeout(() => { document.getElementById(`pay-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, 60);
+    const t2 = setTimeout(() => { setFlashId(null); onHighlightDone?.(); }, 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [highlightId, all, onHighlightDone]);
 
   const stats = useMemo(() => {
     const after = (t: string | null) => !since || (t ? new Date(t).getTime() >= since : false);
@@ -60,16 +79,19 @@ export default function PaymentReviews() {
   }, [all, since]);
 
   const list = useMemo(() => {
-    const base = all.filter((r) => (tab === "pending" ? r.status === "under_review" : r.status !== "under_review") && (planFilter === "all" || r.plan === planFilter));
+    const base = all.filter((r) =>
+      (tab === "pending" ? r.status === "under_review" : r.status !== "under_review")
+      && (countryFilter === "all" || users[r.user_id]?.destination_country === countryFilter)
+      && (planFilter === "all" || r.plan === planFilter));
     const q = query.trim().toLowerCase();
     if (!q) return base;
     return base.filter((r) => (r.reference ?? "").toLowerCase().includes(q) || (users[r.user_id]?.email ?? "").toLowerCase().includes(q) || (users[r.user_id]?.full_name ?? "").toLowerCase().includes(q));
-  }, [all, tab, query, users]);
+  }, [all, tab, query, users, countryFilter, planFilter]);
 
   async function viewReceipt(path: string | null) {
     if (!path) return;
-    const { data } = await supabase.storage.from("receipts").createSignedUrl(path, 300);
-    if (data?.signedUrl) setViewer({ url: data.signedUrl, pdf: /\.pdf$/i.test(path) });
+    const url = await fileUrl(path, "receipts");
+    if (url) setViewer({ url, pdf: /\.pdf$/i.test(path) });
   }
   async function decide(r: Payment, status: "approved" | "rejected") {
     setBusy(r.id);
@@ -77,7 +99,7 @@ export default function PaymentReviews() {
     const patch: Record<string, unknown> = { status, reviewed_at: new Date().toISOString(), reviewed_by: user?.id };
     if (status === "rejected") {
       patch.rejection_comment = comment.trim() || "Your receipt could not be verified.";
-      if (r.receipt_path) { await supabase.storage.from("receipts").remove([r.receipt_path]); patch.receipt_path = null; } // reject = delete now
+      if (r.receipt_path) { if (!r.receipt_path.startsWith("r2:")) await supabase.storage.from("receipts").remove([r.receipt_path]); patch.receipt_path = null; } // reject = delete now (R2 objects expire unused)
     }
     await supabase.from("payments").update(patch).eq("id", r.id);
     setBusy(""); setRejectId(null); setComment("");
@@ -111,11 +133,17 @@ export default function PaymentReviews() {
           ))}
         </div>
         <input className="af" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by payment ID, name or email" style={{ flex: "1 1 220px", maxWidth: 340 }} />
-        <select className="af" value={planFilter} onChange={(e) => setPlanFilter(e.target.value as "all" | "self_service" | "full_service")} style={{ height: 40, maxWidth: 160 }}>
-          <option value="all">All plans</option>
-          <option value="self_service">Self Service</option>
-          <option value="full_service">Full Service</option>
+        <select className="af" value={countryFilter} onChange={(e) => { setCountryFilter(e.target.value); setPlanFilter("all"); }} style={{ height: 40, maxWidth: 180 }}>
+          <option value="all">All countries</option>
+          {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
         </select>
+        {countryFilter !== "all" && (
+          <select className="af" value={planFilter} onChange={(e) => setPlanFilter(e.target.value as "all" | "self_service" | "full_service")} style={{ height: 40, maxWidth: 190 }}>
+            <option value="all">All {countryByCode(countryFilter)?.name ?? ""} plans</option>
+            <option value="self_service">Self Service</option>
+            <option value="full_service">Full Service</option>
+          </select>
+        )}
       </div>
 
       {loading ? (
@@ -128,8 +156,9 @@ export default function PaymentReviews() {
             const u = users[r.user_id];
             const plan = planById(r.plan);
             const method = methodById(r.method);
+            const flash = flashId === r.id;
             return (
-              <div key={r.id} style={{ border: "1px solid var(--line)", borderRadius: 14, background: "var(--card)", padding: 18, boxShadow: "var(--shadow-card)" }}>
+              <div key={r.id} id={`pay-${r.id}`} style={{ border: `1px solid ${flash ? "var(--indigo-600)" : "var(--line)"}`, borderRadius: 14, background: flash ? "var(--indigo-tint)" : "var(--card)", padding: 18, boxShadow: flash ? "0 0 0 4px var(--indigo-tint)" : "var(--shadow-card)", transition: "background 500ms ease, border-color 500ms ease, box-shadow 500ms ease" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                   <div>
                     <div style={{ font: "600 15px/21px var(--font-sans)", color: "var(--ink)" }}>{u?.full_name || "Unnamed user"}</div>

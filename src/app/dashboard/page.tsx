@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { fetchAdminRole } from "@/lib/admin";
 import StudentTopBar from "@/components/student/StudentTopBar";
+import StudentChat from "@/components/student/StudentChat";
+import { glassPanelStyle } from "@/components/student/GlassCard";
 import { planById } from "@/lib/plans";
 
 type Nav = "dashboard" | "roadmap" | "chat" | "profile" | "help";
@@ -13,7 +15,7 @@ type Profile = { full_name: string | null; plan: string | null; user_number: num
 const STAGES = ["University Application", "University Interview", "Migration Office (Migris)", "VFS Application", "Migris Interview", "Residence Permit (TRP)"];
 
 function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "var(--shadow-card)", padding: 24, ...style }}>{children}</div>;
+  return <div style={{ ...glassPanelStyle, padding: 24, ...style }}>{children}</div>;
 }
 
 function Header({ eyebrow, title, sub }: { eyebrow: string; title: string; sub: string }) {
@@ -56,7 +58,7 @@ function StageList({ full }: { full: boolean }) {
   );
 }
 
-function Shell({ nav, plan, name }: { nav: Nav; plan: string | null; name: string | null }) {
+function Shell({ nav, plan, name, userId }: { nav: Nav; plan: string | null; name: string | null; userId: string | null }) {
   const full = plan === "full_service";
   const planName = planById(plan)?.name ?? "your plan";
   if (nav === "dashboard") {
@@ -87,17 +89,8 @@ function Shell({ nav, plan, name }: { nav: Nav; plan: string | null; name: strin
   if (nav === "chat") {
     return (
       <div>
-        <Header eyebrow="Messages" title={full ? "Chat with your admin" : "Support"} sub={full ? "Your dedicated admin drives your file and answers here." : "Reach 24/7 support. Live chat is coming soon."} />
-        <Panel style={{ padding: 0, overflow: "hidden", height: 460, display: "flex", flexDirection: "column" }}>
-          <div style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
-            <div style={{ alignSelf: "flex-start", maxWidth: "72%", background: "var(--subtle)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>Welcome! Send us any document or question here.</div>
-          </div>
-          <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12, display: "flex", gap: 8 }}>
-            <button type="button" style={{ height: 42, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Upload</button>
-            <input className="af" placeholder="Type a message…" style={{ flex: 1 }} />
-            <button type="button" style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 14px/1 var(--font-sans)", cursor: "pointer" }}>Send</button>
-          </div>
-        </Panel>
+        <Header eyebrow="Messages" title={full ? "Chat with your admin" : "Support"} sub={full ? "Your dedicated admin drives your file and answers here." : "Send documents or questions, our team reviews and replies here."} />
+        {userId ? <StudentChat userId={userId} full={full} /> : <Panel><div style={{ color: "var(--ink-soft)", font: "400 14px var(--font-sans)" }}>Loading conversation…</div></Panel>}
       </div>
     );
   }
@@ -111,8 +104,21 @@ export default function Dashboard() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileId, setProfileId] = useState<string | undefined>(undefined);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [nav, setNav] = useState<Nav>("dashboard");
+  const [chatUnread, setChatUnread] = useState(false);
+  const navRef = useRef<Nav>(nav);
+
+  useEffect(() => { navRef.current = nav; if (nav === "chat") setChatUnread(false); }, [nav]);
+  useEffect(() => {
+    if (!userId) return;
+    const ch = supabase.channel(`dash-unread-${userId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` }, (payload) => {
+      const m = payload.new as { sender?: string };
+      if (m.sender === "admin" && navRef.current !== "chat") setChatUnread(true);
+    }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +132,7 @@ export default function Dashboard() {
       if (cancelled) return;
       const row = (data ?? {}) as Record<string, unknown>;
       if (!row.onboarding_completed_at) { router.replace("/profile-setup"); return; }
+      setUserId(user.id);
       setProfile({ full_name: (row.full_name as string) ?? null, plan: (row.plan as string) ?? null, user_number: (row.user_number as number) ?? null });
       if (typeof row.user_number === "number") setProfileId("AWU-" + String(row.user_number).padStart(3, "0"));
       setLoading(false);
@@ -139,9 +146,9 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)" }}>
-      <StudentTopBar nav={nav} onNav={setNav} userId={profileId} plan={profile?.plan} fullName={profile?.full_name} />
+      <StudentTopBar nav={nav} onNav={setNav} userId={profileId} plan={profile?.plan} fullName={profile?.full_name} chatUnread={chatUnread} />
       <main style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 20px 64px" }}>
-        <Shell nav={nav} plan={profile?.plan ?? null} name={profile?.full_name ?? null} />
+        <Shell nav={nav} plan={profile?.plan ?? null} name={profile?.full_name ?? null} userId={userId} />
       </main>
     </div>
   );

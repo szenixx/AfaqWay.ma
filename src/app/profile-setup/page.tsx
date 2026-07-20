@@ -9,6 +9,7 @@ import PricingCheckout from "@/components/pricing/PricingCheckout";
 import { planById } from "@/lib/plans";
 import type { StudentProfile } from "@/lib/programs/types";
 import { fetchAdminRole } from "@/lib/admin";
+import { LegalDocModal } from "@/components/legal/LegalContent";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { getCountryFlow } from "@/lib/onboarding/countryFlows";
 import type { CountryFlow, CountryFlowStep, FieldDef } from "@/lib/onboarding/countryFlows/types";
@@ -89,7 +90,6 @@ const hasCfaData = (cfa: Cfa) => Object.values(cfa).some((s) => Object.values(s)
 function validatePersonal(p: Personal): boolean {
   if (!p.full_name.trim() || !p.date_of_birth || !p.city.trim()) return false;
   if (!/^\d{6,15}$/.test(p.whatsapp_number.replace(/\s/g, ""))) return false;
-  if (p.has_passport !== "yes" && p.has_passport !== "no") return false;
   const c = countryByCode(p.destination_country);
   return !!(c && c.available);
 }
@@ -320,6 +320,35 @@ function NoteBox({ children }: { children: React.ReactNode }) {
   );
 }
 
+const degLabel = (s: string) => s === "high_school" ? "High school" : s === "bachelor" ? "Bachelor's" : s === "master" ? "Master's" : (s || "—");
+const cleanList = (s: string) => (s || "").replace(/[[\]"]/g, "").trim() || "—";
+
+function ageFromDob(dob: string): number | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return null;
+  const t = new Date();
+  let a = t.getFullYear() - d.getFullYear();
+  const m = t.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+  return a >= 0 && a < 130 ? a : null;
+}
+
+function LegalCheck({ checked, onToggle, onRead, label, invalid }: { checked: boolean; onToggle: () => void; onRead: () => void; label: string; invalid?: boolean }) {
+  const stroke = invalid ? "2px solid var(--red)" : "2px solid var(--ink)";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 9, textAlign: "left" }}>
+      <button type="button" role="checkbox" aria-checked={checked} onClick={onToggle} style={{ flex: "none", width: 18, height: 18, borderRadius: 5, border: checked ? "none" : stroke, background: checked ? "var(--indigo-600)" : (invalid ? "var(--red-tint)" : "transparent"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: invalid ? "0 0 0 3px var(--red-tint)" : "none" }}>
+        {checked && <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>}
+      </button>
+      <span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>
+        {label}{" "}
+        <button type="button" onClick={onRead} style={{ background: "none", border: "none", cursor: "pointer", font: "600 12.5px/18px var(--font-sans)", color: "var(--indigo-600)", padding: 0, textDecoration: "underline" }}>Read</button>
+      </span>
+    </div>
+  );
+}
+
 /* ── Page ───────────────────────────────────────────────────────────── */
 
 export default function ProfileSetup() {
@@ -329,11 +358,16 @@ export default function ProfileSetup() {
   const [reached, setReached] = useState(1);
   const [personal, setPersonal] = useState<Personal>(EMPTY_P);
   const [cfa, setCfa] = useState<Cfa>({});
+  const [userNumber, setUserNumber] = useState<number | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [confirmCode, setConfirmCode] = useState<string | null>(null);
   const [progSub, setProgSub] = useState(0); // sub-step within the program step (0 = preferences, 1 = pick)
   const [priceSub, setPriceSub] = useState(0); // sub-step within the pricing step (0 = plan, 1 = checkout)
   const [showErrors, setShowErrors] = useState(false); // reveal red borders on required-but-empty after Continue
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreeRefund, setAgreeRefund] = useState(false);
+  const [legalError, setLegalError] = useState(false);
+  const [legalView, setLegalView] = useState<null | "terms" | "refund">(null);
   const pRef = useRef(personal);
   const cRef = useRef(cfa);
   const uidRef = useRef<string | null>(null);
@@ -363,6 +397,7 @@ export default function ProfileSetup() {
       const stepInPhase = clamp(typeof row.onboarding_step === "number" ? row.onboarding_step : 1, 1, 20);
       const abs = phase === "universal" ? 1 : 1 + stepInPhase;
       pRef.current = p; cRef.current = c;
+      setUserNumber(typeof row.user_number === "number" ? row.user_number : null);
       setPersonal(p); setCfa(c); setReached(abs); setView(abs); setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -445,6 +480,7 @@ export default function ProfileSetup() {
   const bStep: CountryFlowStep | null = view === 1 ? null : flow!.steps[view - 2];
   const isProgram = bStep?.custom === "program";
   const isPricing = bStep?.custom === "pricing";
+  const isRoadmap = bStep?.placeholder === "roadmap";
   const programProfile: StudentProfile = {
     degree: cfa.timing_education?.target_degree === "master" ? "Master" : "Bachelor",
     fields: (cfa.program_setup?.field_of_interest ?? "").split("|").filter(Boolean),
@@ -466,7 +502,7 @@ export default function ProfileSetup() {
         ? <StepFooter onBack={prevStep} saveState={saveState} right={<Button variant="primary" size="lg" onClick={progNext}>Continue</Button>} />
         : <StepFooter onBack={() => setProgSub(0)} saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />)
     : (bStep && bStep.sections.length > 0) ? <StepFooter onBack={prevStep} saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />
-    : <StepFooter right={isLast ? <Button variant="primary" size="lg" onClick={finish}>Done</Button> : <Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />;
+    : <StepFooter right={isLast ? <Button variant="primary" size="lg" onClick={() => { if (!(agreeTerms && agreeRefund)) { setLegalError(true); return; } finish(); }}>Done</Button> : <Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />;
 
   return (
     <div className="af-onboard-shell">
@@ -485,7 +521,15 @@ export default function ProfileSetup() {
             {isProgram && <div style={{ marginBottom: 14 }}><SubStepper sub={progSub} labels={["Your preferences", "Pick your programs"]} onJump={setProgSub} /></div>}
             {isPricing && <div style={{ marginBottom: 14 }}><SubStepper sub={priceSub} labels={["Choose a plan", "Checkout"]} onJump={setPriceSub} /></div>}
             <div className="af-onboard-scroll">
-              <div className={`af-frame ${isPricing && priceSub === 0 ? "af-frame-open" : "af-frame-card"}`}>
+              <div className={`af-frame ${isPricing && priceSub === 0 ? "af-frame-open" : "af-frame-card"}${isRoadmap ? " af-frame-video" : ""}`}>
+                {isRoadmap && (
+                  <>
+                    <video autoPlay muted loop playsInline aria-hidden className="af-roadmap-video">
+                      <source src="/onboarding/step-2.mp4" type="video/mp4" />
+                    </video>
+                    <div aria-hidden className="af-roadmap-veil" />
+                  </>
+                )}
                 {isPricing ? (
                   <PricingCheckout
                     userId={uidRef.current ?? ""}
@@ -540,16 +584,6 @@ export default function ProfileSetup() {
                 })}
               </div>
               {showErrors && !countryByCode(personal.destination_country)?.available && <div style={{ font: "500 12.5px/18px var(--font-sans)", color: "var(--red)", marginTop: 8 }}>Please choose an available destination to continue.</div>}
-
-              {divider}
-
-              {/* Passport */}
-              <div style={eyebrow}>Your passport</div>
-              <div style={sectionTitle}>Do you have a valid passport?</div>
-              <div style={{ display: "inline-block", padding: showErrors && !personal.has_passport ? 6 : 0, border: showErrors && !personal.has_passport ? "1px solid var(--red)" : "none", borderRadius: 14 }}>
-                <Segmented value={personal.has_passport} onChange={(v) => setP("has_passport", v)} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
-              </div>
-              {personal.has_passport === "no" && <NoteBox>A valid passport is essential for your application. You can continue now, but start getting one as soon as possible.</NoteBox>}
             </>
           ) : isProgram ? (
             <>
@@ -601,15 +635,59 @@ export default function ProfileSetup() {
               {bStep?.placeholder === "program" && <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: 0 }}>Program-matching engine, coming next. You&apos;ll see programs that match your profile here.</p>}
               {bStep?.placeholder === "pricing" && <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: 0 }}>Plans and checkout, coming next. Two paid tiers: <strong style={{ color: "var(--ink)" }}>Full service</strong> and <strong style={{ color: "var(--ink)" }}>Self service</strong>.</p>}
               {bStep?.placeholder === "roadmap" && (
-                <div style={{ textAlign: "center", padding: "28px 8px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <span style={{ width: 72, height: 72, borderRadius: 999, background: "var(--green-tint)", border: "1px solid var(--green-line)", color: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", animation: "afNodePop .5s cubic-bezier(.4,0,.2,1) both" }}>
-                    <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
-                  </span>
-                  <h2 style={{ font: "700 24px/30px var(--font-sans)", color: "var(--ink)", margin: "20px 0 0" }}>Congratulations!</h2>
-                  <p style={{ font: "400 15px/24px var(--font-sans)", color: "var(--ink-soft)", margin: "10px 0 0", maxWidth: 420 }}>
-                    You built your roadmap successfully with <strong style={{ color: "var(--indigo-600)" }}>{planById(cfa.pricing?.plan)?.name ?? "your plan"}</strong>.
-                  </p>
-                  <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)", margin: "8px 0 0", maxWidth: 420 }}>Your personalized roadmap is being prepared, we&apos;ll take it from here.</p>
+                <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 400 }}>
+                  <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 4 }}>
+                    {/* Task 5: header — logo left, short trust line right */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <LogoMark size={22} />
+                        <span style={{ font: "700 15px/1 var(--font-sans)", color: "var(--ink)" }}>AfaqWay</span>
+                      </div>
+                      <span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-600)", textAlign: "right" }}>Built on your trust.</span>
+                    </div>
+
+                    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 4, padding: "8px 0" }}>
+                      <span style={{ width: 54, height: 54, borderRadius: 999, flex: "none", background: "var(--green-tint)", border: "1px solid var(--green-line)", color: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", animation: "afNodePop .5s cubic-bezier(.4,0,.2,1) both" }}>
+                        <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
+                      </span>
+                      <h2 style={{ font: "700 21px/27px var(--font-sans)", color: "var(--ink)", margin: "10px 0 0" }}>Congratulations!</h2>
+                      <p style={{ font: "600 13.5px/20px var(--font-sans)", color: "var(--indigo-600)", margin: "4px 0 0" }}>Good luck in your roadmap.</p>
+
+                      {/* Task 6: colorless, extra-blurred transparent glass card */}
+                      <div style={{ width: "100%", maxWidth: 400, marginTop: 14, textAlign: "left", background: "rgba(255,255,255,.18)", backdropFilter: "blur(30px) saturate(1.05)", WebkitBackdropFilter: "blur(30px) saturate(1.05)", border: "1px solid rgba(255,255,255,.45)", borderRadius: 18, boxShadow: "0 12px 32px rgba(23,35,58,.14)", padding: "14px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
+                          <span style={{ width: 38, height: 38, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 15px/1 var(--font-sans)" }}>{(personal.full_name || "U").trim().charAt(0).toUpperCase()}</span>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ font: "700 14px/18px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personal.full_name || "Your name"}</div>
+                            <div style={{ font: "600 11px/15px var(--font-sans)", color: "var(--indigo-600)" }}>AWU-{String(userNumber ?? 0).padStart(3, "0")}</div>
+                          </div>
+                        </div>
+                        {[
+                          ["Age", ageFromDob(personal.date_of_birth) != null ? `${ageFromDob(personal.date_of_birth)} years` : "—"],
+                          ["Country", countryByCode(personal.destination_country)?.name ?? "—"],
+                          ["Program interest", cleanList(cfa.program_setup?.field_of_interest ?? "")],
+                          ["Last diploma", degLabel(cfa.timing_education?.last_degree ?? "")],
+                          ["Degree to study", degLabel(cfa.timing_education?.target_degree ?? "")],
+                          ["Plan", planById(cfa.pricing?.plan)?.name ?? "—"],
+                        ].map(([k, v]) => (
+                          <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderTop: "1px solid rgba(23,35,58,.08)" }}>
+                            <span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>{k}</span>
+                            <span style={{ font: "600 12.5px/18px var(--font-sans)", color: "var(--ink)", textAlign: "right" }}>{v}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: "14px 0 0", maxWidth: 420 }}>
+                        You built your roadmap successfully with <strong style={{ color: "var(--indigo-600)" }}>{planById(cfa.pricing?.plan)?.name ?? "your plan"}</strong>.
+                      </p>
+                      <p style={{ font: "400 12px/18px var(--font-sans)", color: "var(--ink-faint)", margin: "5px 0 0", maxWidth: 420 }}>Your personalized roadmap is being prepared, we&apos;ll take it from here.</p>
+
+                      <div style={{ width: "100%", maxWidth: 420, marginTop: 14, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
+                        <LegalCheck checked={agreeTerms} invalid={legalError && !agreeTerms} onToggle={() => { setAgreeTerms((v) => !v); setLegalError(false); }} onRead={() => setLegalView("terms")} label="I have read and agree to the Terms of Service (Agreement)." />
+                        <LegalCheck checked={agreeRefund} invalid={legalError && !agreeRefund} onToggle={() => { setAgreeRefund((v) => !v); setLegalError(false); }} onRead={() => setLegalView("refund")} label="I have read the Refund Policy." />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </>
@@ -638,6 +716,7 @@ export default function ProfileSetup() {
           </Card>
         </div>
       )}
+      {legalView && <LegalDocModal doc={legalView} onClose={() => setLegalView(null)} />}
     </div>
   );
 }

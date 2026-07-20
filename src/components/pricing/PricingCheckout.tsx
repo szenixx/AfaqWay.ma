@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import FeaturesDoc from "@/components/pricing/FeaturesDoc";
 import { PLANS, planById, PAY_METHODS, type Plan, type PayMethod } from "@/lib/plans";
+import { uploadUserFile } from "@/lib/r2";
 
 /* Pricing & Checkout. Renders its own af-frame-body + af-frame-footer so the
    Back/primary buttons stay pinned to the bottom of the frame on every view.
@@ -169,6 +170,14 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
     return (
       <>
         <div className="af-frame-body">
+          <div style={{ background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>Please read what each plan includes before you choose.</span>
+              <button type="button" onClick={() => setShowAll(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/19px var(--font-sans)", color: "var(--indigo-600)", textDecoration: "underline", padding: 0 }}>Explore more</button>
+            </div>
+            <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-soft)", marginTop: 6 }}>Once you agree to the features and pay, the payment is non-refundable. (-)</div>
+            <div dir="rtl" style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>بمجرد موافقتك على مزايا الخطة والدفع، يصبح المبلغ غير قابل للاسترجاع.</div>
+          </div>
           <div className="af-plan-grid">
             {PLANS.map((p) => <GlassPlanCard key={p.id} plan={p} onChoose={() => { setPricing("plan", p.id); if (!pricing.ref) setPricing("ref", genRef()); setPriceSub(1); }} onSeeAll={() => setShowAll(true)} />)}
           </div>
@@ -189,16 +198,20 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
     if (!file || !plan || !method) return;
     setBusy(true); setError("");
     try {
-      const path = `${userId}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
-      const up = await supabase.storage.from("receipts").upload(path, file, { upsert: false });
-      if (up.error) throw up.error;
-      const ins = await supabase.from("payments").insert({ user_id: userId, plan: plan.id, amount: plan.price, currency: "MAD", method: method.id, status: "under_review", receipt_path: path, reference: pricing.ref ?? null }).select("id").single();
-      if (ins.error) throw ins.error;
+      // Receipts upload to Cloudflare R2 (with a Supabase fallback if R2 is unset).
+      const up = await uploadUserFile(file, { fallbackBucket: "receipts", fallbackPrefix: userId });
+      const ins = await supabase.from("payments").insert({ user_id: userId, plan: plan.id, amount: plan.price, currency: "MAD", method: method.id, status: "under_review", receipt_path: up.path, reference: pricing.ref ?? null }).select("id").single();
+      if (ins.error) {
+        // Insert refused (e.g. the 3-per-6h receipt limit) — remove the orphaned Supabase file (R2 objects expire unused).
+        if (up.storage === "supabase") await supabase.storage.from("receipts").remove([up.path]);
+        throw ins.error;
+      }
       setPricing("payment_id", ins.data.id as string);
       setPricing("reject_comment", "");
       setPricing("status", "under_review");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed, please try again.");
+      const msg = e instanceof Error ? e.message : "Upload failed, please try again.";
+      setError(/limit of 3 receipt/i.test(msg) ? "You have reached the limit of 3 receipt uploads. Please wait up to 6 hours before submitting another receipt." : msg);
     } finally { setBusy(false); }
   }
   async function cancelPayment() {

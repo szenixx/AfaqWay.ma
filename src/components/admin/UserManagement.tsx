@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
+import { planById } from "@/lib/plans";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 
@@ -26,13 +28,15 @@ const sIcon = (d: React.ReactNode) => <svg width="19" height="19" viewBox="0 0 2
 
 const planLabel = (p: string | null) => p === "full_service" ? "Full Service" : p === "self_service" ? "Self Service" : "—";
 
-export default function UserManagement() {
+export default function UserManagement({ initialPlan, initialCountry, title, onOpenChat }: { initialPlan?: "self_service" | "full_service"; initialCountry?: string; title?: string; onOpenChat?: (userId: string) => void } = {}) {
+  const planLock = initialPlan ?? null;
+  const countryLock = initialCountry ?? null;
   const [rows, setRows] = useState<U[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [edit, setEdit] = useState<U | null>(null);
   const [track, setTrack] = useState<U | null>(null);
-  const [filter, setFilter] = useState<"all" | "self_service" | "full_service">("all");
+  const [countryFilter, setCountryFilter] = useState<"all" | string>(initialCountry ?? "all");
   const [confirm, setConfirm] = useState<{ title: string; body: string; tone: "orange" | "red"; onYes: () => void } | null>(null);
 
   const load = useCallback(async () => {
@@ -43,17 +47,19 @@ export default function UserManagement() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  const stats = useMemo(() => ({
-    total: rows.length,
-    self: rows.filter((r) => r.plan === "self_service").length,
-    full: rows.filter((r) => r.plan === "full_service").length,
-    banned: rows.filter((r) => r.banned).length,
-  }), [rows]);
+  const stats = useMemo(() => {
+    const byCountry: Record<string, number> = {};
+    rows.forEach((r) => { const c = r.destination_country || "—"; byCountry[c] = (byCountry[c] ?? 0) + 1; });
+    return { total: rows.length, countries: Object.keys(byCountry).filter((c) => c !== "—").length, banned: rows.filter((r) => r.banned).length, byCountry };
+  }, [rows]);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rows.filter((r) => (filter === "all" || r.plan === filter) && (!q || (r.full_name ?? "").toLowerCase().includes(q) || (r.email ?? "").toLowerCase().includes(q)));
-  }, [rows, query, filter]);
+    return rows.filter((r) =>
+      (!planLock || r.plan === planLock)
+      && (countryFilter === "all" || r.destination_country === countryFilter)
+      && (!q || (r.full_name ?? "").toLowerCase().includes(q) || (r.email ?? "").toLowerCase().includes(q)));
+  }, [rows, query, countryFilter, planLock]);
 
   async function patch(id: string, p: Record<string, unknown>) { await supabase.from("profiles").update(p).eq("id", id); void load(); }
   async function saveEdit() {
@@ -62,21 +68,56 @@ export default function UserManagement() {
     setEdit(null); void load();
   }
 
+  function exportExcel() {
+    const head = ["Name", "ID", "Email", "Plan", "Amount paid", "City", "Chosen country"];
+    const body = rows.map((r) => [
+      r.full_name ?? "", awu(r.user_number), r.email ?? "", planLabel(r.plan),
+      planById(r.plan) ? `${planById(r.plan)!.price} DH` : "", r.city ?? "",
+      r.destination_country ? (countryByCode(r.destination_country)?.name ?? r.destination_country) : "",
+    ]);
+    const csv = [head, ...body].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `afaqway-paid-users-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   return (
     <div>
-      <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: "0 0 16px" }}>Users management</h1>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <Stat label="Paid users" value={stats.total} icon={sIcon(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>)} />
-        <Stat label="Self Service" value={stats.self} icon={sIcon(<><path d="M10 3l6.5 3.2v6.6L10 16l-6.5-3.2V6.2L10 3z" /><path d="M3.5 6.5 10 9.7l6.5-3.2M10 9.7V16.5" /></>)} />
-        <Stat label="Full Service" value={stats.full} icon={sIcon(<><path d="M3 7l3 2.5L10 4l4 5.5L17 7l-1 8H4L3 7z" /></>)} />
-        <Stat label="Banned" value={stats.banned} icon={sIcon(<><circle cx="10" cy="10" r="7" /><path d="M5 5l10 10" /></>)} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{title ?? "Users management"}</h1>
+        {!planLock && (
+          <button type="button" onClick={exportExcel} disabled={rows.length === 0} style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: rows.length ? "pointer" : "not-allowed", opacity: rows.length ? 1 : 0.5, font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg>
+            Export Excel
+          </button>
+        )}
       </div>
+      {!planLock && (
+        <>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+            <Stat label="Paid users" value={stats.total} icon={sIcon(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>)} />
+            <Stat label="Countries picked" value={stats.countries} icon={sIcon(<><circle cx="10" cy="10" r="7" /><path d="M3 10h14M10 3c2 2.4 2 11.6 0 14M10 3c-2 2.4-2 11.6 0 14" /></>)} />
+            <Stat label="Banned" value={stats.banned} icon={sIcon(<><circle cx="10" cy="10" r="7" /><path d="M5 5l10 10" /></>)} />
+          </div>
+          {Object.keys(stats.byCountry).length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+              {Object.entries(stats.byCountry).sort((a, b) => b[1] - a[1]).map(([c, n]) => (
+                <span key={c} className="pill pill-grey">{c === "—" ? "No country" : (countryByCode(c)?.name ?? c)}: {n}</span>
+              ))}
+            </div>
+          )}
+        </>
+      )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 18 }}>
-        <div style={{ display: "inline-flex", background: "var(--subtle)", border: "1px solid var(--line)", borderRadius: 10, padding: 3 }}>
-          {([["all", "All"], ["self_service", "Self Service"], ["full_service", "Full Service"]] as const).map(([v, l]) => (
-            <button key={v} type="button" onClick={() => setFilter(v)} style={{ height: 34, padding: "0 14px", borderRadius: 8, border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", background: filter === v ? "var(--card)" : "transparent", color: filter === v ? "var(--ink)" : "var(--ink-soft)", boxShadow: filter === v ? "var(--shadow-card)" : "none" }}>{l}</button>
-          ))}
-        </div>
+        {!countryLock && (
+          <select className="af" value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} style={{ height: 40, maxWidth: 200 }}>
+            <option value="all">All countries</option>
+            {COUNTRIES.filter((c) => c.available).map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </select>
+        )}
         <input className="af" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" style={{ flex: "1 1 240px", maxWidth: 360 }} />
       </div>
 
@@ -87,7 +128,7 @@ export default function UserManagement() {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
             <thead>
               <tr style={{ textAlign: "left", font: "600 11px/15px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
-                {["ID", "Name", "Email", "Plan", "City", "Controls"].map((h) => <th key={h} style={{ padding: "12px 14px", borderBottom: "1px solid var(--line-soft)" }}>{h}</th>)}
+                {["ID", "Name", "Email", "Country", "Plan", "City", "Controls"].map((h) => <th key={h} style={{ padding: "12px 14px", borderBottom: "1px solid var(--line-soft)" }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -96,6 +137,7 @@ export default function UserManagement() {
                   <td style={{ ...td, font: "600 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{awu(u.user_number)}</td>
                   <td style={td}>{u.full_name || "—"}{u.banned && <span className="pill pill-red" style={{ marginLeft: 6 }}>Banned</span>}</td>
                   <td style={td}>{u.email || "—"}</td>
+                  <td style={{ ...td, whiteSpace: "nowrap" }}>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</td>
                   <td style={td}>
                     <select className="af" value={u.plan ?? ""} onChange={(e) => { const v = e.target.value; setConfirm({ title: "Change this user's plan?", body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.", tone: "orange", onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); } }); }} style={{ height: 34, padding: "0 8px", minWidth: 130 }}>
                       <option value="self_service">Self Service</option>
@@ -107,6 +149,7 @@ export default function UserManagement() {
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <button type="button" onClick={() => setTrack(u)} style={btnGhost}>Track</button>
                       <button type="button" onClick={() => setEdit(u)} style={btnBlue}>Edit</button>
+                      {onOpenChat && <button type="button" onClick={() => onOpenChat(u.id)} style={btnBlue}>Chat</button>}
                       <a href={u.email ? `mailto:${u.email}` : undefined} style={btnGhost}>Email</a>
                       <button type="button" onClick={() => setConfirm({ title: u.banned ? "Unban this user?" : "Ban this user?", body: u.banned ? "They will regain access to their workspace." : "They will lose access to their workspace until you unban them.", tone: "red", onYes: () => { void patch(u.id, { banned: !u.banned }); setConfirm(null); } })} style={btnRed}>{u.banned ? "Unban" : "Ban"}</button>
                     </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import LanguageSwitcher from "./LanguageSwitcher";
 
+const LEGAL_HREF: Record<string, string> = { Terms: "/terms", Refunds: "/refund" };
 const COLS: { head: string; links: string[] }[] = [
   { head: "Platform", links: ["Pricing", "How it works", "Destinations", "Templates", "FAQ"] },
   { head: "Company", links: ["About us", "Blog", "Careers", "Contact", "Press"] },
@@ -48,7 +49,7 @@ export default function Footer() {
             <div key={col.head}>
               <div style={colHead}>{col.head}</div>
               {col.links.map((l) => (
-                <Link key={l} className="af-navlink" href="/soon" style={colLink}>{l}</Link>
+                <Link key={l} className="af-navlink" href={LEGAL_HREF[l] ?? "/soon"} style={colLink}>{l}</Link>
               ))}
             </div>
           ))}

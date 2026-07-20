@@ -9,6 +9,10 @@ import PaymentReviews from "@/components/admin/PaymentReviews";
 import AdminManagement from "@/components/admin/AdminManagement";
 import PaymentMethodsAdmin from "@/components/admin/PaymentMethodsAdmin";
 import UserManagement from "@/components/admin/UserManagement";
+import AdminChat from "@/components/admin/AdminChat";
+import { Flag } from "@/components/ds";
+import { countryByCode } from "@/components/profile-setup/countries";
+import { notify, requestNotify } from "@/lib/notify";
 
 type Page = { id: string; label: string; superOnly?: boolean };
 const PAGES: Page[] = [
@@ -17,9 +21,12 @@ const PAGES: Page[] = [
   { id: "reviews", label: "Payment Reviews", superOnly: true },
   { id: "methods", label: "Payment Methods", superOnly: true },
   { id: "users", label: "Users Management" },
-  { id: "full", label: "Full Service Users" },
-  { id: "self", label: "Self Service Users" },
 ];
+// Per-country control groups (A2). Add a country = add one entry here.
+const COUNTRY_GROUPS: { code: string; pages: Page[] }[] = [
+  { code: "LT", pages: [{ id: "full", label: "Full Service Users" }, { id: "self", label: "Self Service Users" }] },
+];
+const ALL_SUB_PAGES = COUNTRY_GROUPS.flatMap((g) => g.pages);
 
 const svg = (d: React.ReactNode) => <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "none" }}>{d}</svg>;
 const PAGE_ICONS: Record<string, React.ReactNode> = {
@@ -91,38 +98,40 @@ function Placeholder({ title }: { title: string }) {
   );
 }
 
-function playBeep() {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator(); const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type = "sine"; o.frequency.value = 880;
-    g.gain.setValueAtTime(0.0001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-    o.start(); o.stop(ctx.currentTime + 0.36);
-    o.onended = () => ctx.close();
-  } catch { /* audio blocked until first interaction */ }
-}
+type Report = { id: string; type: string; title: string; body: string | null; target_page: string | null; target_id: string | null; read: boolean; created_at: string };
+type BanUser = { id: string; full_name: string | null; email: string | null; user_number: number | null; city: string | null; banned: boolean };
 
-type Report = { id: string; type: string; title: string; body: string | null; target_page: string | null; read: boolean; created_at: string };
-
-function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: string) => void; onChanged: () => void }) {
+function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: string, targetId?: string | null) => void; onChanged: () => void }) {
   const [rows, setRows] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [banPanel, setBanPanel] = useState<{ reportId: string; user: BanUser } | null>(null);
+  const [banConfirming, setBanConfirming] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("admin_reports").select("id, type, title, body, target_page, read, created_at").order("created_at", { ascending: false }).limit(100);
+    const { data } = await supabase.from("admin_reports").select("id, type, title, body, target_page, target_id, read, created_at").order("created_at", { ascending: false }).limit(100);
     setRows((data ?? []) as Report[]); setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load, version]);
   async function mark(id: string) { await supabase.from("admin_reports").update({ read: true }).eq("id", id); onChanged(); void load(); }
   async function markAll() { await supabase.from("admin_reports").update({ read: true }).eq("read", false); onChanged(); void load(); }
-  async function check(r: Report) { await mark(r.id); if (r.target_page) onGo(r.target_page); }
+  async function check(r: Report) {
+    await mark(r.id);
+    if (r.type === "ban" && r.target_id) {
+      // A5: keep bans in-panel — show the user and let the admin unban here.
+      const { data } = await supabase.from("profiles").select("id, full_name, email, user_number, city, banned").eq("id", r.target_id).maybeSingle();
+      if (data) { setBanPanel({ reportId: r.id, user: data as BanUser }); return; }
+    }
+    if (r.target_page) onGo(r.target_page, r.target_id);
+  }
+  function closeBan() { setBanPanel(null); setBanConfirming(false); }
+  async function unban() {
+    if (!banPanel) return;
+    await supabase.from("profiles").update({ banned: false }).eq("id", banPanel.user.id);
+    closeBan(); onChanged(); void load();
+  }
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Reports</h1>
         <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
@@ -151,88 +160,45 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
           ))}
         </div>
       )}
+
+      {banPanel && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
+            <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="pill pill-red">Banned user</span>
+              <span style={{ font: "700 15px/20px var(--font-sans)", color: "var(--red)" }}>{banPanel.user.full_name || "User"}</span>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink)" }}>
+                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Profile ID</span><b>AWU-{String(banPanel.user.user_number ?? 0).padStart(3, "0")}</b></div>
+                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Email</span><b>{banPanel.user.email || "—"}</b></div>
+                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>City</span><b>{banPanel.user.city || "—"}</b></div>
+                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Status</span><b style={{ color: banPanel.user.banned ? "var(--red)" : "var(--green)" }}>{banPanel.user.banned ? "Banned" : "Active"}</b></div>
+              </div>
+              {banConfirming ? (
+                <div style={{ marginTop: 18, background: "var(--amber-tint)", border: "1px solid var(--amber-line)", borderRadius: 12, padding: 14 }}>
+                  <div style={{ font: "600 13.5px/20px var(--font-sans)", color: "var(--ink)" }}>Are you sure you want to unban this user?</div>
+                  <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>They will immediately regain access to their workspace and messaging.</div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
+                    <button type="button" onClick={() => setBanConfirming(false)} style={{ height: 38, padding: "0 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>No, keep banned</button>
+                    <button type="button" onClick={unban} style={{ height: 38, padding: "0 14px", borderRadius: 10, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "#fff" }}>Yes, unban</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
+                  <button type="button" onClick={closeBan} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Close</button>
+                  {banPanel.user.banned && <button type="button" onClick={() => setBanConfirming(true)} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Unban user</button>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ChatWireframe() {
-  const [emailOn, setEmailOn] = useState(false);
-  const [pinOn, setPinOn] = useState(false);
-  const [filter, setFilter] = useState<"full" | "self">("full");
-  const [msg, setMsg] = useState("");
-  const [sending, setSending] = useState(false);
-  const [status, setStatus] = useState("");
-  async function send() {
-    if (!msg.trim()) return;
-    if (!emailOn) { setStatus("Posted to chat (wireframe — live messaging is next)."); setMsg(""); return; }
-    setSending(true); setStatus("");
-    const { data, error } = await supabase.functions.invoke("send-update", { body: { plan: filter === "full" ? "full_service" : "self_service", subject: "Update from AfaqWay", message: msg } });
-    setSending(false);
-    if (error) setStatus("Email failed: " + error.message);
-    else { setStatus(`Emailed ${(data as { sent?: number })?.sent ?? 0} ${filter === "full" ? "Full Service" : "Self Service"} user(s).`); setMsg(""); }
-  }
-  const opt = (on: boolean): CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, cursor: "pointer", font: "600 12px/1 var(--font-sans)", border: on ? "1px solid var(--indigo-line)" : "1px solid var(--line)", background: on ? "var(--indigo-tint)" : "var(--card)", color: on ? "var(--indigo-text)" : "var(--ink-soft)" });
-  return (
-    <div>
-      <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: "0 0 4px" }}>Messages</h1>
-      <p style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", margin: "0 0 18px" }}>Send updates to students. Turning on <b>Email</b> also mails it (updates@afaqway.com); <b>Pin</b> keeps it as the last update at the top of their chat. Wireframe — live messaging + email are wired next.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr) 260px", gap: 0, height: 560, border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", background: "var(--card)" }}>
-
-        {/* LEFT: search + filter + conversations */}
-        <div style={{ borderRight: "1px solid var(--line-soft)", padding: 12, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-          <input className="af" placeholder="Search conversations" />
-          <div style={{ display: "inline-flex", background: "var(--subtle)", border: "1px solid var(--line)", borderRadius: 9, padding: 3 }}>
-            {(["full", "self"] as const).map((f) => (
-              <button key={f} type="button" onClick={() => setFilter(f)} style={{ flex: 1, height: 30, borderRadius: 7, border: "none", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", background: filter === f ? "var(--card)" : "transparent", color: filter === f ? "var(--ink)" : "var(--ink-soft)" }}>{f === "full" ? "Full Service" : "Self Service"}</button>
-            ))}
-          </div>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: 10, borderRadius: 10, background: i === 1 ? "var(--indigo-tint)" : "transparent", cursor: "pointer" }}>
-              <span style={{ width: 34, height: 34, borderRadius: 999, background: "var(--subtle)", flex: "none" }} />
-              <div style={{ flex: 1 }}><div style={{ height: 9, width: "60%", background: "var(--subtle)", borderRadius: 999 }} /><div style={{ height: 8, width: "85%", background: "var(--subtle)", borderRadius: 999, marginTop: 6 }} /></div>
-            </div>
-          ))}
-        </div>
-
-        {/* CENTER: thread + message bar with options */}
-        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <div style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
-            <div style={{ alignSelf: "flex-start", maxWidth: "72%", background: "var(--subtle)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>Hi, I uploaded my passport page.</div>
-            <div style={{ alignSelf: "flex-end", maxWidth: "72%", background: "var(--indigo-tint)", borderRadius: 12, padding: "10px 14px", font: "400 13px/19px var(--font-sans)", color: "var(--ink)" }}>Great, we&apos;re reviewing it now.</div>
-            <div style={{ alignSelf: "flex-start", maxWidth: "72%", background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, padding: 12 }}>
-              <div style={{ font: "600 12px/16px var(--font-sans)", color: "var(--ink)", marginBottom: 8 }}>Which intake do you prefer?</div>
-              {["Autumn 2027", "Autumn 2028"].map((a, i) => <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: "8px 12px", marginBottom: 6, font: "500 12.5px/18px var(--font-sans)", color: "var(--ink)", cursor: "pointer" }}>{i + 1}. {a}</div>)}
-            </div>
-          </div>
-          <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12 }}>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-              <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><span style={{ width: 7, height: 7, borderRadius: 999, background: emailOn ? "var(--green)" : "var(--ink-faint)" }} />Email</button>
-              <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}><span style={{ width: 7, height: 7, borderRadius: 999, background: pinOn ? "var(--indigo-600)" : "var(--ink-faint)" }} />Pin as last update</button>
-              <button type="button" style={opt(false)}>Upload file</button>
-              <button type="button" style={opt(false)}>Interactive question</button>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input className="af" placeholder={emailOn ? `Write an update to email all ${filter === "full" ? "Full" : "Self"} Service users…` : "Write an update…"} value={msg} onChange={(e) => setMsg(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: 1 }} />
-              <button type="button" disabled={sending || !msg.trim()} onClick={send} style={{ height: 42, padding: "0 18px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 14px/1 var(--font-sans)", cursor: sending || !msg.trim() ? "not-allowed" : "pointer", opacity: sending || !msg.trim() ? 0.5 : 1 }}>{sending ? "Sending…" : emailOn ? "Send & email" : "Send"}</button>
-            </div>
-            {status && <div style={{ font: "500 12.5px/18px var(--font-sans)", color: status.startsWith("Email failed") ? "var(--red)" : "var(--green)", marginTop: 8 }}>{status}</div>}
-          </div>
-        </div>
-
-        {/* RIGHT: last important updates (pinned / emailed) */}
-        <div style={{ borderLeft: "1px solid var(--line-soft)", padding: 12, overflowY: "auto" }}>
-          <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 10 }}>Last updates</div>
-          {[1, 2].map((i) => (
-            <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, marginBottom: 8, background: "var(--card)" }}>
-              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}><span className="pill pill-indigo">Pinned</span><span className="pill pill-green">Emailed</span></div>
-              <div style={{ height: 8, width: "90%", background: "var(--subtle)", borderRadius: 999 }} /><div style={{ height: 8, width: "70%", background: "var(--subtle)", borderRadius: 999, marginTop: 6 }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+const rowSt = { display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--line-soft)" } as const;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -243,23 +209,39 @@ export default function AdminPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [unread, setUnread] = useState(0);
   const [reportVersion, setReportVersion] = useState(0);
+  const [chatUser, setChatUser] = useState<string | null>(null);
+  const [highlightPayment, setHighlightPayment] = useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ LT: true });
+  const [chatUnread, setChatUnread] = useState(false);
+  const pageRef = useRef(page);
+  useEffect(() => { pageRef.current = page; if (page === "chat") setChatUnread(false); }, [page]);
 
   const refreshUnread = useCallback(async () => {
     const { count } = await supabase.from("admin_reports").select("id", { count: "exact", head: true }).eq("read", false);
     setUnread(count ?? 0);
   }, []);
 
+  const goFromReport = useCallback((p: string, targetId?: string | null) => {
+    if (p === "reviews" && targetId) setHighlightPayment(targetId);
+    setPage(p);
+    void refreshUnread();
+  }, [refreshUnread]);
+  const openChat = useCallback((userId: string) => { setChatUser(userId); setPage("chat"); }, []);
+
   useEffect(() => {
     if (status !== "ready") return;
     void refreshUnread();
-    if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+    requestNotify();
     const ch = supabase.channel("admin-reports")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_reports" }, (payload) => {
         const rep = payload.new as { title?: string; body?: string };
-        playBeep();
         setUnread((u) => u + 1);
         setReportVersion((v) => v + 1);
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") { try { new Notification(rep.title ?? "New report", { body: rep.body ?? "" }); } catch { /* ignore */ } }
+        notify(rep.title ?? "New report", rep.body ?? "");
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const m = payload.new as { sender?: string };
+        if (m.sender === "user" && pageRef.current !== "chat") setChatUnread(true);
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -290,71 +272,101 @@ export default function AdminPage() {
 
   const isSuper = role === "superadmin";
   const pages = PAGES.filter((p) => isSuper || !p.superOnly);
-  const navBtn = (on: boolean): CSSProperties => ({ display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start", textAlign: "left", padding: collapsed ? "11px 0" : "10px 14px", borderRadius: 10, border: "none", borderLeft: `2px solid ${on ? "var(--indigo-600)" : "transparent"}`, background: on ? "var(--indigo-tint)" : "transparent", color: on ? "var(--indigo-text)" : "var(--ink)", cursor: "pointer", font: "600 13.5px/20px var(--font-sans)", width: "100%" });
+  const cls = (on: boolean, extra = "") => `adm-item${on ? " active" : ""}${extra ? " " + extra : ""}`;
+  const lbl = (t: string) => collapsed ? undefined : t;
 
   return (
-    <div style={{ minHeight: "100vh", position: "relative", display: "flex", background: "url(/hero-ambient.webp) center/cover fixed no-repeat" }}>
-      {/* Sidebar */}
-      <aside style={{ zIndex: 1, width: collapsed ? 68 : 248, flex: "none", background: "rgba(255,255,255,.82)", borderRight: "1px solid var(--line)", display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh", transition: "width 160ms cubic-bezier(.4,0,.2,1)" }}>
-        <div style={{ padding: collapsed ? "18px 0 12px" : "18px 16px 12px", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between", gap: 8, borderBottom: "1px solid var(--line-soft)" }}>
-          {!collapsed && (
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <LogoMark size={26} />
-              <div>
-                <div style={{ font: "700 16px/1 var(--font-sans)", color: "var(--ink)" }}>AfaqWay</div>
-                <div style={{ font: "600 9.5px/14px var(--font-sans)", letterSpacing: ".06em", textTransform: "uppercase", color: "var(--indigo-600)", marginTop: 3 }}>{isSuper ? "Super admin" : "Admin"}</div>
+    <div className="adm-root">
+      <div className="adm-bg" aria-hidden><span><LogoMark size={800} /></span></div>
+      <div className="adm-shell">
+        <aside className="adm-sidebar" style={{ width: collapsed ? 76 : 258 }}>
+          <span className="adm-sidebar-logo" aria-hidden><LogoMark size={150} /></span>
+          {/* Workspace switcher */}
+          <div className="adm-ws" style={{ justifyContent: collapsed ? "center" : "space-between" }}>
+            {!collapsed && (
+              <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                <span className="adm-ws-badge"><LogoMark size={22} /></span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ font: "700 15px/18px var(--font-sans)", color: "var(--ink)" }}>AfaqWay</div>
+                  <div style={{ font: "600 9.5px/14px var(--font-sans)", letterSpacing: ".06em", textTransform: "uppercase", color: "var(--indigo-600)", marginTop: 2 }}>{isSuper ? "Super admin" : "Admin"}</div>
+                </div>
               </div>
-            </div>
-          )}
-          <button type="button" onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--subtle)", color: "var(--ink-soft)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{collapsed ? <path d="M7 5l5 5-5 5" /> : <path d="M13 5l-5 5 5 5" />}</svg>
-          </button>
-        </div>
-
-        <nav style={{ flex: 1, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 2 }}>
-          {pages.map((p) => (
-            <button key={p.id} type="button" onClick={() => setPage(p.id)} title={collapsed ? p.label : undefined} style={navBtn(p.id === page)}>
-              {PAGE_ICONS[p.id]}{!collapsed && p.label}
+            )}
+            <button type="button" className="adm-collapse-btn" onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{collapsed ? <path d="M7 5l5 5-5 5" /> : <path d="M13 5l-5 5 5 5" />}</svg>
             </button>
-          ))}
-        </nav>
+          </div>
 
-        {/* Report + Chat boxes */}
-        <div style={{ padding: 10, borderTop: "1px solid var(--line-soft)", display: "flex", flexDirection: "column", gap: 2 }}>
-          <button type="button" onClick={() => setPage("reports")} title={collapsed ? "Reports" : undefined} style={navBtn(page === "reports")}>
-            <span style={{ position: "relative", display: "flex" }}>
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3a4 4 0 0 0-4 4v3l-1.5 3h11L14 10V7a4 4 0 0 0-4-4z" /><path d="M8.5 16a1.5 1.5 0 0 0 3 0" /></svg>
-              {unread > 0 && <span style={{ position: "absolute", top: -6, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 999, background: "var(--red)", color: "#fff", font: "700 9.5px/16px var(--font-sans)", textAlign: "center" }}>{unread > 9 ? "9+" : unread}</span>}
-            </span>
-            {!collapsed && "Reports"}
-          </button>
-          <button type="button" onClick={() => setPage("chat")} title={collapsed ? "Messages" : undefined} style={navBtn(page === "chat")}>
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-4 3V6a1 1 0 0 1 1-1z" /></svg>
-            {!collapsed && "Messages"}
-          </button>
-        </div>
+          <nav className="adm-nav">
+            {!collapsed && <div className="adm-group-label">Workspace</div>}
+            {pages.map((p) => (
+              <button key={p.id} type="button" onClick={() => setPage(p.id)} title={lbl(p.label)} className={cls(p.id === page)}>
+                <span className="adm-item-ico">{PAGE_ICONS[p.id]}</span>{!collapsed && p.label}
+              </button>
+            ))}
+            {COUNTRY_GROUPS.map((g) => {
+              const c = countryByCode(g.code);
+              const open = openGroups[g.code];
+              const active = g.pages.some((p) => p.id === page);
+              return (
+                <div key={g.code}>
+                  <button type="button" onClick={() => { if (collapsed) { setCollapsed(false); setOpenGroups((o) => ({ ...o, [g.code]: true })); } else setOpenGroups((o) => ({ ...o, [g.code]: !o[g.code] })); }} title={lbl(`${c?.name} control`)} className={cls(active && !open)} style={{ justifyContent: collapsed ? "center" : "space-between" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      {c ? <Flag stripes={c.stripes} size="sm" /> : null}{!collapsed && <span>{c?.name} control</span>}
+                    </span>
+                    {!collapsed && <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }}><path d="M7 5l5 5-5 5" /></svg>}
+                  </button>
+                  {open && !collapsed && g.pages.map((p) => (
+                    <button key={p.id} type="button" onClick={() => setPage(p.id)} className={cls(p.id === page, "sub")}>
+                      <span className="adm-item-ico">{PAGE_ICONS[p.id]}</span>{p.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </nav>
 
-        <div style={{ padding: 10, borderTop: "1px solid var(--line-soft)" }}>
-          {!collapsed && <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", padding: "0 14px 8px", wordBreak: "break-all" }}>{email}</div>}
-          <button type="button" onClick={() => logout(router)} title={collapsed ? "Log out" : undefined} style={{ ...navBtn(false), color: "var(--red)" }}>
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M13 14v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v2M9 10h8m0 0-3-3m3 3-3 3" /></svg>
-            {!collapsed && "Log out"}
-          </button>
-        </div>
-      </aside>
+          {/* Footer group: Reports + Messages */}
+          <div className="adm-foot">
+            <button type="button" onClick={() => setPage("reports")} title={lbl("Reports")} className={cls(page === "reports")}>
+              <span className="adm-item-ico" style={{ position: "relative" }}>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3a4 4 0 0 0-4 4v3l-1.5 3h11L14 10V7a4 4 0 0 0-4-4z" /><path d="M8.5 16a1.5 1.5 0 0 0 3 0" /></svg>
+                {unread > 0 && <span style={{ position: "absolute", top: -6, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 999, background: "var(--red)", color: "#fff", font: "700 9.5px/16px var(--font-sans)", textAlign: "center" }}>{unread > 9 ? "9+" : unread}</span>}
+              </span>
+              {!collapsed && "Reports"}
+            </button>
+            <button type="button" onClick={() => setPage("chat")} title={lbl("Messages")} className={cls(page === "chat")}>
+              <span className="adm-item-ico" style={{ position: "relative" }}>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-4 3V6a1 1 0 0 1 1-1z" /></svg>
+                {chatUnread && <span style={{ position: "absolute", top: -3, right: -3, width: 9, height: 9, borderRadius: 999, background: "var(--red)", border: "2px solid #fff" }} />}
+              </span>
+              {!collapsed && "Messages"}
+              {chatUnread && !collapsed && <span style={{ marginLeft: "auto", width: 8, height: 8, borderRadius: 999, background: "var(--red)" }} />}
+            </button>
+          </div>
 
-      {/* Content */}
-      <main style={{ position: "relative", zIndex: 1, flex: 1, minWidth: 0, padding: "30px 34px", overflowY: "auto" }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-          {page === "reviews" ? <PaymentReviews />
+          {/* Footer group: account + logout */}
+          <div className="adm-foot">
+            {!collapsed && <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", padding: "2px 12px 4px", wordBreak: "break-all" }}>{email}</div>}
+            <button type="button" onClick={() => logout(router)} title={lbl("Log out")} className={cls(false, "danger")}>
+              <span className="adm-item-ico"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M13 14v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v2M9 10h8m0 0-3-3m3 3-3 3" /></svg></span>
+              {!collapsed && "Log out"}
+            </button>
+          </div>
+        </aside>
+
+        <main className="adm-main">
+          {page === "reviews" ? <PaymentReviews highlightId={highlightPayment} onHighlightDone={() => setHighlightPayment(null)} />
             : page === "admins" ? <AdminManagement />
             : page === "methods" ? <PaymentMethodsAdmin />
-            : page === "users" ? <UserManagement />
-            : page === "reports" ? <ReportBox version={reportVersion} onGo={(p) => { setPage(p); void refreshUnread(); }} onChanged={refreshUnread} />
-            : page === "chat" ? <ChatWireframe />
-            : <Placeholder title={PAGES.find((p) => p.id === page)?.label ?? page} />}
-        </div>
-      </main>
+            : page === "users" ? <UserManagement onOpenChat={openChat} />
+            : page === "full" ? <UserManagement initialPlan="full_service" initialCountry="LT" title="Full Service users — Lithuania" onOpenChat={openChat} />
+            : page === "self" ? <UserManagement initialPlan="self_service" initialCountry="LT" title="Self Service users — Lithuania" onOpenChat={openChat} />
+            : page === "reports" ? <ReportBox version={reportVersion} onGo={goFromReport} onChanged={refreshUnread} />
+            : page === "chat" ? <AdminChat initialUserId={chatUser} />
+            : <Placeholder title={[...PAGES, ...ALL_SUB_PAGES].find((p) => p.id === page)?.label ?? page} />}
+        </main>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { planById } from "@/lib/plans";
    Profile, Subscription (opens a doc-style modal), Help center, Sign out. */
 
 type Nav = "dashboard" | "roadmap" | "chat" | "profile" | "help";
-type Props = { nav: Nav; onNav: (n: Nav) => void; userId?: string; plan?: string | null; fullName?: string | null };
+type Props = { nav: Nav; onNav: (n: Nav) => void; userId?: string; plan?: string | null; fullName?: string | null; chatUnread?: boolean };
 
 const navItems: { id: Nav; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
@@ -57,7 +57,7 @@ function SubscriptionModal({ plan, onClose }: { plan: string | null | undefined;
   );
 }
 
-export default function StudentTopBar({ nav, onNav, userId, plan, fullName }: Props) {
+export default function StudentTopBar({ nav, onNav, userId, plan, fullName, chatUnread }: Props) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -79,8 +79,9 @@ export default function StudentTopBar({ nav, onNav, userId, plan, fullName }: Pr
           <div className="af-nav-desktop" style={{ alignItems: "center", gap: 22 }}>
             {navItems.map((n) => navBtn(n.id, n.label))}
             <span style={{ width: 1, height: 24, background: "var(--line)" }} />
-            <button type="button" onClick={() => onNav("chat")} aria-label="Messages" style={{ background: nav === "chat" ? "var(--indigo-tint)" : "none", border: "none", cursor: "pointer", color: nav === "chat" ? "var(--indigo-600)" : "var(--ink-soft)", width: 36, height: 36, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <button type="button" onClick={() => onNav("chat")} aria-label="Messages" style={{ position: "relative", background: nav === "chat" ? "var(--indigo-tint)" : "none", border: "none", cursor: "pointer", color: nav === "chat" ? "var(--indigo-600)" : "var(--ink-soft)", width: 36, height: 36, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-4 3V6a1 1 0 0 1 1-1z" /></svg>
+              {chatUnread && <span style={{ position: "absolute", top: 6, right: 6, width: 9, height: 9, borderRadius: 999, background: "var(--red)", border: "2px solid var(--card)" }} />}
             </button>
             <div style={{ position: "relative" }}>
               <button type="button" onClick={() => setMenu((v) => !v)} aria-label="Profile menu" style={{ width: 36, height: 36, borderRadius: 999, background: "var(--indigo-100)", color: "var(--indigo-600)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: "700 14px/1 var(--font-sans)" }}>

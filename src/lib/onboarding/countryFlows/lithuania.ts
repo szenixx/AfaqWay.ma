@@ -28,8 +28,8 @@ export const lithuaniaFlow: CountryFlow = {
               required: true,
               placeholder: "Select an intake",
               options: [
-                { value: "Autumn 2027 (September)", label: "Autumn 2027 (September)" },
                 { value: "Autumn 2028 (September)", label: "Autumn 2028 (September)" },
+                { value: "Autumn 2029 (September)", label: "Autumn 2029 (September)" },
               ],
             },
           ],
@@ -79,7 +79,7 @@ export const lithuaniaFlow: CountryFlow = {
           sectionTitle: "Your program preferences",
           fields: [
             { kind: "multiselect", key: "field_of_interest", label: "Field of interest", hint: "pick up to 2", required: true, maxSelect: 2, options: FIELD_OPTIONS },
-            { kind: "text", key: "max_budget", label: "Max tuition budget", hint: "€ per year, min 2800", required: true, sanitize: "digits", inputMode: "numeric", numeric: true, min: 2800, maxLength: 6, placeholder: "e.g. 4000" },
+            { kind: "text", key: "max_budget", label: "Max tuition budget", hint: "€ per year, min 2800", required: true, sanitize: "digits", inputMode: "numeric", numeric: true, min: 2800, maxLength: 6, placeholder: "recommended 4500+ €" },
             { kind: "segmented", key: "has_english_test", label: "Do you have an English test?", required: true, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] },
             { kind: "select", key: "english_test_type", label: "Which English test?", required: true, placeholder: "Choose a test", options: ENGLISH_TESTS, showWhen: { field: "has_english_test", equals: "yes" }, row: 2 },
             { kind: "text", key: "english_test_score", label: "Test score", hint: "numbers only", required: true, sanitize: "decimal", inputMode: "decimal", numeric: true, placeholder: "your test score", showWhen: { field: "has_english_test", equals: "yes" }, row: 2 },
