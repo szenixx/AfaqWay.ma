@@ -122,10 +122,18 @@ export default function AuthPage() {
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     setLoading(true);
     try {
+      // Go straight to onboarding (or the dashboard if already done) — no bounce
+      // through the home / sign-in page.
+      const routeAfterAuth = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.replace("/signup"); return; }
+        const { data: prof } = await supabase.from("profiles").select("onboarding_completed_at").eq("id", user.id).maybeSingle();
+        router.replace(prof?.onboarding_completed_at ? "/dashboard" : "/profile-setup");
+      };
       if (!isSignup) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) setError(error.message);
-        else router.push(POST_AUTH);
+        else await routeAfterAuth();
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -133,13 +141,13 @@ export default function AuthPage() {
           options: { emailRedirectTo: `${window.location.origin}${POST_AUTH}` },
         });
         if (error) setError(error.message);
-        else if (data.session) router.push(POST_AUTH);
+        else if (data.session) await routeAfterAuth();
         else {
           // Accounts are auto-confirmed, so log the user in right away instead of
           // waiting on a confirmation email.
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
           if (signInErr) setNotice("Your account is ready. Please log in to continue.");
-          else router.push(POST_AUTH);
+          else await routeAfterAuth();
         }
       }
     } finally {

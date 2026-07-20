@@ -90,8 +90,13 @@ export function scoreProgram(p: Program, s: StudentProfile): Recommendation {
 }
 
 /** Rank every programme by compatibility. Never returns an empty list. */
+// Only ever show programmes for the degree the student wants (bachelor vs master).
+const degreeMatch = (profile: StudentProfile) => (p: Program) =>
+  !profile.degree || p.degree.toLowerCase() === profile.degree.toLowerCase();
+
 export function recommend(profile: StudentProfile, programs: Program[]): Recommendation[] {
   return programs
+    .filter(degreeMatch(profile))
     .map((p) => scoreProgram(p, profile))
     .sort((a, b) => b.score - a.score || (a.program.tuition_eur ?? 1e9) - (b.program.tuition_eur ?? 1e9));
 }
@@ -100,6 +105,6 @@ export function recommend(profile: StudentProfile, programs: Program[]): Recomme
 export function searchPrograms(query: string, profile: StudentProfile, programs: Program[]): Recommendation[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  const hits = programs.filter((p) => `${p.name} ${p.university} ${p.field}`.toLowerCase().includes(q));
+  const hits = programs.filter(degreeMatch(profile)).filter((p) => `${p.name} ${p.university} ${p.field}`.toLowerCase().includes(q));
   return hits.map((p) => scoreProgram(p, profile)).sort((a, b) => b.score - a.score);
 }

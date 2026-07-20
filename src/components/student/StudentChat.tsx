@@ -16,6 +16,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [uploadingName, setUploadingName] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
@@ -67,6 +68,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
     try {
       let fp: string | null = null, fn: string | null = null;
       if (file) {
+        setUploadingName(file.name); // show it in the conversation right away while it uploads
         const up = await uploadUserFile(file, { fallbackBucket: "update_files", fallbackPrefix: userId });
         fp = up.path; fn = file.name;
       }
@@ -76,7 +78,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
       if (res.ok) { setBody(""); setFile(null); setReplyTo(null); void load(); }
       else if (res.reason === "banned") { setBlocked(true); setNotice({ kind: "error", text: "Your account is currently blocked. Please contact support." }); }
       else setNotice({ kind: "error", text: "Message not sent. Please try again." });
-    } catch (e) { setNotice({ kind: "error", text: "Could not send: " + (e instanceof Error ? e.message : "error") }); } finally { setSending(false); }
+    } catch (e) { setNotice({ kind: "error", text: "Could not send: " + (e instanceof Error ? e.message : "error") }); } finally { setSending(false); setUploadingName(null); }
   }
 
   return (
@@ -92,7 +94,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
           return (
             <div key={m.id} style={{ display: "flex", flexDirection: mine ? "row-reverse" : "row", alignItems: "center", gap: 6, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "90%" }}
               onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m }); }}>
-              <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "rgba(255,255,255,.92)", borderRadius: 12, padding: "9px 12px" }}>
+              <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "rgba(255,255,255,.92)", borderRadius: 16, padding: "9px 13px", boxShadow: "0 2px 8px rgba(23,35,58,.06)" }}>
                 {quoted && (
                   <div style={{ borderLeft: "3px solid var(--indigo-600)", background: "rgba(43,76,155,.06)", borderRadius: 6, padding: "4px 8px", marginBottom: 6 }}>
                     <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: "var(--indigo-600)" }}>{quoted.sender === "user" ? "You" : "AfaqWay"}</span>
@@ -121,6 +123,12 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
             </div>
           );
         })}
+        {uploadingName && (
+          <div style={{ alignSelf: "flex-end", maxWidth: "80%", background: "var(--indigo-tint)", borderRadius: 16, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span aria-hidden style={{ width: 14, height: 14, flex: "none", border: "2px solid var(--indigo-line)", borderTopColor: "var(--indigo-600)", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />
+            <span style={{ font: "500 12.5px/17px var(--font-sans)", color: "var(--indigo-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uploading {uploadingName}…</span>
+          </div>
+        )}
       </div>
       {notice && <div style={{ padding: "8px 16px", font: "500 12.5px/18px var(--font-sans)", color: notice.kind === "error" ? "var(--red)" : "var(--amber)", background: notice.kind === "error" ? "var(--red-tint)" : "var(--amber-tint)", borderTop: "1px solid var(--line-soft)" }}>{notice.text}</div>}
       <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12, background: "var(--card)" }}>
@@ -134,13 +142,13 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
           </div>
         )}
         {file && <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}><span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Attached: {file.name}</span><button type="button" onClick={() => setFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button></div>}
-        <div style={{ display: "flex", gap: 8, minWidth: 0, alignItems: "center" }}>
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={blocked} aria-label="Upload a file" title="Upload" style={{ height: 42, width: 42, flex: "none", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: blocked ? "not-allowed" : "pointer", color: "var(--ink)", opacity: blocked ? 0.5 : 1 }}>
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13V4m0 0 3.5 3.5M10 4 6.5 7.5M4 14v2h12v-2" /></svg>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, padding: "4px 5px 4px 8px", boxShadow: "0 6px 18px rgba(23,35,58,.06)" }}>
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={blocked} aria-label="Attach a file" title="Attach a file" style={{ flex: "none", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, border: "none", background: "none", cursor: blocked ? "not-allowed" : "pointer", color: "var(--ink-soft)", opacity: blocked ? 0.5 : 1 }}>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>
           </button>
           <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <input className="af" placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0 }} />
-          <button type="button" disabled={sending || blocked} onClick={send} style={{ height: 42, flex: "none", padding: "0 16px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 14px/1 var(--font-sans)", cursor: sending || blocked ? "not-allowed" : "pointer", opacity: sending || blocked ? 0.5 : 1 }}>{sending ? "…" : "Send"}</button>
+          <input placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0, height: 38, border: "none", background: "transparent", outline: "none", font: "400 16px/1 var(--font-sans)", color: "var(--ink)" }} />
+          <button type="button" disabled={sending || blocked} onClick={send} style={{ height: 38, flex: "none", padding: "0 16px", borderRadius: 999, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 13.5px/1 var(--font-sans)", cursor: sending || blocked ? "not-allowed" : "pointer", opacity: sending || blocked ? 0.5 : 1 }}>{sending ? "…" : "Send"}</button>
         </div>
       </div>
 

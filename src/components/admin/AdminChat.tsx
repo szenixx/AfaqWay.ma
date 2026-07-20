@@ -29,6 +29,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
   const [qText, setQText] = useState("");
   const [qOpts, setQOpts] = useState(["", ""]);
   const [sending, setSending] = useState(false);
+  const [uploadingName, setUploadingName] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; msg: Msg; kind: "msg" | "file" } | null>(null);
@@ -122,6 +123,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
       if (hasQ) finalBody = "ASK::" + JSON.stringify({ q: qText.trim(), opts: qOpts.filter((o) => o.trim()).map((o) => o.trim()) });
       let file_path: string | null = null, file_name: string | null = null, attachUrl: string | null = null;
       if (file) {
+        setUploadingName(file.name);
         const path = `${sel}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
         const up = await supabase.storage.from("update_files").upload(path, file);
         if (up.error) throw up.error;
@@ -140,7 +142,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
       } else setStatus("Sent");
       setBody(""); setFile(null); setPinOn(false); setWhatsappOn(false); setShowQ(false); setQText(""); setQOpts(["", ""]); setReplyTo(null);
       void loadMsgs(sel);
-    } catch (e) { setStatus("Failed: " + (e instanceof Error ? e.message : "error")); } finally { setSending(false); }
+    } catch (e) { setStatus("Failed: " + (e instanceof Error ? e.message : "error")); } finally { setSending(false); setUploadingName(null); }
   }
 
   // ── Country gate (A3) — centered, glass cards ──
@@ -206,7 +208,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                 <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{selUser.full_name || "Unnamed"} <span style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}>· {selUser.email}</span></span>
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="var(--ink-faint)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto" }}><circle cx="10" cy="10" r="7" /><path d="M10 9v4M10 6.5v.5" /></svg>
               </button>
-              <div style={{ flex: 1, minHeight: 0, padding: 14, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
+              <div className="stu-chat-texture" style={{ flex: 1, minHeight: 0, padding: 14, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
                 {msgs.length === 0 && <div style={{ color: "var(--ink-faint)", font: "400 13px var(--font-sans)", textAlign: "center", marginTop: 20 }}>No messages yet. Send the first update.</div>}
                 {msgs.map((m) => {
                   const mine = m.sender === "admin";
@@ -215,7 +217,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                   return (
                     <div key={m.id} style={{ display: "flex", flexDirection: mine ? "row-reverse" : "row", alignItems: "center", gap: 6, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "90%" }}
                       onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "msg" }); }}>
-                      <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "var(--subtle)", border: m.pinned ? "1px solid var(--indigo-line)" : "none", borderRadius: 12, padding: "9px 12px" }}>
+                      <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "rgba(255,255,255,.94)", border: m.pinned ? "1px solid var(--indigo-line)" : "none", borderRadius: 16, padding: "9px 13px", boxShadow: "0 2px 8px rgba(23,35,58,.06)" }}>
                         {quoted && (
                           <div style={{ borderLeft: "3px solid var(--indigo-600)", background: "rgba(43,76,155,.06)", borderRadius: 6, padding: "4px 8px", marginBottom: 6 }}>
                             <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: "var(--indigo-600)" }}>{quoted.sender === "admin" ? "You" : selUser?.full_name || "Student"}</span>
@@ -246,10 +248,16 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                     </div>
                   );
                 })}
+                {uploadingName && (
+                  <div style={{ alignSelf: "flex-end", maxWidth: "80%", background: "var(--indigo-tint)", borderRadius: 16, padding: "9px 13px", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span aria-hidden style={{ width: 14, height: 14, flex: "none", border: "2px solid var(--indigo-line)", borderTopColor: "var(--indigo-600)", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />
+                    <span style={{ font: "500 12.5px/17px var(--font-sans)", color: "var(--indigo-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uploading {uploadingName}…</span>
+                  </div>
+                )}
               </div>
 
               {/* Composer */}
-              <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12 }}>
+              <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12, background: "var(--card)" }}>
                 {file && <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}><span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Attached: {file.name}</span><button type="button" onClick={() => setFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button></div>}
                 {showQ && (
                   <div style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, marginBottom: 8, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -262,7 +270,6 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                   <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="14" height="10" rx="2" /><path d="M3.5 6 10 10.5 16.5 6" /></svg>Email</button>
                   <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h6l-1 6 3 2v1H5v-1l3-2-1-6z" /><path d="M10 12v5" /></svg>Pin</button>
                   <button type="button" onClick={() => setWhatsappOn((v) => !v)} title="WhatsApp alert (coming soon)" style={opt(whatsappOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3a7 7 0 0 0-6 10.5L3 17l3.7-1A7 7 0 1 0 10 3z" /><path d="M7.5 7.5c0 3 2 5 5 5 .6 0 1-.6.7-1.1l-1-1.2-1.4.6-1.6-1.6.6-1.4-1.2-1c-.5-.3-1.1.1-1.1.7z" /></svg>WhatsApp</button>
-                  <button type="button" onClick={() => fileRef.current?.click()} style={opt(false)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13V4m0 0 3.5 3.5M10 4 6.5 7.5M4 14v2h12v-2" /></svg>Upload</button>
                   <button type="button" onClick={() => setShowQ((v) => !v)} style={opt(showQ)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7.5 7.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.7-.9 1.4v.3" /><path d="M10 15v.4" /></svg>Question</button>
                   <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                 </div>
@@ -276,9 +283,12 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                     <button type="button" onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button>
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input className="af" placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: 1 }} />
-                  <button type="button" disabled={sending} onClick={send} style={{ height: 42, padding: "0 16px", borderRadius: 10, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 13.5px/1 var(--font-sans)", cursor: sending ? "not-allowed" : "pointer", opacity: sending ? 0.5 : 1 }}>{sending ? "…" : emailOn ? "Send & email" : "Send"}</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, padding: "4px 5px 4px 8px", boxShadow: "0 6px 18px rgba(23,35,58,.06)" }}>
+                  <button type="button" onClick={() => fileRef.current?.click()} aria-label="Attach a file" title="Attach a file" style={{ flex: "none", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, border: "none", background: "none", cursor: "pointer", color: "var(--ink-soft)" }}>
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>
+                  </button>
+                  <input placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0, height: 38, border: "none", background: "transparent", outline: "none", font: "400 14px/1 var(--font-sans)", color: "var(--ink)" }} />
+                  <button type="button" disabled={sending} onClick={send} style={{ height: 38, flex: "none", padding: "0 16px", borderRadius: 999, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 13.5px/1 var(--font-sans)", cursor: sending ? "not-allowed" : "pointer", opacity: sending ? 0.5 : 1 }}>{sending ? "…" : emailOn ? "Send & email" : "Send"}</button>
                 </div>
                 {status && <div style={{ font: "500 12px/17px var(--font-sans)", color: status.startsWith("Failed") ? "var(--red)" : "var(--green)", marginTop: 6 }}>{status}</div>}
               </div>
