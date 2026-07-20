@@ -130,9 +130,11 @@ export default function Dashboard() {
       const { role } = await fetchAdminRole(user.email);
       if (cancelled) return;
       if (role) { router.replace("/admin"); return; }
-      const { data } = await supabase.from("profiles").select("full_name, onboarding_completed_at, plan, plan_status, user_number").eq("id", user.id).single();
+      const { data } = await supabase.from("profiles").select("full_name, onboarding_completed_at, plan, plan_status, user_number, banned").eq("id", user.id).single();
       if (cancelled) return;
       const row = (data ?? {}) as Record<string, unknown>;
+      if (!row) { await supabase.auth.signOut(); router.replace("/signup"); return; }
+      if (row.banned) { await supabase.auth.signOut(); router.replace("/signup?reason=inactive"); return; }
       if (!row.onboarding_completed_at) { router.replace("/profile-setup"); return; }
       setUserId(user.id);
       setProfile({ full_name: (row.full_name as string) ?? null, plan: (row.plan as string) ?? null, user_number: (row.user_number as number) ?? null });

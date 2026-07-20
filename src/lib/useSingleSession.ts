@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
 // A stable per-device id (shared across tabs on the same device via localStorage).
-function deviceId(): string {
+export function deviceId(): string {
   try {
     let id = localStorage.getItem("af_device_id");
     if (!id) { id = crypto.randomUUID(); localStorage.setItem("af_device_id", id); }

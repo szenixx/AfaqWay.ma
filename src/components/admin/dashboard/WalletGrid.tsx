@@ -26,8 +26,8 @@ export default function WalletGrid() {
           <Bars data={d.revenueSeries} />
         </DashCard>
       </div>
-      <DashCard title="Subscriptions" subtitle="Active plan split">
-        <Donut data={d.subDist} />
+      <DashCard title="Revenue by Country" subtitle="Approved revenue per destination">
+        <Donut data={d.revenueByCountry.length ? d.revenueByCountry : [{ label: "No data", value: 1 }]} />
       </DashCard>
       <DashCard title="Payment Methods" subtitle="Approved by method">
         <Donut data={d.methodDist.length ? d.methodDist : [{ label: "No data", value: 1 }]} />

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button, Field, Divider, Icon, GoogleIcon } from "@/components/ds";
 import { StatusCircle, IconCheck, IconClock } from "@/components/home/ui";
 import { supabase } from "@/lib/supabase/client";
+import { fetchAdminRole } from "@/lib/admin";
+import { deviceId } from "@/lib/useSingleSession";
 
 const POST_AUTH = "/dashboard";
 
@@ -77,27 +79,57 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
   const textureRef = useRef<HTMLDivElement>(null);
 
   const isSignup = mode === "signup";
 
   useEffect(() => {
+    let cancelled = false;
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "signup") {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time UI sync from query param on mount
       setMode("signup");
     }
-    if (params.get("reason") === "another-device") {
+    const reason = params.get("reason");
+    const kicked = reason === "another-device" || reason === "inactive";
+    if (reason === "another-device") {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time UI sync from query param on mount
       setNotice("You were signed out because your account was opened on another device. Only one device can be signed in at a time.");
-      return; // stay on the sign-in form; don't auto-redirect
+    } else if (reason === "inactive") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time UI sync from query param on mount
+      setNotice("Your account is not active right now. Please contact support.");
     }
-    // Already signed in? Skip the form and go straight to the workspace.
+    // If there's a SAVED session, validate it against the server before trusting it.
+    // A stale session (account deleted, banned, or now active on another device)
+    // must NOT auto-open the dashboard — sign it out and show the login form instead.
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) router.replace("/dashboard");
+      const dest = kicked ? null : await resolveSavedSession();
+      if (cancelled) return;
+      if (dest) { router.replace(dest); return; } // valid → straight to the workspace
+      setChecking(false); // no valid session → show the form
     })();
+    return () => { cancelled = true; };
   }, [router]);
+
+  // Returns where a valid saved session should go, or null (and signs it out) if invalid.
+  async function resolveSavedSession(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const { data: { user }, error } = await supabase.auth.getUser(); // server check → fails if account deleted
+    if (error || !user) { await supabase.auth.signOut(); return null; }
+    const { role } = await fetchAdminRole(user.email);
+    if (role) return "/admin";
+    const { data: prof } = await supabase.from("profiles").select("onboarding_completed_at, banned, active_session_id").eq("id", user.id).maybeSingle();
+    if (!prof) { await supabase.auth.signOut(); return null; }
+    if (prof.banned) { await supabase.auth.signOut(); setNotice("Your account is not active right now. Please contact support."); return null; }
+    if (prof.active_session_id && prof.active_session_id !== deviceId()) {
+      await supabase.auth.signOut();
+      setNotice("You were signed out because your account is signed in on another device. Please log in again.");
+      return null;
+    }
+    return prof.onboarding_completed_at ? "/dashboard" : "/profile-setup";
+  }
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -126,8 +158,11 @@ export default function AuthPage() {
       // through the home / sign-in page.
       const routeAfterAuth = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { router.replace("/signup"); return; }
-        const { data: prof } = await supabase.from("profiles").select("onboarding_completed_at").eq("id", user.id).maybeSingle();
+        if (!user) { setError("Sign-in failed, please try again."); return; }
+        const { role } = await fetchAdminRole(user.email);
+        if (role) { router.replace("/admin"); return; } // admins → console
+        const { data: prof } = await supabase.from("profiles").select("onboarding_completed_at, banned").eq("id", user.id).maybeSingle();
+        if (prof?.banned) { await supabase.auth.signOut(); setError("Your account is not active. Please contact support."); return; }
         router.replace(prof?.onboarding_completed_at ? "/dashboard" : "/profile-setup");
       };
       if (!isSignup) {
@@ -179,6 +214,12 @@ export default function AuthPage() {
   }
 
   const footerPrefix = isSignup ? "Already have an account? " : "Don’t have an account? ";
+
+  // While validating a saved session, show a neutral loader — never flash the form
+  // or bounce through another page (fixes the "goes to home first" glitch).
+  if (checking) {
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)", color: "var(--ink-faint)", font: "400 15px/24px var(--font-sans)" }}>Loading…</div>;
+  }
 
   return (
     <div className="af-auth-main" style={{ height: "100vh", overflow: "hidden", background: "var(--paper)" }}>

@@ -164,7 +164,7 @@ export function useOverviewData() {
       totalStudents: students.length,
       activeStudents: active.length,
       newToday: students.filter((s) => new Date(s.created_at) >= today).length,
-      countryDist: countryDist.length ? countryDist : [{ label: "Lithuania", value: active.length }],
+      countryDist: countryDist.length ? countryDist : [{ label: "No country data", value: 1 }],
       recent: students.slice(0, 12),
       // signal-shaped stubs for widgets without a dedicated source yet
       journey: [
@@ -185,17 +185,19 @@ export function useWalletData() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [active, setActive] = useState<{ plan: string | null }[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
+  const [countryOf, setCountryOf] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
       const { data: pay } = await supabase.from("payments").select("id, user_id, plan, amount, method, status, created_at").order("created_at", { ascending: false }).limit(400);
       const rows = (pay ?? []) as Payment[];
       setPayments(rows);
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, plan").eq("plan_status", "active");
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, plan, destination_country").eq("plan_status", "active");
       setActive((profs ?? []).map((p) => ({ plan: (p as { plan: string | null }).plan })));
       const nm: Record<string, string> = {};
-      (profs ?? []).forEach((p) => { const r = p as { id: string; full_name: string | null }; nm[r.id] = r.full_name ?? "—"; });
-      setNames(nm);
+      const co: Record<string, string> = {};
+      (profs ?? []).forEach((p) => { const r = p as { id: string; full_name: string | null; destination_country: string | null }; nm[r.id] = r.full_name ?? "—"; if (r.destination_country) co[r.id] = r.destination_country; });
+      setNames(nm); setCountryOf(co);
       setLoading(false);
     })();
   }, []);
@@ -205,6 +207,9 @@ export function useWalletData() {
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
     const byMethod: Record<string, number> = {};
     approved.forEach((p) => { byMethod[p.method] = (byMethod[p.method] ?? 0) + 1; });
+    const byCountryRev: Record<string, number> = {};
+    approved.forEach((p) => { const c = countryOf[p.user_id]; if (c) byCountryRev[c] = (byCountryRev[c] ?? 0) + (p.amount || 0); });
+    const revenueByCountry = Object.entries(byCountryRev).sort((a, b) => b[1] - a[1]).map(([c, v]) => ({ label: countryByCode(c)?.name ?? c, value: v }));
     const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(); d.setMonth(d.getMonth() - (5 - i)); return d; });
     return {
       loading, names,
@@ -218,11 +223,12 @@ export function useWalletData() {
         { label: "Full Service", value: active.filter((a) => a.plan === "full_service").length },
       ],
       methodDist: Object.entries(byMethod).map(([m, v]) => ({ label: m, value: v })),
+      revenueByCountry,
       revenueSeries: months.map((d) => ({ label: d.toLocaleString("en-US", { month: "short" }), value: approved.filter((p) => { const c = new Date(p.created_at); return c.getMonth() === d.getMonth() && c.getFullYear() === d.getFullYear(); }).reduce((s, p) => s + (p.amount || 0), 0) })),
       recent: payments.slice(0, 12),
       pendingRows: payments.filter((p) => p.status === "under_review").slice(0, 8),
     };
-  }, [payments, active, names, loading]);
+  }, [payments, active, names, countryOf, loading]);
 }
 
 export { PALETTE, planById };
