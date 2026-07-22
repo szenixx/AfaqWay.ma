@@ -8,7 +8,7 @@ export default function TermsPage() {
     <LegalPage
       title="Terms of Service"
       updated={LEGAL_UPDATED}
-      intro="These Terms of Service (the “Terms”) govern your use of AfaqWay (the “Platform”, “we”, “us”), operated by Abel SARL. By creating an account, purchasing a plan, or using the Platform, you agree to these Terms. If you do not agree, please do not use the Platform."
+      intro="These Terms of Service (the “Terms”) govern your use of AfaqWay (the “Platform”, “we”, “us”), operated by Abderrahmane Almoustansir. By creating an account, purchasing a plan, or using the Platform, you agree to these Terms. If you do not agree, please do not use the Platform."
     >
       <TermsBody />
     </LegalPage>

@@ -16,11 +16,7 @@ export function TermsBody() {
         <p>The Platform provides <strong>guidance and assistance only</strong>. Decisions about admission, visas, scholarships, and residence permits are made solely by the relevant universities, embassies, and government authorities, over which we have no control.</p>
       </Section>
       <Section n={2} title="Plans and what each includes">
-        <p>The exact features and price of each paid plan are shown on the pricing page at the time of purchase and form part of these Terms. In summary:</p>
-        <ul>
-          <li><strong>Self Service</strong> — you drive your application: a personalized roadmap with checklists, human review on every document you upload, learning resources, full document-status visibility, and support access.</li>
-          <li><strong>Full Service</strong> — everything in Self Service, plus a dedicated advisor who manages your file, a live tracker, direct messaging, interview preparation, and post-arrival support.</li>
-        </ul>
+        <p>We offer one or more paid plans. The exact features, scope, and price of each plan are those shown at the time of purchase and form part of these Terms. Our plans generally range from self-directed guidance, where you drive your own application with our tools and human document review, to more fully assisted service, where our team manages a larger part of your file on your behalf. The applicable plan at the time of your purchase governs what you are entitled to, and availability and details may change for future purchases.</p>
       </Section>
       <Section n={3} title="No guarantee of outcomes">
         <p>AfaqWay <strong>does not guarantee</strong> admission by any university, approval of any visa or residence permit, award of any scholarship, or any specific timeline or immigration outcome. Our services improve your chances by keeping you organized and reducing avoidable mistakes, but the final decision always rests with the universities, embassies, and authorities involved.</p>
@@ -38,10 +34,10 @@ export function TermsBody() {
         <p>Your account is personal to you. You must keep your credentials confidential and must not <strong>share, sell, transfer, or allow unauthorized access</strong> to your account. Each paid plan is for a single user unless stated otherwise.</p>
       </Section>
       <Section n={8} title="Intellectual property">
-        <p>All content and materials — templates, checklists, guides, roadmaps, learning resources, software, AI tools, text, and design — are the property of AfaqWay (Abel SARL) or its licensors. You receive a limited, personal, non-transferable licence to use them for your own application while your plan is active. You may not copy, redistribute, resell, or create derivative works without our written permission.</p>
+        <p>All content and materials — templates, checklists, guides, roadmaps, learning resources, software, AI tools, text, and design — are the property of AfaqWay (Abderrahmane Almoustansir) or its licensors. You receive a limited, personal, non-transferable licence to use them for your own application while your plan is active. You may not copy, redistribute, resell, or create derivative works without our written permission.</p>
       </Section>
       <Section n={9} title="Limitation of liability">
-        <p>To the maximum extent permitted by law, AfaqWay and Abel SARL are not liable for indirect or consequential losses, or for losses arising from third-party decisions, your failure to complete steps or submit on time, inaccurate information you provide, or events outside our reasonable control. Where liability cannot be excluded, our total liability is limited to the amount you paid for the plan in question.</p>
+        <p>To the maximum extent permitted by law, AfaqWay and Abderrahmane Almoustansir are not liable for indirect or consequential losses, or for losses arising from third-party decisions, your failure to complete steps or submit on time, inaccurate information you provide, or events outside our reasonable control. Where liability cannot be excluded, our total liability is limited to the amount you paid for the plan in question.</p>
       </Section>
       <Section n={10} title="Suspension and termination">
         <p>We may suspend or terminate your access if you breach these Terms, provide false information or documents, attempt fraud, share your account, or misuse the Platform. Sections that by their nature should survive termination continue to apply.</p>

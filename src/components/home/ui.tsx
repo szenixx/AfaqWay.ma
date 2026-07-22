@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { Circle, Plane, Clock3, Check, Compass, FileText, SquareCheckBig, CalendarDays, MessageCircle, Video, ArrowRight, Zap } from "lucide-react";
 
 /* Shared homepage primitives, all values come from the design-system tokens. */
 
@@ -59,27 +60,20 @@ export function StatusCircle({ size, tone, children }: { size: number; tone: Ton
   );
 }
 
-/* Outline glyphs, DS: 1.75px stroke, rounded caps/joins, 20x20 grid. */
-function Glyph({ size = 22, children }: { size?: number; children: ReactNode }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      {children}
-    </svg>
-  );
-}
-
-export const IconRing = ({ size }: { size?: number }) => <Glyph size={size}><circle cx="10" cy="10" r="7" /></Glyph>;
-export const IconPlane = ({ size }: { size?: number }) => <Glyph size={size}><path d="M17.5 2.5 2 9.6l6 2.3 2.3 6L17.5 2.5Z" /><path d="M10.3 11.9 13.7 8.5" /></Glyph>;
-export const IconClock = ({ size }: { size?: number }) => <Glyph size={size}><circle cx="10" cy="10" r="7" /><path d="M10 6.5v3.7l2.6 1.7" /></Glyph>;
-export const IconCheck = ({ size }: { size?: number }) => <Glyph size={size}><path d="M7 10.3 9.2 12.5 13.3 7.8" /></Glyph>;
-export const IconCompass = ({ size }: { size?: number }) => <Glyph size={size}><circle cx="10" cy="10" r="7" /><path d="M12.8 7.2 11.2 11.2 7.2 12.8 8.8 8.8Z" /></Glyph>;
-export const IconDoc = ({ size }: { size?: number }) => <Glyph size={size}><path d="M6 2.5h6l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1Z" /><path d="M12 2.5V6h3.5" /></Glyph>;
-export const IconTracker = ({ size }: { size?: number }) => <Glyph size={size}><rect x="3.5" y="3.5" width="13" height="13" rx="3" /><path d="M7 10.3 9.2 12.5 13.3 7.8" /></Glyph>;
-export const IconCalendar = ({ size }: { size?: number }) => <Glyph size={size}><rect x="3" y="4" width="14" height="13" rx="2" /><path d="M3 8h14M7 2.5v3M13 2.5v3" /></Glyph>;
-export const IconChat = ({ size }: { size?: number }) => <Glyph size={size}><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-3 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /></Glyph>;
-export const IconVideo = ({ size }: { size?: number }) => <Glyph size={size}><rect x="3" y="4.5" width="14" height="11" rx="2" /><path d="M9 8.2v3.6l3-1.8Z" /></Glyph>;
-export const IconArrow = ({ size }: { size?: number }) => <Glyph size={size}><path d="M4 10h12M11 5l5 5-5 5" /></Glyph>;
-export const IconSpark = ({ size }: { size?: number }) => <Glyph size={size}><path d="M12 2 6 11h4l-2 7 7-10h-4z" /></Glyph>;
+/* Unified icon set (Lucide). Same export names + { size } signature as before, so
+   every homepage section keeps working; colour still inherits via currentColor. */
+export const IconRing = ({ size = 22 }: { size?: number }) => <Circle size={size} />;
+export const IconPlane = ({ size = 22 }: { size?: number }) => <Plane size={size} />;
+export const IconClock = ({ size = 22 }: { size?: number }) => <Clock3 size={size} />;
+export const IconCheck = ({ size = 22 }: { size?: number }) => <Check size={size} />;
+export const IconCompass = ({ size = 22 }: { size?: number }) => <Compass size={size} />;
+export const IconDoc = ({ size = 22 }: { size?: number }) => <FileText size={size} />;
+export const IconTracker = ({ size = 22 }: { size?: number }) => <SquareCheckBig size={size} />;
+export const IconCalendar = ({ size = 22 }: { size?: number }) => <CalendarDays size={size} />;
+export const IconChat = ({ size = 22 }: { size?: number }) => <MessageCircle size={size} />;
+export const IconVideo = ({ size = 22 }: { size?: number }) => <Video size={size} />;
+export const IconArrow = ({ size = 22 }: { size?: number }) => <ArrowRight size={size} />;
+export const IconSpark = ({ size = 22 }: { size?: number }) => <Zap size={size} />;
 
 /* CSS tricolor flags, real flags, never recoloured (DS exception). */
 export const FLAGS: Record<string, string> = {

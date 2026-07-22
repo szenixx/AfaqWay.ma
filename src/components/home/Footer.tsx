@@ -1,23 +1,33 @@
 import Link from "next/link";
-import LanguageSwitcher from "./LanguageSwitcher";
 
-const LEGAL_HREF: Record<string, string> = { Terms: "/terms", Refunds: "/refund" };
+// href for every footer link (all real routes now, no /soon placeholders)
+const HREF: Record<string, string> = {
+  Pricing: "/pricing", "How it works": "/how-it-works", Destinations: "/destinations",
+  "About us": "/about", Contact: "/contact",
+  Terms: "/terms", Privacy: "/privacy", Refunds: "/refund",
+};
 const COLS: { head: string; links: string[] }[] = [
-  { head: "Platform", links: ["Pricing", "How it works", "Destinations", "Templates", "FAQ"] },
-  { head: "Company", links: ["About us", "Blog", "Careers", "Contact", "Press"] },
-  { head: "Legal", links: ["Terms", "Privacy", "Cookies", "Refunds"] },
+  { head: "Platform", links: ["Pricing", "How it works", "Destinations"] },
+  { head: "Company", links: ["About us", "Contact"] },
+  { head: "Legal", links: ["Terms", "Privacy", "Refunds"] },
+];
+
+// NOTE: social URLs are PLACEHOLDERS — swap in the real handles/number.
+const SOCIALS: { label: string; href: string; icon: React.ReactNode }[] = [
+  { label: "Instagram", href: "https://instagram.com/afaqway", icon: <InstagramIcon /> },
+  { label: "TikTok", href: "https://tiktok.com/@afaqway", icon: <TikTokIcon /> },
+  { label: "WhatsApp", href: "https://wa.me/212600000000", icon: <WhatsAppIcon /> },
+  { label: "Facebook", href: "https://facebook.com/afaqway", icon: <FacebookIcon /> },
 ];
 
 const colHead = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--ink-faint)", marginBottom: 16 };
 const colLink = { display: "block", font: "500 14px/20px var(--font-sans)", color: "var(--ink-soft)", marginTop: 10 };
 
-function Social({ children }: { children: React.ReactNode }) {
+function Social({ label, href, children }: { label: string; href: string; children: React.ReactNode }) {
   return (
-    <Link href="/soon" className="af-navlink" style={{ color: "var(--ink-soft)", display: "inline-flex" }}>
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        {children}
-      </svg>
-    </Link>
+    <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className="af-navlink" style={{ color: "var(--ink-soft)", display: "inline-flex" }}>
+      {children}
+    </a>
   );
 }
 
@@ -40,16 +50,16 @@ export default function Footer() {
               The study-abroad platform that treats students like adults.
             </p>
             <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              <Social><path d="M4 4l12 12M16 4L4 16" /></Social>
-              <Social><rect x="3" y="3" width="14" height="14" rx="4" /><circle cx="10" cy="10" r="3.4" /><circle cx="14.3" cy="5.7" r="0.4" fill="currentColor" /></Social>
-              <Social><rect x="3" y="3" width="14" height="14" rx="2" /><path d="M6 8.5V14M6 6.2v.2M9.5 14v-3a1.5 1.5 0 0 1 3 0v3" /></Social>
+              {SOCIALS.map((s) => (
+                <Social key={s.label} label={s.label} href={s.href}>{s.icon}</Social>
+              ))}
             </div>
           </div>
           {COLS.map((col) => (
             <div key={col.head}>
               <div style={colHead}>{col.head}</div>
               {col.links.map((l) => (
-                <Link key={l} className="af-navlink" href={LEGAL_HREF[l] ?? "/soon"} style={colLink}>{l}</Link>
+                <Link key={l} className="af-navlink" href={HREF[l] ?? "/soon"} style={colLink}>{l}</Link>
               ))}
             </div>
           ))}
@@ -59,9 +69,41 @@ export default function Footer() {
           <span style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}>
             © 2026 AfaqWay. Built for students, not agencies.
           </span>
-          <LanguageSwitcher />
         </div>
       </div>
     </footer>
+  );
+}
+
+/* Brand glyphs (Lucide v1 dropped brand logos, so these are inline). */
+function InstagramIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.3" cy="6.7" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function TikTokIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16.5 3c.4 2.3 1.7 3.7 3.9 3.9v2.5c-1.3.1-2.5-.3-3.9-1.1v5.9c0 3.4-2.5 5.9-5.8 5.9-3 0-5.2-2.2-5.2-5.1 0-3.1 2.6-5.4 5.9-4.9v2.7c-.4-.1-.9-.2-1.3-.2-1.4 0-2.4 1-2.4 2.4 0 1.4 1 2.4 2.4 2.4 1.5 0 2.5-1.1 2.5-2.9V3h3.9z" />
+    </svg>
+  );
+}
+function WhatsAppIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 20.5l1.3-4.2A8 8 0 1 1 8 19.4l-4.5 1.1z" />
+      <path d="M9 9.2c.2-.6.4-.6.7-.6h.5c.2 0 .4 0 .6.5l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.1-.2.3-.1.5.3.6 1.3 1.7 2.3 2.1.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.5.8c.2.1.3.2.3.4 0 .5-.4 1.3-.8 1.5-.5.3-1.4.5-3-.2-2-.9-3.3-3-3.5-3.3-.1-.2-.9-1.3-.9-2.4 0-1.1.6-1.6.8-1.8z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function FacebookIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M14 8.5V7c0-.8.2-1.2 1.3-1.2h1.5V3h-2.4C11.7 3 11 4.4 11 6.6v1.9H9V11h2v10h3V11h2.2l.4-2.5H14z" />
+    </svg>
   );
 }

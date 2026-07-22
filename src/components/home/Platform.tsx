@@ -30,7 +30,7 @@ export default function Platform() {
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "center", marginTop: 28 }}>
-          <Link className="af-btn-ghost" href="/soon" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 22px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 14px/1 var(--font-sans)", boxSizing: "border-box" }}>
+          <Link className="af-btn-ghost" href="/our-service" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 22px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 14px/1 var(--font-sans)", boxSizing: "border-box" }}>
             See more about our services
             <IconArrow size={16} />
           </Link>

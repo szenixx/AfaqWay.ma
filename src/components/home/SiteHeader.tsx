@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import LanguageSwitcher from "./LanguageSwitcher";
+import { Menu, X, ChevronRight } from "lucide-react";
 
 const navLink = { font: "600 14px/20px var(--font-sans)" };
 const MOBILE_LINKS: { label: string; href: string }[] = [
   { label: "Home", href: "/" },
-  { label: "Our service", href: "/soon" },
-  { label: "About us", href: "/soon" },
+  { label: "Our service", href: "/our-service" },
+  { label: "About us", href: "/about" },
 ];
 
 export default function SiteHeader() {
@@ -44,8 +44,8 @@ export default function SiteHeader() {
         {/* Desktop nav */}
         <div className="af-nav-desktop" style={{ alignItems: "center", gap: 28 }}>
           <nav style={{ display: "inline-flex", alignItems: "center", gap: 24 }}>
-            <Link className="af-navlink" href="/soon" style={navLink}>Our service</Link>
-            <Link className="af-navlink" href="/soon" style={navLink}>About us</Link>
+            <Link className="af-navlink" href="/our-service" style={navLink}>Our service</Link>
+            <Link className="af-navlink" href="/about" style={navLink}>About us</Link>
           </nav>
           <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 36, padding: "0 18px", borderRadius: 999, font: "600 14px/1 var(--font-sans)" }}>
             Sign up
@@ -60,9 +60,7 @@ export default function SiteHeader() {
           aria-expanded={open}
           style={{ background: "none", border: "none", padding: 6, margin: 0, cursor: "pointer", color: "var(--ink-soft)", alignItems: "center" }}
         >
-          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            {open ? <path d="M5 5l10 10M15 5L5 15" /> : <path d="M3 7h14M3 13h14" />}
-          </svg>
+          {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
@@ -92,13 +90,9 @@ export default function SiteHeader() {
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 48, borderBottom: "1px solid var(--line-soft)", font: "500 15px/22px var(--font-sans)", color: "var(--ink)" }}
               >
                 {l.label}
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--ink-faint)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M8 5l5 5-5 5" /></svg>
+                <ChevronRight size={16} color="var(--ink-faint)" />
               </Link>
             ))}
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line-soft)" }}>
-              <div style={{ font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 8 }}>Language</div>
-              <LanguageSwitcher variant="list" />
-            </div>
             <Link
               className="af-btn-primary"
               href="/signup"

@@ -211,7 +211,7 @@ export default function Hero() {
           </g>
         </svg>
 
-        <h1 style={{ font: "700 var(--font-sans)", fontSize: "clamp(30px, 5.5vw, 56px)", lineHeight: 1.12, letterSpacing: "-0.02em", color: "var(--ink)", maxWidth: 900, margin: "28px 0 0" }}>
+        <h1 style={{ font: "800 var(--font-sans)", fontSize: "clamp(30px, 5.5vw, 56px)", lineHeight: 1.12, letterSpacing: "-0.02em", color: "var(--ink)", maxWidth: 900, margin: "28px 0 0" }}>
           Study abroad, guided every step of the way.
         </h1>
         <p style={{ font: "400 var(--font-sans)", fontSize: "clamp(15px, 2.2vw, 17px)", lineHeight: 1.65, color: "var(--ink-soft)", maxWidth: 600, margin: "20px 0 0" }}>
@@ -222,7 +222,7 @@ export default function Hero() {
           <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: 999, font: "600 15px/1 var(--font-sans)" }}>
             Start your roadmap
           </Link>
-          <Link className="af-btn-ghost" href="/soon" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 26px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>
+          <Link className="af-btn-ghost" href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 26px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>
             Talk to us
             <IconArrow size={16} />
           </Link>

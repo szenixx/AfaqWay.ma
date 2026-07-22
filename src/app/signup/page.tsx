@@ -6,9 +6,12 @@ import { Button, Field, Divider, Icon, GoogleIcon } from "@/components/ds";
 import { StatusCircle, IconCheck, IconClock } from "@/components/home/ui";
 import { supabase } from "@/lib/supabase/client";
 import { fetchAdminRole } from "@/lib/admin";
+import { resolvePostLoginDest } from "@/lib/authRoute";
 import { deviceId } from "@/lib/useSingleSession";
 
-const POST_AUTH = "/dashboard";
+// OAuth / email-confirm links land on a neutral callback that resolves the role
+// and redirects directly — never through the user dashboard.
+const POST_AUTH = "/auth/callback";
 
 /* Node = the numbered circle's own position. Bubble = the text card's position,
    placed independently so it can sit on whichever side has room. Together the
@@ -154,16 +157,12 @@ export default function AuthPage() {
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     setLoading(true);
     try {
-      // Go straight to onboarding (or the dashboard if already done) — no bounce
-      // through the home / sign-in page.
+      // Resolve the destination from the user's role at login time and go there
+      // directly — no bounce through the home / dashboard / sign-in page.
       const routeAfterAuth = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setError("Sign-in failed, please try again."); return; }
-        const { role } = await fetchAdminRole(user.email);
-        if (role) { router.replace("/admin"); return; } // admins → console
-        const { data: prof } = await supabase.from("profiles").select("onboarding_completed_at, banned").eq("id", user.id).maybeSingle();
-        if (prof?.banned) { await supabase.auth.signOut(); setError("Your account is not active. Please contact support."); return; }
-        router.replace(prof?.onboarding_completed_at ? "/dashboard" : "/profile-setup");
+        const { dest, error } = await resolvePostLoginDest();
+        if (dest) { router.replace(dest); return; }
+        setError(error ?? "Sign-in failed, please try again.");
       };
       if (!isSignup) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

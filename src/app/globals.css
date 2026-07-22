@@ -352,3 +352,56 @@ a {
   .span2, .span3, .span4 { grid-column: auto; }
   .dash-card { min-height: 220px; }
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Student workspace (Lithuania) — glass / iOS-26 shell, scoped .sw-*.
+   Same design language as the admin Overview/Wallet dashboards (reuses .dash-card
+   and the dashboard kit). One universal workspace: sidebar ~19%, content ~81%.
+   ──────────────────────────────────────────────────────────────────────────── */
+.sw-root { min-height: 100dvh; position: relative; background: linear-gradient(135deg, #E6ECF7 0%, #EFF1F8 52%, #EAE7F4 100%); overflow-x: hidden; }
+.sw-root::before { content: ""; position: fixed; width: 46vw; height: 46vw; left: -9vw; top: -12vw; border-radius: 50%; background: radial-gradient(circle, rgba(43,76,155,.26), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
+.sw-root::after { content: ""; position: fixed; width: 42vw; height: 42vw; right: -7vw; bottom: -14vw; border-radius: 50%; background: radial-gradient(circle, rgba(99,179,166,.24), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
+.sw-shell { position: relative; z-index: 1; display: flex; gap: 18px; padding: 18px; align-items: flex-start; min-height: 100dvh; }
+.sw-sidebar { position: sticky; top: 18px; align-self: flex-start; height: calc(100dvh - 36px); flex: none; width: clamp(210px, 19%, 268px); display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,.55); backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8); border: 1px solid rgba(255,255,255,.7); border-radius: 26px; box-shadow: 0 18px 48px rgba(23,35,58,.14), inset 0 1px 0 rgba(255,255,255,.75); padding: 16px; }
+.sw-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 2px; }
+.sw-brand-name { font: 800 19px/1 var(--font-sans); color: var(--ink); letter-spacing: -.2px; }
+.sw-brand-sub { font: 600 9.5px/13px var(--font-sans); letter-spacing: .07em; text-transform: uppercase; color: var(--indigo-600); margin-top: 2px; }
+.sw-nav { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 2px; }
+.sw-nav::-webkit-scrollbar { width: 0; }
+.sw-group-label { font: 700 10px/14px var(--font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); padding: 14px 12px 4px; }
+.sw-navitem { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 13px; border: none; border-radius: 15px; background: transparent; color: var(--ink-soft); cursor: pointer; font: 600 13.5px/20px var(--font-sans); text-align: left; text-decoration: none; transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease; position: relative; }
+.sw-navitem:hover { background: rgba(43,76,155,.08); color: var(--ink); }
+.sw-navitem.active { background: #fff; color: var(--indigo-600); box-shadow: 0 8px 20px rgba(23,35,58,.12); }
+.sw-navitem.danger { color: var(--red); }
+.sw-navitem.danger:hover { background: var(--red-tint); }
+.sw-navico { flex: none; display: flex; }
+.sw-foot { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 18px; background: rgba(247,249,252,.6); }
+.sw-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px; }
+.sw-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: rgba(255,255,255,.55); backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8); border: 1px solid rgba(255,255,255,.7); border-radius: 22px; box-shadow: 0 12px 32px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.7); padding: 16px 22px; }
+.sw-iconbtn { position: relative; width: 42px; height: 42px; border-radius: 14px; border: 1px solid rgba(255,255,255,.8); background: rgba(255,255,255,.7); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 140ms ease, color 140ms ease; flex: none; }
+.sw-iconbtn:hover { background: #fff; color: var(--indigo-600); }
+.sw-iconbtn.active { background: var(--indigo-600); color: #fff; border-color: var(--indigo-600); }
+.sw-dot { position: absolute; top: 8px; right: 9px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--red); color: #fff; font: 700 9px/15px var(--font-sans); text-align: center; border: 2px solid #fff; }
+.sw-avatar { width: 42px; height: 42px; border-radius: 14px; flex: none; background: linear-gradient(135deg,#3B5BDB,#845EF7); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); box-shadow: 0 6px 16px rgba(59,91,219,.32); }
+.sw-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 232px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 48px rgba(23,35,58,.18); padding: 7px; z-index: 60; }
+.sw-menu-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 11px; border: none; background: transparent; cursor: pointer; font: 600 13.5px/18px var(--font-sans); color: var(--ink); }
+.sw-menu-row:hover { background: var(--subtle); }
+.sw-menu-row.danger { color: var(--red); }
+.sw-tile { background: rgba(255,255,255,.55); backdrop-filter: blur(26px) saturate(1.8); -webkit-backdrop-filter: blur(26px) saturate(1.8); border: 1px solid rgba(255,255,255,.7); border-radius: 20px; box-shadow: 0 10px 30px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.75); padding: 18px; }
+.sw-content { min-width: 0; }
+.sw-mobilebar { display: none; }
+@media (max-width: 1199px) {
+  .sw-2col { grid-template-columns: 1fr !important; }
+  .sw-explore { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 1023px) {
+  .sw-shell { flex-direction: column; padding: 12px; gap: 12px; }
+  .sw-sidebar { display: none; }
+  .sw-mobilebar { display: flex; }
+  .sw-main { width: 100%; }
+}
+@media (max-width: 720px) {
+  .sw-statrow { grid-template-columns: repeat(2, 1fr) !important; }
+  .sw-explore { grid-template-columns: 1fr !important; }
+  .sw-header { padding: 14px 16px; }
+}

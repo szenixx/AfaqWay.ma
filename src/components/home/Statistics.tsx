@@ -1,4 +1,4 @@
-const STATS = [
+export const STATS = [
   { value: "4", label: "European destinations", note: "Lithuania open today" },
   { value: "24/7", label: "Support", note: "Real humans, not a bot" },
   { value: "48h", label: "Avg. document review", note: "By a human expert" },

@@ -1,14 +1,6 @@
 import Link from "next/link";
 import { Container, SectionHead, Flag } from "./ui";
-
-const DESTS: { name: string; open: boolean }[] = [
-  { name: "Lithuania", open: true },
-  { name: "Germany", open: false },
-  { name: "Poland", open: false },
-  { name: "Russia", open: false },
-  { name: "Hungary", open: false },
-  { name: "Latvia", open: false },
-];
+import { DESTINATIONS as DESTS } from "@/lib/destinations";
 
 export default function Destinations() {
   return (
@@ -34,18 +26,16 @@ export default function Destinations() {
               )}
               {d.open && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, font: "500 12px/17px var(--font-sans)", color: "var(--ink-soft)", flexWrap: "wrap" }}>
-                  <span>10+ universities</span>
+                  <span>{d.universities}</span>
                   <span style={{ color: "var(--ink-faint)" }}>·</span>
-                  <span>~€4k/yr tuition</span>
+                  <span>{d.tuition}</span>
                   <span style={{ color: "var(--ink-faint)" }}>·</span>
-                  <span>2 intakes/yr</span>
+                  <span>{d.intakes}</span>
                 </div>
               )}
-              {d.open && (
-                <Link href="/soon" style={{ font: "600 13px/20px var(--font-sans)", color: "var(--indigo-600)" }}>
-                  Explore Lithuania →
-                </Link>
-              )}
+              <Link href="/destinations" style={{ font: "600 13px/20px var(--font-sans)", color: "var(--indigo-600)" }}>
+                Explore {d.name} →
+              </Link>
             </div>
           ))}
         </div>
