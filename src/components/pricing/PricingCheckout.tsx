@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import FeaturesDoc from "@/components/pricing/FeaturesDoc";
@@ -33,7 +34,7 @@ const money = (n: number, c: string) => `${n.toLocaleString("en-US")} ${c}`;
 function CheckDot() {
   return (
     <span aria-hidden style={{ flex: "none", width: 20, height: 20, borderRadius: 999, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
-      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
+      <Check size={12} />
     </span>
   );
 }
@@ -53,7 +54,7 @@ function GlassPlanCard({ plan, onChoose, onSeeAll }: { plan: Plan; onChoose: () 
           <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 18 }}>{plan.tagline}</div>
           <button type="button" onClick={onChoose} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 20px", borderRadius: 12, border: "none", cursor: "pointer", font: "600 14px/1 var(--font-sans)", background: "var(--indigo-600)", color: "#fff", boxShadow: "0 6px 16px rgba(43,76,155,.28)" }}>
             Buy now
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 5l5 5-5 5" /></svg>
+            <ChevronRight size={15} />
           </button>
         </div>
         <div className="af-plan-divider" />
@@ -66,7 +67,7 @@ function GlassPlanCard({ plan, onChoose, onSeeAll }: { plan: Plan; onChoose: () 
           </ul>
           <button type="button" onClick={onSeeAll} style={{ alignSelf: "flex-start", marginTop: 14, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--indigo-600)", padding: 0 }}>
             See all features
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M8 5l5 5-5 5" /></svg>
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>
@@ -95,7 +96,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
       </div>
       <button type="button" onClick={copy} aria-label={`Copy ${label}`} style={{ flex: "none", width: 34, height: 34, borderRadius: 9, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", color: copied ? "var(--green)" : "var(--ink-soft)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         {copied
-          ? <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
+          ? <Check size={16} />
           : <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /></svg>}
       </button>
     </div>
@@ -196,7 +197,7 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
           </div>
           <div style={{ marginTop: 22 }}>
             <button type="button" onClick={onBackStep} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "var(--ink)" }}>
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5l-5 5 5 5" /></svg>
+              <ChevronLeft size={16} />
               Back
             </button>
           </div>
@@ -364,7 +365,7 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
             <div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)", marginBottom: 4 }}>Invoice Receipt</div>
             <div style={{ height: 1, background: "var(--line-soft)", marginBottom: 12 }} />
             <button type="button" onClick={() => fileRef.current?.click()} className="af-upload-stripes" style={{ width: "100%", border: "1.5px dashed var(--indigo-line)", borderRadius: 14, padding: "26px 16px", backgroundColor: "var(--card)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-              <svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke="var(--indigo-600)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13V4M6 8l4-4 4 4M4 14v2h12v-2" /></svg>
+              <Upload size={26} />
               <span style={{ font: "600 12.5px/18px var(--font-sans)", letterSpacing: ".03em", color: file ? "var(--ink)" : "var(--ink-soft)", textTransform: file ? "none" : "uppercase" }}>{file ? file.name : "Upload the receipt / reçu here"}</span>
             </button>
             <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0] ?? null; if (f && f.size > 4 * 1024 * 1024) { setError("File is larger than 4 MB. Please upload a smaller receipt."); return; } setError(""); setFile(f); }} />

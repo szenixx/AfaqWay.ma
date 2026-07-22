@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
 type Admin = { id: string; email: string; role: string; name: string | null; phone: string | null; describe_role: string | null; banned: boolean; must_reset_pw: boolean; created_at: string };
@@ -110,7 +111,7 @@ export default function AdminManagement() {
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--red)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3 2 17h16L10 3z" /><path d="M10 8v4M10 14.5v.5" /></svg>
+              <TriangleAlert size={20} />
               <span style={{ font: "700 15px/20px var(--font-sans)", color: "var(--red)" }}>{confirm.title}</span>
             </div>
             <div style={{ padding: 20 }}>

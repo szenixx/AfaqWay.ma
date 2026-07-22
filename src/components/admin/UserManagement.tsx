@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Ban, CircleCheckBig, Download, TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
@@ -90,7 +91,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{title ?? "Users management"}</h1>
         {!planLock && (
           <button type="button" onClick={exportExcel} disabled={rows.length === 0} style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: rows.length ? "pointer" : "not-allowed", opacity: rows.length ? 1 : 0.5, font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg>
+            <Download size={15} />
             Export Excel
           </button>
         )}
@@ -137,8 +138,8 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
                   <td style={{ ...td, font: "600 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{awu(u.user_number)}</td>
                   <td style={td}>{u.full_name || "—"}{" "}
                     {u.banned
-                      ? <span className="pill pill-red" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="10" cy="10" r="7.5" /><path d="M5 5l10 10" /></svg>Banned</span>
-                      : <span className="pill pill-green" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7.5" /><path d="M6.5 10.5 9 13l4.5-5" /></svg>Active</span>}
+                      ? <span className="pill pill-red" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}><Ban size={12} />Banned</span>
+                      : <span className="pill pill-green" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 6 }}><CircleCheckBig size={12} />Active</span>}
                   </td>
                   <td style={td}>{u.email || "—"}</td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</td>
@@ -189,7 +190,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: `1px solid ${confirm.tone === "orange" ? "var(--amber-line)" : "var(--red-line)"}`, borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: confirm.tone === "orange" ? "var(--amber-tint)" : "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke={confirm.tone === "orange" ? "var(--amber)" : "var(--red)"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3 2 17h16L10 3z" /><path d="M10 8v4M10 14.5v.5" /></svg>
+              <TriangleAlert size={20} />
               <span style={{ font: "700 15px/20px var(--font-sans)", color: confirm.tone === "orange" ? "var(--amber)" : "var(--red)" }}>{confirm.title}</span>
             </div>
             <div style={{ padding: 20 }}>

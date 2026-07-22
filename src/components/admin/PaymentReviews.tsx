@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Ban, RotateCcw } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
@@ -122,7 +123,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Payment reviews</h1>
         <button type="button" onClick={() => setAskReset(true)} title="Reset the statistics counters" style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
-          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4v4h-4M4 16v-4h4" /><path d="M15.5 8a6 6 0 0 0-11-1M4.5 12a6 6 0 0 0 11 1" /></svg>
+          <RotateCcw size={15} />
           Reset stats
         </button>
       </div>
@@ -213,7 +214,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--line-soft)" }}>
               <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>Receipt</span>
               <button type="button" onClick={() => setViewer(null)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 999, border: "none", cursor: "pointer", background: "var(--subtle)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5l10 10M15 5L5 15" /></svg>
+                <Ban size={18} />
               </button>
             </div>
             <div style={{ flex: 1, minHeight: 0, background: "var(--subtle)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { Ban, Check } from "lucide-react";
 import { PLANS } from "@/lib/plans";
 
 /* Full-screen "document" comparing both plans in detail. Page 1 = English,
@@ -10,7 +11,7 @@ import { PLANS } from "@/lib/plans";
 function Tick({ ar }: { ar?: boolean }) {
   return (
     <span aria-hidden style={{ flex: "none", width: 18, height: 18, borderRadius: 999, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2, marginLeft: ar ? 8 : 0, marginRight: ar ? 0 : 8 }}>
-      <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
+      <Check size={11} />
     </span>
   );
 }
@@ -58,7 +59,7 @@ export default function FeaturesDoc({ onClose }: { onClose: () => void }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(23,35,58,.55)", overflowY: "auto", padding: "48px 16px" }}>
       <button type="button" onClick={onClose} aria-label="Close" style={{ position: "fixed", top: 16, right: 16, zIndex: 101, width: 40, height: 40, borderRadius: 999, border: "none", cursor: "pointer", background: "var(--card)", boxShadow: "var(--shadow-card)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5l10 10M15 5L5 15" /></svg>
+        <Ban size={20} />
       </button>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <DocPage />
