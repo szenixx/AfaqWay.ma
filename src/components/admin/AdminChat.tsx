@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Flag } from "@/components/ds";
+import { DefaultAvatar } from "@/components/ds/DefaultAvatar";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl } from "@/lib/r2";
 import { parseAsk } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Reply, Trash2 } from "lucide-react";
 
-type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null };
+type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null };
 type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
 
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
@@ -17,6 +18,7 @@ const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 export default function AdminChat({ initialUserId }: { initialUserId?: string | null }) {
   const [country, setCountry] = useState<string | null>(initialUserId ? "LT" : null);
   const [users, setUsers] = useState<U[]>([]);
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
   const [sel, setSel] = useState<string | null>(initialUserId ?? null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "full" | "self">("all");
@@ -50,8 +52,12 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
   useEffect(() => { if (initialUserId) { setCountry("LT"); setSel(initialUserId); } }, [initialUserId]);
 
   const loadUsers = useCallback(async () => {
-    const { data } = await supabase.from("profiles").select("id, full_name, email, user_number, plan").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
-    setUsers((data ?? []) as U[]);
+    const { data } = await supabase.from("profiles").select("id, full_name, email, user_number, plan, avatar_path").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
+    const list = (data ?? []) as U[];
+    setUsers(list);
+    const withAvatar = list.filter((u) => u.avatar_path);
+    const entries = await Promise.all(withAvatar.map(async (u) => [u.id, await fileUrl(u.avatar_path as string, "avatars", undefined, 86400)] as const));
+    setAvatars(Object.fromEntries(entries.filter(([, url]) => url)) as Record<string, string>);
   }, []);
   useEffect(() => { void loadUsers(); }, [loadUsers]);
 
@@ -189,7 +195,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
           </div>
           {shown.length === 0 ? <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-faint)", padding: 8 }}>No users.</div> : shown.map((u) => (
             <button key={u.id} type="button" onClick={() => setSel(u.id)} style={{ textAlign: "left", display: "flex", gap: 10, alignItems: "center", padding: 9, borderRadius: 10, border: "none", background: sel === u.id ? "var(--indigo-tint)" : "transparent", cursor: "pointer" }}>
-              <span style={{ width: 34, height: 34, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 13px/1 var(--font-sans)" }}>{(u.full_name || "U").charAt(0).toUpperCase()}</span>
+              <DefaultAvatar size={34} src={avatars[u.id]} />
               <span style={{ minWidth: 0 }}>
                 <span style={{ display: "block", font: "600 13px/18px var(--font-sans)", color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.full_name || "Unnamed"}</span>
                 <span style={{ display: "block", font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{awu(u.user_number)} · {u.plan === "full_service" ? "Full" : "Self"}</span>
@@ -205,7 +211,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
           ) : (
             <>
               <button type="button" onClick={openInfo} title="View student information" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--line-soft)", border: "none", background: "transparent", cursor: "pointer" }}>
-                <span style={{ width: 30, height: 30, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 12px/1 var(--font-sans)" }}>{(selUser.full_name || "U").charAt(0).toUpperCase()}</span>
+                <DefaultAvatar size={30} src={avatars[selUser.id]} />
                 <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{selUser.full_name || "Unnamed"} <span style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}>· {selUser.email}</span></span>
                 <Info size={15} />
               </button>
@@ -336,7 +342,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
         <div onClick={() => setShowInfo(false)} style={{ position: "fixed", inset: 0, zIndex: 210, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 18, boxShadow: "0 24px 60px rgba(23,35,58,.25)", overflow: "hidden" }}>
             <div style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid var(--line-soft)" }}>
-              <span style={{ width: 44, height: 44, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 17px/1 var(--font-sans)" }}>{(selUser.full_name || "U").charAt(0).toUpperCase()}</span>
+              <DefaultAvatar size={44} src={avatars[selUser.id]} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ font: "700 16px/21px var(--font-sans)", color: "var(--ink)" }}>{selUser.full_name || "Unnamed"}</div>
                 <div style={{ font: "600 11.5px/16px var(--font-sans)", color: "var(--indigo-600)" }}>{awu(selUser.user_number)} · {selUser.plan === "full_service" ? "Full Service" : "Self Service"}</div>

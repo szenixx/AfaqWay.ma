@@ -9,6 +9,7 @@ import {
   GraduationCap, Building2, Home, Wallet, Bus, HeartPulse, Landmark, Users,
   Lightbulb, CircleCheckBig, Clock3, TriangleAlert, CircleDashed, Lock,
 } from "lucide-react";
+export { DefaultAvatar } from "@/components/ds/DefaultAvatar";
 
 export function Panel({ children, style, className }: { children: ReactNode; style?: React.CSSProperties; className?: string }) {
   return <div className={`sw-tile${className ? " " + className : ""}`} style={style}>{children}</div>;

@@ -70,7 +70,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
       let fp: string | null = null, fn: string | null = null;
       if (file) {
         setUploadingName(file.name); // show it in the conversation right away while it uploads
-        const up = await uploadUserFile(file, { fallbackBucket: "update_files", fallbackPrefix: userId });
+        const up = await uploadUserFile(file, { fallbackBucket: "update_files", fallbackPrefix: userId, folder: "chat" });
         fp = up.path; fn = file.name;
       }
       const { data, error } = await supabase.rpc("send_user_message", { p_body: body.trim(), p_file_path: fp, p_file_name: fn, p_reply_to: replyTo?.id ?? null });

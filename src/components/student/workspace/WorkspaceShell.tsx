@@ -13,6 +13,8 @@ import {
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import StudentChat from "@/components/student/StudentChat";
 import { planById } from "@/lib/plans";
+import { DefaultAvatar } from "./parts";
+import SidebarCarousel from "./SidebarCarousel";
 import {
   Overview, Journey, Documents, Explore, Notifications, Support,
   Subscription, Profile, Settings, type WsProfile,
@@ -33,11 +35,12 @@ const PRIMARY_NAV: { id: Nav; label: string; icon: React.ReactNode }[] = [
 const firstName = (n: string | null) => (n ? n.trim().split(" ")[0] : "there");
 
 export default function WorkspaceShell({
-  profile, nav, onNav, chatUnread, unreadNotifs, onSignOut, onProgramRequest,
+  profile, nav, onNav, chatUnread, unreadNotifs, onSignOut, onProgramRequest, onReload,
 }: {
   profile: WsProfile; nav: Nav; onNav: (n: Nav) => void;
   chatUnread: boolean; unreadNotifs: number; onSignOut: () => void;
   onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean>;
+  onReload: () => Promise<void>;
 }) {
   const [menu, setMenu] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
@@ -59,17 +62,8 @@ export default function WorkspaceShell({
       case "support": return <Support onNav={(n) => onNav(n as Nav)} />;
       case "subscription": return <Subscription profile={profile} />;
       case "profile": return <Profile profile={profile} onNav={(n) => onNav(n as Nav)} />;
-      case "settings": return <Settings profile={profile} onProgramRequest={onProgramRequest} />;
-      case "messages": return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <div style={{ font: "700 11px/15px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--indigo-600)" }}>Messages</div>
-            <h1 style={{ font: "800 26px/32px var(--font-sans)", color: "var(--ink)", margin: "3px 0 0", letterSpacing: "-.3px" }}>{full ? "Chat with your advisor" : "Support & messages"}</h1>
-            <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0" }}>{full ? "Your dedicated advisor drives your file and answers here." : "Send documents or questions, our team reviews and replies here."}</p>
-          </div>
-          <StudentChat userId={profile.userId} full={full} />
-        </div>
-      );
+      case "settings": return <Settings profile={profile} onProgramRequest={onProgramRequest} onReload={onReload} />;
+      case "messages": return <StudentChat userId={profile.userId} full={full} />;
       default: return null;
     }
   })();
@@ -87,15 +81,7 @@ export default function WorkspaceShell({
             <div className="sw-group-label">Workspace</div>
             {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
           </nav>
-          <div className="sw-foot">
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px" }}>
-              <span style={{ width: 34, height: 34, borderRadius: 11, flex: "none", background: "linear-gradient(135deg,#3B5BDB,#845EF7)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", font: "700 14px/1 var(--font-sans)" }}>{(profile.fullName || "U").trim().charAt(0).toUpperCase()}</span>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ font: "700 12.5px/16px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.fullName || "Student"}</div>
-                <div style={{ font: "500 10.5px/14px var(--font-sans)", color: "var(--ink-faint)" }}>{profile.profileId}</div>
-              </div>
-            </div>
-          </div>
+          <SidebarCarousel />
         </aside>
 
         {/* Main */}
@@ -104,10 +90,13 @@ export default function WorkspaceShell({
           <header className="sw-header">
             {/* mobile logo + menu */}
             <button type="button" className="sw-iconbtn sw-mobilebar" onClick={() => setMobileNav(true)} aria-label="Menu"><Menu size={20} /></button>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ font: "800 clamp(19px,2.4vw,24px)/1.15 var(--font-sans)", color: "var(--ink)", letterSpacing: "-.3px" }}>Welcome back, {firstName(profile.fullName)}!</div>
-              <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>Continue your Lithuania journey and keep track of your progress from one place.</div>
-            </div>
+            {/* Overview keeps the Welcome greeting; other modules show their title in-page (below). */}
+            {nav === "overview" ? (
+              <div style={{ minWidth: 0 }}>
+                <div style={{ font: "800 clamp(19px,2.4vw,24px)/1.15 var(--font-sans)", color: "var(--ink)", letterSpacing: "-.3px" }}>Welcome back, {firstName(profile.fullName)}!</div>
+                <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>Continue your Lithuania journey and keep track of your progress from one place.</div>
+              </div>
+            ) : <div style={{ flex: 1 }} />}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
               <button type="button" className={`sw-iconbtn${nav === "notifications" ? " active" : ""}`} onClick={() => onNav("notifications")} aria-label="Notifications">
                 <Bell size={20} />{unreadNotifs > 0 && nav !== "notifications" && <span className="sw-dot">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>}
@@ -116,17 +105,21 @@ export default function WorkspaceShell({
                 <MessageCircle size={20} />{chatUnread && nav !== "messages" && <span className="sw-dot" style={{ background: "var(--red)", minWidth: 11, height: 11, padding: 0, top: 9, right: 10 }} />}
               </button>
               <div style={{ position: "relative" }}>
-                <button type="button" onClick={() => setMenu((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", padding: 0 }} aria-label="Account menu">
-                  <span className="sw-avatar">{(profile.fullName || "U").trim().charAt(0).toUpperCase()}</span>
-                  <ChevronDown size={16} color="var(--ink-soft)" />
+                <button type="button" className="sw-profile" onClick={() => setMenu((v) => !v)} aria-label="Account menu">
+                  <DefaultAvatar size={36} src={profile.avatarUrl} />
+                  <span className="sw-profile-meta">
+                    <span className="sw-profile-name">{firstName(profile.fullName)}</span>
+                    <span className="sw-profile-email">{profile.email || profile.profileId}</span>
+                  </span>
+                  <ChevronDown size={16} color="var(--ink-faint)" />
                 </button>
                 {menu && (
                   <>
                     <div onClick={() => setMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 50 }} aria-hidden />
                     <div className="sw-menu">
                       <div style={{ padding: "8px 12px 10px", borderBottom: "1px solid var(--line-soft)", marginBottom: 5 }}>
-                        <div style={{ font: "700 13px/17px var(--font-sans)", color: "var(--ink)" }}>{profile.fullName || "Student"}</div>
-                        <div style={{ font: "500 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{planById(profile.plan)?.name ?? "—"} · {profile.profileId}</div>
+                        <div style={{ font: "700 13px/17px var(--font-sans)", color: "var(--ink)" }}>{firstName(profile.fullName)}</div>
+                        <div style={{ font: "500 11px/15px var(--font-sans)", color: "var(--ink-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{profile.email || `${planById(profile.plan)?.name ?? "—"} · ${profile.profileId}`}</div>
                       </div>
                       <MenuRow icon={<UserRound size={17} />} label="Profile" onClick={() => { onNav("profile"); setMenu(false); }} />
                       <MenuRow icon={<CreditCard size={17} />} label="Subscription" onClick={() => { onNav("subscription"); setMenu(false); }} />

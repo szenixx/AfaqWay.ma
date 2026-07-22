@@ -8,8 +8,7 @@ export const metadata = {
   description: "Get in touch with AfaqWay by email or WhatsApp.",
 };
 
-// NOTE: WhatsApp number below is a PLACEHOLDER — swap in the real number.
-const WHATSAPP_URL = "https://wa.me/212600000000";
+const WHATSAPP_URL = "https://wa.me/212632501155";
 
 export default function ContactPage() {
   return (

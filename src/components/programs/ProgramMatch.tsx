@@ -10,7 +10,7 @@ import type { Program, Recommendation, StudentProfile } from "@/lib/programs/typ
    I-know-the-program = free search + shuffled suggestions, NO match status. */
 
 const MAX_RESULTS = 12;
-const MAX_PICKS = 3;
+const MAX_PICKS = 1; // one study program only
 
 function scoreColor(score: number, perfect: boolean) {
   if (perfect) return { bg: "var(--green-tint)", fg: "var(--green)", bd: "var(--green-line)" };
@@ -99,18 +99,19 @@ export default function ProgramMatch({ profile, selected, onSelect }: { profile:
   // shuffled suggestions — different order each time the know path is opened
   const suggestions = useMemo(() => [...PROGRAMS].sort(() => Math.random() - 0.5).slice(0, 8), [path]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Single-select: picking a program replaces any previous choice.
   const toggle = (id: number) => {
-    if (selected.includes(id)) onSelect(selected.filter((x) => x !== id));
-    else if (selected.length < MAX_PICKS) onSelect([...selected, id]);
+    if (selected.includes(id)) onSelect([]);
+    else onSelect([id]);
   };
   const orderOf = (id: number) => selected.indexOf(id) + 1;
-  const canAdd = selected.length < MAX_PICKS;
+  const canAdd = true; // replacing is always allowed in single-select
 
   return (
     <div>
       <div style={{ font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-faint)" }}>Find your program</div>
       <div style={{ font: "600 18px/24px var(--font-sans)", color: "var(--ink)", margin: "4px 0 6px" }}>How do you want to pick?</div>
-      <p style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", margin: "0 0 16px" }}>Pick up to {MAX_PICKS} programs in the order you prefer. We&apos;ll build your roadmap around them.</p>
+      <p style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", margin: "0 0 16px" }}>Pick the one study program you want. We&apos;ll build your roadmap around it.</p>
 
       <div role="radiogroup" style={{ display: "flex", gap: 12, marginBottom: 16 }}>
         {([["help", "Help me choose"], ["know", "I know the program"]] as const).map(([v, label]) => {
@@ -126,7 +127,7 @@ export default function ProgramMatch({ profile, selected, onSelect }: { profile:
 
       {selected.length > 0 && (
         <div style={{ background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-          <div style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", marginBottom: 6 }}>Your choices ({selected.length}/{MAX_PICKS})</div>
+          <div style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", marginBottom: 6 }}>Your program</div>
           <ol style={{ margin: 0, paddingLeft: 18, font: "400 13px/20px var(--font-sans)", color: "var(--ink)" }}>
             {selected.map((id) => <li key={id}>{byId.get(id)?.name ?? id}</li>)}
           </ol>

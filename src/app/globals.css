@@ -98,6 +98,16 @@ a {
   .af-hamburger { display: inline-flex; }
 }
 
+/* "How it feels" map. Desktop: centered, ≤560px (perfect as-is). Phone: render
+   larger inside a horizontal-scroll wrapper so all countries/labels stay legible. */
+.af-feelsmap { width: 100%; max-width: 560px; margin: 0 auto; }
+.af-feelsmap-inner { width: 100%; }
+@media (max-width: 900px) {
+  .af-feelsmap { max-width: none; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .af-feelsmap::-webkit-scrollbar { display: none; }
+  .af-feelsmap-inner { width: 620px; }
+}
+
 /* Two-column section (map + copy) → stacks on narrow screens */
 .af-two-col {
   display: grid;
@@ -358,50 +368,130 @@ a {
    Same design language as the admin Overview/Wallet dashboards (reuses .dash-card
    and the dashboard kit). One universal workspace: sidebar ~19%, content ~81%.
    ──────────────────────────────────────────────────────────────────────────── */
-.sw-root { min-height: 100dvh; position: relative; background: linear-gradient(135deg, #E6ECF7 0%, #EFF1F8 52%, #EAE7F4 100%); overflow-x: hidden; }
-.sw-root::before { content: ""; position: fixed; width: 46vw; height: 46vw; left: -9vw; top: -12vw; border-radius: 50%; background: radial-gradient(circle, rgba(43,76,155,.26), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
-.sw-root::after { content: ""; position: fixed; width: 42vw; height: 42vw; right: -7vw; bottom: -14vw; border-radius: 50%; background: radial-gradient(circle, rgba(99,179,166,.24), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
-.sw-shell { position: relative; z-index: 1; display: flex; gap: 18px; padding: 18px; align-items: flex-start; min-height: 100dvh; }
-.sw-sidebar { position: sticky; top: 18px; align-self: flex-start; height: calc(100dvh - 36px); flex: none; width: clamp(210px, 19%, 268px); display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,.55); backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8); border: 1px solid rgba(255,255,255,.7); border-radius: 26px; box-shadow: 0 18px 48px rgba(23,35,58,.14), inset 0 1px 0 rgba(255,255,255,.75); padding: 16px; }
+/* Fixed application shell: full viewport, sidebar + top fixed, only content scrolls.
+   Page = very subtle light surface; cards (.sw-tile) are the solid white surfaces. */
+.sw-root { height: 100dvh; position: relative; background: linear-gradient(135deg, #E7ECF7 0%, #EDF1F9 52%, #E8EEF9 100%); overflow: hidden; }
+.sw-root::before { content: ""; position: fixed; width: 46vw; height: 46vw; left: -9vw; top: -12vw; border-radius: 50%; background: radial-gradient(circle, rgba(43,76,155,.10), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
+.sw-root::after { content: ""; position: fixed; width: 42vw; height: 42vw; right: -7vw; bottom: -14vw; border-radius: 50%; background: radial-gradient(circle, rgba(61,99,180,.08), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
+.sw-shell { position: relative; z-index: 1; display: flex; gap: 18px; padding: 18px; align-items: stretch; height: 100dvh; }
+.sw-sidebar { align-self: stretch; height: 100%; flex: none; width: clamp(210px, 19%, 268px); display: flex; flex-direction: column; gap: 14px; background: linear-gradient(180deg, #EEF2FC, #E6ECF9); border: 1px solid rgba(255,255,255,.7); border-radius: 26px; box-shadow: 0 18px 48px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.7); padding: 16px; }
 .sw-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 2px; }
 .sw-brand-name { font: 800 19px/1 var(--font-sans); color: var(--ink); letter-spacing: -.2px; }
 .sw-brand-sub { font: 600 9.5px/13px var(--font-sans); letter-spacing: .07em; text-transform: uppercase; color: var(--indigo-600); margin-top: 2px; }
 .sw-nav { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 2px; }
 .sw-nav::-webkit-scrollbar { width: 0; }
 .sw-group-label { font: 700 10px/14px var(--font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-faint); padding: 14px 12px 4px; }
-.sw-navitem { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 13px; border: none; border-radius: 15px; background: transparent; color: var(--ink-soft); cursor: pointer; font: 600 13.5px/20px var(--font-sans); text-align: left; text-decoration: none; transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease; position: relative; }
-.sw-navitem:hover { background: rgba(43,76,155,.08); color: var(--ink); }
-.sw-navitem.active { background: #fff; color: var(--indigo-600); box-shadow: 0 8px 20px rgba(23,35,58,.12); }
+.sw-navitem { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 13px; border: none; border-radius: 15px; background: transparent; color: var(--ink-soft); cursor: pointer; font: 600 13.5px/20px var(--font-sans); text-align: left; text-decoration: none; transition: background 220ms var(--ease), color 220ms var(--ease), box-shadow 220ms var(--ease); position: relative; }
+.sw-navitem:hover:not(.active) { background: rgba(43,76,155,.08); color: var(--ink); }
+/* Active module: solid AfaqWay blue, white text + icons, soft shadow (no glow). */
+.sw-navitem.active { background: var(--indigo-600); color: #fff; box-shadow: 0 8px 18px -8px rgba(43,76,155,.55); }
 .sw-navitem.danger { color: var(--red); }
 .sw-navitem.danger:hover { background: var(--red-tint); }
 .sw-navico { flex: none; display: flex; }
-.sw-foot { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 18px; background: rgba(247,249,252,.6); }
-.sw-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px; }
-.sw-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: rgba(255,255,255,.55); backdrop-filter: blur(30px) saturate(1.8); -webkit-backdrop-filter: blur(30px) saturate(1.8); border: 1px solid rgba(255,255,255,.7); border-radius: 22px; box-shadow: 0 12px 32px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.7); padding: 16px 22px; }
-.sw-iconbtn { position: relative; width: 42px; height: 42px; border-radius: 14px; border: 1px solid rgba(255,255,255,.8); background: rgba(255,255,255,.7); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 140ms ease, color 140ms ease; flex: none; }
-.sw-iconbtn:hover { background: #fff; color: var(--indigo-600); }
+.sw-foot { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 18px; background: rgba(255,255,255,.55); }
+/* Sidebar image carousel */
+.sw-carousel { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 2px 4px 4px; flex: none; }
+.sw-carousel-frame { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: transparent; border: none; box-shadow: none; }
+.sw-carousel-slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 600ms var(--ease); }
+.sw-carousel-ph { background: linear-gradient(135deg, var(--indigo-100), #DCE6F6); }
+.sw-carousel-dots { display: flex; align-items: center; gap: 6px; }
+.sw-dot-ind { width: 6px; height: 6px; padding: 0; border: none; border-radius: 999px; background: rgba(43,76,155,.25); cursor: pointer; transition: background 220ms var(--ease), width 220ms var(--ease); }
+.sw-dot-ind.on { width: 16px; background: var(--indigo-600); }
+.sw-main { flex: 1; min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; gap: 14px; }
+/* Header sits directly on the page background (no card/frame), stays fixed. */
+.sw-header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: transparent; padding: 6px 8px 2px; }
+/* Top action buttons: true circles, white, thin border, soft shadow, smooth hover. */
+.sw-iconbtn { position: relative; width: 42px; height: 42px; border-radius: 999px; border: 1px solid rgba(43,76,155,.10); background: #fff; color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 200ms var(--ease), box-shadow 200ms var(--ease), transform 200ms var(--ease); flex: none; box-shadow: 0 1px 2px rgba(23,35,58,.04), 0 8px 20px -16px rgba(43,76,155,.3); }
+.sw-iconbtn:hover { color: var(--indigo-600); transform: translateY(-1px); box-shadow: 0 1px 2px rgba(23,35,58,.05), 0 12px 24px -16px rgba(43,76,155,.42); }
 .sw-iconbtn.active { background: var(--indigo-600); color: #fff; border-color: var(--indigo-600); }
 .sw-dot { position: absolute; top: 8px; right: 9px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--red); color: #fff; font: 700 9px/15px var(--font-sans); text-align: center; border: 2px solid #fff; }
-.sw-avatar { width: 42px; height: 42px; border-radius: 14px; flex: none; background: linear-gradient(135deg,#3B5BDB,#845EF7); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); box-shadow: 0 6px 16px rgba(59,91,219,.32); }
+.sw-avatar { width: 42px; height: 42px; border-radius: 14px; flex: none; background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700)); color: #fff; border: none; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); box-shadow: 0 6px 16px rgba(43,76,155,.32); }
+/* Profile capsule: avatar + name/email, white pill, thin border, soft shadow. */
+.sw-profile { display: inline-flex; align-items: center; gap: 11px; padding: 6px 12px 6px 6px; border-radius: 999px; background: #fff; border: 1px solid rgba(43,76,155,.10); box-shadow: 0 1px 2px rgba(23,35,58,.04), 0 10px 24px -18px rgba(43,76,155,.3); cursor: pointer; transition: box-shadow 220ms var(--ease), transform 220ms var(--ease); }
+.sw-profile:hover { transform: translateY(-1px); box-shadow: 0 1px 2px rgba(23,35,58,.05), 0 16px 30px -20px rgba(43,76,155,.4); }
+.sw-profile .sw-avatar { width: 36px; height: 36px; border-radius: 999px; font-size: 14px; }
+.sw-profile-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.sw-profile-name { font: 700 13px/16px var(--font-sans); color: var(--ink); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-profile-email { font: 400 11px/15px var(--font-sans); color: var(--ink-faint); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 620px) { .sw-profile-meta { display: none; } .sw-profile { padding: 5px; } }
 .sw-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 232px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 48px rgba(23,35,58,.18); padding: 7px; z-index: 60; }
 .sw-menu-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 11px; border: none; background: transparent; cursor: pointer; font: 600 13.5px/18px var(--font-sans); color: var(--ink); }
 .sw-menu-row:hover { background: var(--subtle); }
 .sw-menu-row.danger { color: var(--red); }
-.sw-tile { background: rgba(255,255,255,.55); backdrop-filter: blur(26px) saturate(1.8); -webkit-backdrop-filter: blur(26px) saturate(1.8); border: 1px solid rgba(255,255,255,.7); border-radius: 20px; box-shadow: 0 10px 30px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.75); padding: 18px; }
-.sw-content { min-width: 0; }
+/* One card language everywhere: white surface, thin semi-transparent blue border,
+   soft ambient shadow, subtle blue reflection, generous padding, smooth hover. */
+.sw-tile { background: linear-gradient(180deg, #FCFDFF, #FFFFFF 40%); border: 1px solid rgba(43,76,155,.09); border-radius: 22px; box-shadow: 0 1px 2px rgba(23,35,58,.04), 0 14px 32px -22px rgba(43,76,155,.20), inset 0 1px 0 rgba(255,255,255,.9); padding: 20px; transition: box-shadow 220ms var(--ease), transform 220ms var(--ease); }
+.sw-tile:hover { box-shadow: 0 1px 2px rgba(23,35,58,.05), 0 20px 40px -24px rgba(43,76,155,.28), inset 0 1px 0 rgba(255,255,255,.95); transform: translateY(-1px); }
+.sw-content { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 2px 6px 24px 2px; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.sw-content::-webkit-scrollbar { width: 10px; }
+.sw-content::-webkit-scrollbar-thumb { background: rgba(23,35,58,.14); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
 .sw-mobilebar { display: none; }
 @media (max-width: 1199px) {
   .sw-2col { grid-template-columns: 1fr !important; }
   .sw-explore { grid-template-columns: repeat(2, 1fr) !important; }
 }
 @media (max-width: 1023px) {
-  .sw-shell { flex-direction: column; padding: 12px; gap: 12px; }
+  .sw-root { height: auto; overflow-x: hidden; overflow-y: visible; }
+  .sw-shell { flex-direction: column; padding: 12px; gap: 12px; height: auto; }
   .sw-sidebar { display: none; }
   .sw-mobilebar { display: flex; }
-  .sw-main { width: 100%; }
+  .sw-main { width: 100%; height: auto; }
+  .sw-content { overflow: visible; }
 }
 @media (max-width: 720px) {
   .sw-statrow { grid-template-columns: repeat(2, 1fr) !important; }
   .sw-explore { grid-template-columns: 1fr !important; }
   .sw-header { padding: 14px 16px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Premium refinement layer
+   Subtle gradients, faint glows, soft layered shadows and calm micro-motion,
+   applied to SHARED primitives so every screen feels refined at once. No
+   flashy animation; AfaqWay blue stays the centerpiece. Layouts untouched.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Softer, layered card shadow (Stripe/Linear-style depth without heaviness) */
+  --shadow-card: 0 1px 2px rgba(23,35,58,.045), 0 10px 24px -14px rgba(23,35,58,.16);
+  --shadow-soft: 0 1px 2px rgba(23,35,58,.05), 0 20px 44px -22px rgba(23,35,58,.24);
+  --grad-indigo: linear-gradient(180deg, var(--indigo-500), var(--indigo-600) 62%, var(--indigo-700));
+}
+
+/* Barely-there decorative wash behind paper-background pages (workspaces paint
+   their own background over this, so they're unaffected). */
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(58vw 48vh at 8% -10%, rgba(43,76,155,.055), transparent 60%),
+    radial-gradient(52vw 46vh at 104% 4%, rgba(99,140,220,.05), transparent 62%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* Marketing / legal cards: richer resting depth + a restrained hover elevation. */
+.card { transition: box-shadow 220ms var(--ease), transform 220ms var(--ease); }
+.card:hover { box-shadow: var(--shadow-soft); transform: translateY(-2px); }
+
+/* Pills: a faint top highlight so they sit slightly above the surface. */
+.pill { box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+
+/* Opt-in gradient hairline border for feature/CTA panels. */
+.af-gradient-border {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, rgba(43,76,155,.35), rgba(43,76,155,.05) 46%, rgba(99,140,220,.3)) border-box;
+}
+
+/* Admin shells keep a faint indigo gradient on the active nav item. The student
+   workspace (.sw-navitem) uses solid AfaqWay blue — defined in its own block. */
+.dash-navitem.active, .adm-item.active {
+  background: linear-gradient(180deg, #ffffff, var(--indigo-100));
+}
+/* Admin stat cards: a whisper-soft inner top highlight for extra depth. */
+.dash-stat { box-shadow: 0 10px 30px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.8); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+  .card:hover { transform: none; }
 }

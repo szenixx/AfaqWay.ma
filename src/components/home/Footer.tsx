@@ -12,12 +12,12 @@ const COLS: { head: string; links: string[] }[] = [
   { head: "Legal", links: ["Terms", "Privacy", "Refunds"] },
 ];
 
-// NOTE: social URLs are PLACEHOLDERS — swap in the real handles/number.
+// TikTok URL is still a PLACEHOLDER — swap in the real handle when available.
 const SOCIALS: { label: string; href: string; icon: React.ReactNode }[] = [
-  { label: "Instagram", href: "https://instagram.com/afaqway", icon: <InstagramIcon /> },
+  { label: "Instagram", href: "https://www.instagram.com/afaqway.platform/", icon: <InstagramIcon /> },
   { label: "TikTok", href: "https://tiktok.com/@afaqway", icon: <TikTokIcon /> },
-  { label: "WhatsApp", href: "https://wa.me/212600000000", icon: <WhatsAppIcon /> },
-  { label: "Facebook", href: "https://facebook.com/afaqway", icon: <FacebookIcon /> },
+  { label: "WhatsApp", href: "https://wa.me/212632501155", icon: <WhatsAppIcon /> },
+  { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61588760870063", icon: <FacebookIcon /> },
 ];
 
 const colHead = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--ink-faint)", marginBottom: 16 };

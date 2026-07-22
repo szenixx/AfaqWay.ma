@@ -10,12 +10,14 @@ import { fileUrl } from "@/lib/r2";
 type Payment = { id: string; user_id: string; plan: string; amount: number; currency: string; method: string; status: string; receipt_path: string | null; reference: string | null; rejection_comment: string | null; created_at: string; reviewed_at: string | null };
 type UserInfo = { full_name: string | null; email: string | null; destination_country: string | null };
 
-function Stat({ label, value, tone, icon }: { label: string; value: number; tone?: string; icon: React.ReactNode }) {
+function Stat({ label, value, tone, tint, icon }: { label: string; value: number; tone?: string; tint?: string; icon: React.ReactNode }) {
+  const c = tone ?? "var(--indigo-600)";
+  const bg = tint ?? "var(--indigo-tint)";
   return (
-    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
-      <span style={{ width: 38, height: 38, borderRadius: 14, background: "var(--indigo-tint)", color: tone ?? "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
+    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderTop: `3px solid ${c}`, borderRadius: 18, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
+      <span style={{ width: 38, height: 38, borderRadius: 14, background: bg, color: c, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
       <div>
-        <div style={{ font: "700 22px/26px var(--font-sans)", color: tone ?? "var(--ink)" }}>{value}</div>
+        <div style={{ font: "700 22px/26px var(--font-sans)", color: c }}>{value}</div>
         <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</div>
       </div>
     </div>
@@ -129,10 +131,10 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       </div>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <Stat label="Pending" value={stats.pending} tone="var(--amber)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 2" /></>)} />
-        <Stat label="Approved" value={stats.approved} tone="var(--green)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} />
-        <Stat label="Rejected" value={stats.rejected} tone="var(--red)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></>)} />
-        <Stat label="Processed" value={stats.approved + stats.rejected} icon={rIcon(<><path d="M4 10h12M10 4v12" /></>)} />
+        <Stat label="Pending" value={stats.pending} tone="var(--amber)" tint="var(--amber-tint)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 2" /></>)} />
+        <Stat label="Approved" value={stats.approved} tone="var(--green)" tint="var(--green-tint)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} />
+        <Stat label="Rejected" value={stats.rejected} tone="var(--red)" tint="var(--red-tint)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></>)} />
+        <Stat label="Processed" value={stats.approved + stats.rejected} tone="var(--indigo-600)" tint="var(--indigo-tint)" icon={rIcon(<><path d="M4 10h12M10 4v12" /></>)} />
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>

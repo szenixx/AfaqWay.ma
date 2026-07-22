@@ -10,10 +10,10 @@ import { supabase } from "@/lib/supabase/client";
 
 export type StoredFile = { path: string; storage: "r2" | "supabase" };
 
-export async function uploadUserFile(file: File, opts: { fallbackBucket: string; fallbackPrefix: string }): Promise<StoredFile> {
+export async function uploadUserFile(file: File, opts: { fallbackBucket: string; fallbackPrefix: string; folder?: string }): Promise<StoredFile> {
   try {
     const { data, error } = await supabase.functions.invoke("storage-sign", {
-      body: { action: "upload", filename: file.name, contentType: file.type || "application/octet-stream" },
+      body: { action: "upload", filename: file.name, contentType: file.type || "application/octet-stream", folder: opts.folder },
     });
     const key = (data as { key?: string; url?: string } | null)?.key;
     const url = (data as { url?: string } | null)?.url;
@@ -31,10 +31,10 @@ export async function uploadUserFile(file: File, opts: { fallbackBucket: string;
 }
 
 // Resolve a stored path (R2 or Supabase) to a short-lived viewable/downloadable URL.
-export async function fileUrl(path: string, supabaseBucket: string, download?: string): Promise<string | null> {
+export async function fileUrl(path: string, supabaseBucket: string, download?: string, ttl?: number): Promise<string | null> {
   if (path.startsWith("r2:")) {
     const key = path.slice(3);
-    const { data, error } = await supabase.functions.invoke("storage-sign", { body: { action: "download", key, download } });
+    const { data, error } = await supabase.functions.invoke("storage-sign", { body: { action: "download", key, download, ttl } });
     if (error) return null;
     return (data as { url?: string } | null)?.url ?? null;
   }

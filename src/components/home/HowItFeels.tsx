@@ -33,9 +33,11 @@ export default function HowItFeels() {
   return (
     <div style={{ padding: "56px 24px" }}>
       <div className="af-two-col">
-        {/* Map — sits directly on the section background, no card/layer behind it */}
-        <div style={{ width: "100%", maxWidth: 560, margin: "0 auto" }}>
-          <div onClick={() => setPinned(null)} style={{ position: "relative", width: "100%", aspectRatio: "1264 / 848" }}>
+        {/* Map — sits directly on the section background, no card/layer behind it.
+            On phones it renders larger inside a horizontal-scroll wrapper so every
+            country + label is readable (swipe to pan); desktop is unchanged. */}
+        <div className="af-feelsmap">
+          <div className="af-feelsmap-inner" onClick={() => setPinned(null)} style={{ position: "relative", aspectRatio: "1264 / 848" }}>
             <Image src="/europe-map.webp" alt="Outline map of Europe and Morocco" fill style={{ objectFit: "contain" }} sizes="(max-width: 900px) 100vw, 560px" />
 
             <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>

@@ -213,7 +213,7 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
     setBusy(true); setError("");
     try {
       // Receipts upload to Cloudflare R2 (with a Supabase fallback if R2 is unset).
-      const up = await uploadUserFile(file, { fallbackBucket: "receipts", fallbackPrefix: userId });
+      const up = await uploadUserFile(file, { fallbackBucket: "receipts", fallbackPrefix: userId, folder: "receipts" });
       const ins = await supabase.from("payments").insert({ user_id: userId, plan: plan.id, amount: plan.price, currency: "MAD", method: method.id, status: "under_review", receipt_path: up.path, reference: pricing.ref ?? null }).select("id").single();
       if (ins.error) {
         // Insert refused (e.g. the 3-per-6h receipt limit) — remove the orphaned Supabase file (R2 objects expire unused).

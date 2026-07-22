@@ -4,27 +4,33 @@
    switches on the user's plan (self_service vs full_service). Realistic demo
    data comes from ./data. Presentational pieces come from ./parts. */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { uploadUserFile } from "@/lib/r2";
+import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
   Bell, MessageCircle, ArrowRight, Plus, Check, Pencil, Mail, Phone, MapPin,
   Calendar, CreditCard, UserRound, ChevronRight, Send, LifeBuoy, Compass,
-  TriangleAlert, X, Sparkles,
+  TriangleAlert, X, Sparkles, GraduationCap,
 } from "lucide-react";
 import { planById } from "@/lib/plans";
+import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
 import {
   JOURNEY, REQUIRED_DOCS, DOC_LABEL, DOC_TONE, NOTIFICATIONS, RECENT_ACTIVITY,
   UPCOMING_TASKS, EXPLORE, FAQ, type DocStatus,
 } from "./data";
 import {
-  Panel, PageHead, CardTitle, StatTile, ProgressLine, Pill, EmptyState,
-  BtnPrimary, BtnGhost, StatusGlyph, exploreIcon,
+  Panel, CardTitle, StatTile, ProgressLine, Pill, EmptyState,
+  BtnPrimary, BtnGhost, StatusGlyph, exploreIcon, DefaultAvatar,
 } from "./parts";
 
 export type WsProfile = {
   fullName: string | null; email: string | null; plan: string | null;
   userId: string; profileId: string; city: string | null;
   whatsapp: string | null; dob: string | null; program: string | null;
+  study: StudyApp | null; academic: AcademicInfo | null;
+  avatarUrl: string | null; diplomaField: string; englishLevel: string;
 };
 
 const totalTasks = JOURNEY.reduce((s, st) => s + st.tasks.length, 0);
@@ -40,9 +46,6 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
   const unread = NOTIFICATIONS.filter((n) => !n.read).length;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Overview" title="Your dashboard"
-        sub={full ? "Your Lithuania application is being handled for you. Here's everything at a glance." : "Everything happening in your Lithuania journey, at a glance."} />
-
       {/* Stat row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }} className="sw-statrow">
         <StatTile label="Journey progress" value={`${journeyPct}%`} accent="#3B5BDB" icon={<Route size={16} />} sub={`Stage ${activeStageIdx + 1} of ${JOURNEY.length}`} />
@@ -161,8 +164,6 @@ export function Journey({ profile }: { profile: WsProfile }) {
   const full = profile.plan === "full_service";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="My Journey" title="Your path to studying in Lithuania"
-        sub={full ? "Six stages, driven by your advisor. Follow each one as our team moves your file forward." : "Six stages, each with its own checklist. Complete them, upload, and we review every step."} />
       <Panel>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span style={{ font: "700 14px/18px var(--font-sans)", color: "var(--ink)" }}>Overall progress</span>
@@ -226,10 +227,6 @@ export function Documents({ profile }: { profile: WsProfile }) {
   const approved = REQUIRED_DOCS.filter((d) => d.status === "approved").length;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Documents" title="Document center"
-        sub={full ? "Provide your documents once, our team applies them to your application for you." : "Upload each required document. A real reviewer verifies every file, usually within 48 hours."}
-        action={<BtnPrimary><Upload size={16} />Upload document</BtnPrimary>} />
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }} className="sw-statrow">
         <StatTile label="Approved" value={String(approved)} accent="#20C997" icon={<CircleCheckBig size={16} />} />
         <StatTile label="Under review" value={String(REQUIRED_DOCS.filter((d) => d.status === "under_review").length)} accent="#F76707" icon={<Clock3 size={16} />} />
@@ -238,10 +235,13 @@ export function Documents({ profile }: { profile: WsProfile }) {
       </div>
 
       <Panel>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-          {filters.map((f) => (
-            <button key={f.id} type="button" onClick={() => setFilter(f.id)} style={{ height: 34, padding: "0 14px", borderRadius: 12, border: "1px solid var(--line)", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", background: filter === f.id ? "var(--indigo-600)" : "rgba(255,255,255,.6)", color: filter === f.id ? "#fff" : "var(--ink-soft)" }}>{f.label}</button>
-          ))}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {filters.map((f) => (
+              <button key={f.id} type="button" onClick={() => setFilter(f.id)} style={{ height: 34, padding: "0 14px", borderRadius: 12, border: "1px solid var(--line)", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", background: filter === f.id ? "var(--indigo-600)" : "rgba(255,255,255,.6)", color: filter === f.id ? "#fff" : "var(--ink-soft)" }}>{f.label}</button>
+            ))}
+          </div>
+          <BtnPrimary style={{ height: 38 }}><Upload size={16} />Upload document</BtnPrimary>
         </div>
       </Panel>
 
@@ -274,8 +274,6 @@ export function Explore() {
   const [open, setOpen] = useState<string>(EXPLORE[0].key);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Explore Lithuania" title="Everything about your destination"
-        sub="Universities, cities, cost of living and the practical things you need to know before and after you arrive." />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }} className="sw-explore">
         {EXPLORE.map((sec) => {
           const isOpen = open === sec.key;
@@ -313,8 +311,11 @@ export function Notifications() {
   const unread = items.filter((n) => !n.read).length;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Notifications" title="Notification center" sub="Every update about your application, documents and messages."
-        action={unread > 0 ? <BtnGhost onClick={() => setItems((xs) => xs.map((n) => ({ ...n, read: true })))}><Check size={15} />Mark all read</BtnGhost> : undefined} />
+      {unread > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <BtnGhost onClick={() => setItems((xs) => xs.map((n) => ({ ...n, read: true })))}><Check size={15} />Mark all read</BtnGhost>
+        </div>
+      )}
       <Panel style={{ padding: 8 }}>
         {items.length === 0 ? <EmptyState icon={<Bell size={26} />} title="All caught up" /> : items.map((n, i) => (
           <div key={n.id} style={{ display: "flex", gap: 13, padding: "14px 12px", borderBottom: i < items.length - 1 ? "1px solid var(--line-soft)" : "none", background: n.read ? "transparent" : "var(--indigo-tint)", borderRadius: 12 }}>
@@ -336,23 +337,26 @@ export function Support({ onNav }: { onNav: (id: string) => void }) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Support" title="How can we help?" sub="Find quick answers, open a ticket, or chat with our team directly." />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="sw-explore">
-        {[
-          { icon: <MessageCircle size={20} />, title: "Live chat", desc: "Chat with our team in Messages.", cta: "Open chat", to: "messages" },
-          { icon: <Plus size={20} />, title: "Open a ticket", desc: "Describe an issue and we'll follow up.", cta: "New ticket", to: "messages" },
-          { icon: <Mail size={20} />, title: "Contact support", desc: "support@afaqway.com · 24/7", cta: "Email us", to: "messages" },
-        ].map((c) => (
-          <Panel key={c.title}>
-            <span style={{ width: 46, height: 46, borderRadius: 14, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>{c.icon}</span>
-            <div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)" }}>{c.title}</div>
-            <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", margin: "4px 0 14px" }}>{c.desc}</div>
-            <BtnGhost onClick={() => onNav(c.to)}>{c.cta}<ArrowRight size={15} /></BtnGhost>
-          </Panel>
-        ))}
+        {SUPPORT_CARDS.map((c) => {
+          const inner = (
+            <>
+              <span style={{ width: 46, height: 46, borderRadius: 14, background: "#fff", color: c.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, boxShadow: "0 3px 10px rgba(23,35,58,.06)" }}>{c.icon}</span>
+              <div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)" }}>{c.title}</div>
+              <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", margin: "4px 0 14px" }}>{c.desc}</div>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, font: "600 13px/1 var(--font-sans)", color: c.color }}>{c.cta}<ArrowRight size={15} /></span>
+            </>
+          );
+          const cardStyle: React.CSSProperties = { display: "block", textAlign: "left", padding: 18, borderRadius: 20, background: c.tint, border: `1px solid ${c.line}`, cursor: "pointer", textDecoration: "none" };
+          return c.href
+            ? <a key={c.title} href={c.href} target={c.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" style={cardStyle}>{inner}</a>
+            : <button key={c.title} type="button" onClick={() => onNav(c.to!)} style={{ ...cardStyle, width: "100%", font: "inherit" }}>{inner}</button>;
+        })}
       </div>
-      <Panel>
-        <CardTitle title="Frequently asked questions" />
+
+      {/* FAQ — no card background, just a thin divider above it */}
+      <div style={{ borderTop: "1px solid var(--line)", paddingTop: 18, marginTop: 4 }}>
+        <div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)", marginBottom: 14 }}>Frequently asked questions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {FAQ.map((f, i) => {
             const isOpen = openFaq === i;
@@ -367,10 +371,17 @@ export function Support({ onNav }: { onNav: (id: string) => void }) {
             );
           })}
         </div>
-      </Panel>
+      </div>
     </div>
   );
 }
+
+// NOTE: WhatsApp number is the real support line.
+const SUPPORT_CARDS: { icon: React.ReactNode; title: string; desc: string; cta: string; color: string; tint: string; line: string; to?: string; href?: string }[] = [
+  { icon: <MessageCircle size={20} />, title: "Live chat", desc: "Chat with our team inside your workspace.", cta: "Open chat", color: "var(--indigo-600)", tint: "var(--indigo-tint)", line: "var(--indigo-line)", to: "messages" },
+  { icon: <Plus size={20} />, title: "Open a ticket", desc: "Send us your issue directly on WhatsApp.", cta: "WhatsApp us", color: "var(--green)", tint: "var(--green-tint)", line: "var(--green-line)", href: "https://wa.me/212632501155" },
+  { icon: <Mail size={20} />, title: "Contact support", desc: "support@afaqway.com", cta: "Email us", color: "var(--amber)", tint: "var(--amber-tint)", line: "var(--amber-line)", href: "mailto:support@afaqway.com" },
+];
 
 /* ── Subscription ─────────────────────────────────────────────────────────── */
 export function Subscription({ profile }: { profile: WsProfile }) {
@@ -379,7 +390,6 @@ export function Subscription({ profile }: { profile: WsProfile }) {
   const full = profile.plan === "full_service";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Subscription" title="Your plan" sub="Your active subscription and what it includes." />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">
         <Panel style={{ background: "linear-gradient(135deg, rgba(59,91,219,.14), rgba(132,94,247,.12))" }}>
           <span className={full ? "pill pill-indigo" : "pill pill-green"}>Current plan</span>
@@ -423,17 +433,18 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
     { label: "Date of birth", value: profile.dob || "—", icon: <Calendar size={15} /> },
     { label: "Destination", value: "Lithuania", icon: <Compass size={15} /> },
   ];
+  const st = profile.study ?? { program: "—", tuition: "—", city: "—", country: "Lithuania", language: "English", university: "—" };
+  const ac = profile.academic ?? { lastDegree: "—", field: "—", year: "—", grade: "—", target: "—", englishLevel: "—", test: "—" };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Profile" title="Your profile" sub="Your personal and account details."
-        action={<BtnGhost onClick={() => onNav("settings")}><Pencil size={15} />Edit in Settings</BtnGhost>} />
       <Panel>
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18, borderBottom: "1px solid var(--line-soft)", marginBottom: 6 }}>
-          <span style={{ width: 68, height: 68, borderRadius: 22, flex: "none", background: "linear-gradient(135deg,#3B5BDB,#845EF7)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", font: "800 28px/1 var(--font-sans)", boxShadow: "0 8px 22px rgba(59,91,219,.32)" }}>{(profile.fullName || "U").trim().charAt(0).toUpperCase()}</span>
+          <DefaultAvatar size={68} src={profile.avatarUrl} />
           <div style={{ minWidth: 0 }}>
             <div style={{ font: "800 20px/26px var(--font-sans)", color: "var(--ink)" }}>{profile.fullName || "Student"}</div>
             <div style={{ font: "500 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>ID {profile.profileId} · {planById(profile.plan)?.name ?? "—"}</div>
           </div>
+          <BtnGhost style={{ marginLeft: "auto" }} onClick={() => onNav("settings")}><Pencil size={15} />Edit</BtnGhost>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 26px" }} className="sw-2col">
           {rows.map((r) => (
@@ -445,36 +456,163 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
         </div>
         <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", marginTop: 14 }}>These details come from your onboarding. To change them, use Settings.</div>
       </Panel>
+
+      {/* Personal Academic Information — sits above Study Application (always shown) */}
+      <Panel>
+        <CardTitle title="Personal Academic Information" sub="Your previous diploma and English background, from onboarding" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
+          <InfoRow label="Last diploma" value={ac.lastDegree} />
+          <InfoRow label="Field of study" value={ac.field} />
+          <InfoRow label="Year of last degree" value={ac.year} />
+          <InfoRow label="Grade" value={ac.grade} />
+          <InfoRow label="Target degree" value={ac.target} />
+          <InfoRow label="English level" value={ac.englishLevel} />
+          <InfoRow label="English test" value={ac.test} />
+        </div>
+      </Panel>
+
+      {/* Study Application — locked; changes go to the admin as a request (always shown) */}
+      <Panel>
+        <CardTitle title="Study Application" sub="Set from your application — locked" action={<BtnGhost onClick={() => onNav("settings")}><Pencil size={15} />Request a change</BtnGhost>} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
+          <InfoRow label="Program Name" value={st.program} icon={<GraduationCap size={15} />} />
+          <InfoRow label="Tuition Fees" value={st.tuition} />
+          <InfoRow label="City" value={st.city} />
+          <InfoRow label="Country" value={st.country} />
+          <InfoRow label="Program Language" value={st.language} />
+          <InfoRow label="University Name" value={st.university} />
+        </div>
+        <div style={{ marginTop: 12, font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", background: "var(--subtle)", borderRadius: 12, padding: "10px 12px" }}>These fields are locked. To change any of them, submit a change request in Settings and our team will review it.</div>
+      </Panel>
     </div>
   );
 }
 
-/* ── Settings ─────────────────────────────────────────────────────────────── */
-export function Settings({ profile, onProgramRequest }: { profile: WsProfile; onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean> }) {
+function InfoRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--line-soft)" }}>
+      {icon && <span style={{ width: 32, height: 32, borderRadius: 10, flex: "none", background: "var(--subtle)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{label}</div>
+        <div style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Settings (fully interactive: real saves + avatar upload to R2) ─────────── */
+export function Settings({ profile, onProgramRequest, onReload }: { profile: WsProfile; onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean>; onReload: () => Promise<void> }) {
   const [name, setName] = useState(profile.fullName ?? "");
   const [city, setCity] = useState(profile.city ?? "");
   const [whatsapp, setWhatsapp] = useState(profile.whatsapp ?? "");
-  const [saved, setSaved] = useState(false);
+  const [diploma, setDiploma] = useState(profile.diplomaField ?? "");
+  const [english, setEnglish] = useState(profile.englishLevel ?? "");
+  const [savedKey, setSavedKey] = useState("");
+  const [busy, setBusy] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const flash = (k: string) => { setSavedKey(k); setTimeout(() => setSavedKey(""), 2200); };
+
+  async function savePersonal() {
+    setBusy("personal");
+    await supabase.from("profiles").update({ full_name: name.trim(), city: city.trim() }).eq("id", profile.userId);
+    setBusy(""); flash("personal"); await onReload();
+  }
+  async function saveContact() {
+    setBusy("contact");
+    await supabase.from("profiles").update({ whatsapp_number: whatsapp.replace(/[^\d]/g, "") }).eq("id", profile.userId);
+    setBusy(""); flash("contact"); await onReload();
+  }
+  async function saveAcademic() {
+    setBusy("academic");
+    const { data } = await supabase.from("profiles").select("country_flow_answers").eq("id", profile.userId).maybeSingle();
+    const cfa = ((data?.country_flow_answers as Record<string, unknown>) ?? {});
+    cfa.timing_education = { ...((cfa.timing_education as object) ?? {}), last_degree_field: diploma.trim() };
+    cfa.program_setup = { ...((cfa.program_setup as object) ?? {}), english_level: english };
+    await supabase.from("profiles").update({ country_flow_answers: cfa }).eq("id", profile.userId);
+    setBusy(""); flash("academic"); await onReload();
+  }
+  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { path } = await uploadUserFile(file, { fallbackBucket: "avatars", fallbackPrefix: `${profile.userId}/avatars`, folder: "avatars" });
+      await supabase.from("profiles").update({ avatar_path: path }).eq("id", profile.userId);
+      await onReload();
+    } catch (err) { console.warn("avatar upload failed", err); }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+  const SavedTag = ({ k }: { k: string }) => savedKey === k ? <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "600 12.5px/1 var(--font-sans)", color: "var(--green)" }}><Check size={15} />Saved</span> : null;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <PageHead eyebrow="Settings" title="Settings" sub="Edit your details or request a change to your program." />
+      {/* Profile photo */}
+      <Panel>
+        <CardTitle title="Profile photo" sub="Upload a picture — stored securely in your private storage" />
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <DefaultAvatar size={64} src={profile.avatarUrl} />
+          <div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickAvatar} />
+            <BtnPrimary onClick={() => fileRef.current?.click()} disabled={uploading}><Upload size={16} />{uploading ? "Uploading…" : "Upload photo"}</BtnPrimary>
+            <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>JPG or PNG. Replaces your current photo.</div>
+          </div>
+        </div>
+      </Panel>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">
         <Panel>
           <CardTitle title="Personal information" />
           <Field label="Full name" value={name} onChange={setName} />
           <Field label="City" value={city} onChange={setCity} />
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <BtnPrimary onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2200); }}>Save changes</BtnPrimary>
-            {saved && <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "600 12.5px/1 var(--font-sans)", color: "var(--green)" }}><Check size={15} />Saved</span>}
+            <BtnPrimary onClick={savePersonal} disabled={busy === "personal"}>Save changes</BtnPrimary>
+            <SavedTag k="personal" />
           </div>
         </Panel>
         <Panel>
           <CardTitle title="Contact information" />
           <Field label="Email (read-only)" value={profile.email ?? ""} onChange={() => {}} readOnly />
           <Field label="WhatsApp" value={whatsapp} onChange={setWhatsapp} />
-          <div style={{ marginTop: 14 }}><BtnPrimary onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2200); }}>Save contact info</BtnPrimary></div>
+          <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
+            <BtnPrimary onClick={saveContact} disabled={busy === "contact"}>Save contact info</BtnPrimary>
+            <SavedTag k="contact" />
+          </div>
         </Panel>
       </div>
+
+      {/* Academic info — the only academic fields the student may change (task 1) */}
+      <Panel>
+        <CardTitle title="Academic information" sub="Update your previous field of study and your English level" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
+          <Field label="Field of study (previous diploma)" value={diploma} onChange={setDiploma} placeholder="e.g. Economics" />
+          <label style={{ display: "block", marginBottom: 12 }}>
+            <span style={{ display: "block", font: "600 11.5px/16px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 5 }}>English level</span>
+            <select className="af" value={english} onChange={(e) => setEnglish(e.target.value)} style={{ width: "100%", height: 42 }}>
+              <option value="">Choose a level</option>
+              {ENGLISH_LEVELS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+        </div>
+        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 12 }}>
+          <BtnPrimary onClick={saveAcademic} disabled={busy === "academic"}>Save academic info</BtnPrimary>
+          <SavedTag k="academic" />
+        </div>
+      </Panel>
+
+      <Panel>
+        <CardTitle title="Your program" sub="Set by our team, based on your profile and requests" />
+        {profile.program ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)" }}>
+            <span style={{ width: 38, height: 38, borderRadius: 12, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={19} /></span>
+            <div style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{profile.program}</div>
+          </div>
+        ) : (
+          <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)" }}>No program assigned yet. Once our team sets your program it appears here.</div>
+        )}
+      </Panel>
       <ProgramChangeCard onProgramRequest={onProgramRequest} />
     </div>
   );

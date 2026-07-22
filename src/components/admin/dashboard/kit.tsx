@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
+import { DefaultAvatar } from "@/components/ds/DefaultAvatar";
 
 const PALETTE = ["#3B5BDB", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
 // per-stat accent colours so the KPI row isn't a monochrome block
@@ -91,7 +92,7 @@ export function SuperAdminBar() {
   return (
     <div className="dash-card" style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "clamp(9px,1.3vh,15px) clamp(14px,1.5vw,20px)", background: "linear-gradient(120deg, rgba(59,91,219,.14), rgba(32,201,151,.10) 60%, rgba(132,94,247,.12))" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-        <span style={{ width: 42, height: 42, borderRadius: 14, flex: "none", background: "linear-gradient(135deg,#3B5BDB,#845EF7)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", font: "700 18px/1 var(--font-sans)", boxShadow: "0 6px 16px rgba(59,91,219,.35)" }}>{(me?.name ?? "S").charAt(0).toUpperCase()}</span>
+        <DefaultAvatar size={42} />
         <div style={{ minWidth: 0 }}>
           <div style={{ font: "700 clamp(15px,2vh,18px)/1.2 var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me?.name ?? "Super Admin"}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>

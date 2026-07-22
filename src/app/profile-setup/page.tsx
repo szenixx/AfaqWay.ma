@@ -384,6 +384,7 @@ export default function ProfileSetup() {
   const cRef = useRef(cfa);
   const uidRef = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigating = useRef(false); // re-entrancy guard so a double-tap on Continue can't skip a step
 
   useSingleSession(sessionUserId);
 
@@ -464,12 +465,16 @@ export default function ProfileSetup() {
     if (!id) return;
     await supabase.from("profiles").update({ onboarding_phase: abs === 1 ? "universal" : "country_flow", onboarding_step: abs === 1 ? 1 : abs - 1 }).eq("id", id);
   }
-  async function goNext() {
+  function goNext() {
+    if (navigating.current) return;            // ignore rapid double-clicks
     if (!currentValid) { setShowErrors(true); return; }
     setShowErrors(false);
+    flushSave();                               // persist the latest field values before leaving the step
     const next = view + 1;
-    if (next > reached) { setReached(next); await persistPosition(next); }
-    setView(next);
+    setView(next);                             // advance immediately — no waiting on the network (fixes the lag/flash)
+    if (next > reached) { setReached(next); void persistPosition(next); } // remember position in the background
+    navigating.current = true;
+    setTimeout(() => { navigating.current = false; }, 250);
   }
   async function finish() {
     const id = uidRef.current;
