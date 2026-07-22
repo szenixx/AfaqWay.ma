@@ -7,6 +7,7 @@ import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl } from "@/lib/r2";
 import { parseAsk } from "@/lib/chat";
+import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Reply, Trash2 } from "lucide-react";
 
 type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null };
 type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
@@ -206,7 +207,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
               <button type="button" onClick={openInfo} title="View student information" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--line-soft)", border: "none", background: "transparent", cursor: "pointer" }}>
                 <span style={{ width: 30, height: 30, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 12px/1 var(--font-sans)" }}>{(selUser.full_name || "U").charAt(0).toUpperCase()}</span>
                 <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{selUser.full_name || "Unnamed"} <span style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}>· {selUser.email}</span></span>
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="var(--ink-faint)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto" }}><circle cx="10" cy="10" r="7" /><path d="M10 9v4M10 6.5v.5" /></svg>
+                <Info size={15} />
               </button>
               <div className="stu-chat-texture" style={{ flex: 1, minHeight: 0, padding: 14, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
                 {msgs.length === 0 && <div style={{ color: "var(--ink-faint)", font: "400 13px var(--font-sans)", textAlign: "center", marginTop: 20 }}>No messages yet. Send the first update.</div>}
@@ -233,7 +234,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                             <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 5 }}>Interactive question, the student taps an answer to reply.</div>
                           </div>
                         ) : m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
-                        {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>{m.file_name || "file"}</button>}
+                        {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><Paperclip size={13} />{m.file_name || "file"}</button>}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, font: "400 10px/14px var(--font-sans)", color: "var(--ink-faint)" }}>
                           <span>{new Date(m.created_at).toLocaleString()}</span>
                           {m.emailed && <span style={{ color: "var(--green)" }}>emailed</span>}
@@ -242,8 +243,8 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                       </div>
                       {/* Actions OUTSIDE the bubble (Task 4 + 5) */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "none" }}>
-                        <button type="button" onClick={() => setReplyTo(m)} title="Reply" style={actIco}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6 4 10l5 4M4 10h7a5 5 0 0 1 5 5v1" /></svg></button>
-                        {m.file_path && <button type="button" onClick={() => downloadFile(m.file_path, m.file_name)} title="Download" style={actIco}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg></button>}
+                        <button type="button" onClick={() => setReplyTo(m)} title="Reply" style={actIco}><Reply size={14} /></button>
+                        {m.file_path && <button type="button" onClick={() => downloadFile(m.file_path, m.file_name)} title="Download" style={actIco}><Download size={14} /></button>}
                       </div>
                     </div>
                   );
@@ -267,10 +268,10 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="14" height="10" rx="2" /><path d="M3.5 6 10 10.5 16.5 6" /></svg>Email</button>
-                  <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h6l-1 6 3 2v1H5v-1l3-2-1-6z" /><path d="M10 12v5" /></svg>Pin</button>
-                  <button type="button" onClick={() => setWhatsappOn((v) => !v)} title="WhatsApp alert (coming soon)" style={opt(whatsappOn)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3a7 7 0 0 0-6 10.5L3 17l3.7-1A7 7 0 1 0 10 3z" /><path d="M7.5 7.5c0 3 2 5 5 5 .6 0 1-.6.7-1.1l-1-1.2-1.4.6-1.6-1.6.6-1.4-1.2-1c-.5-.3-1.1.1-1.1.7z" /></svg>WhatsApp</button>
-                  <button type="button" onClick={() => setShowQ((v) => !v)} style={opt(showQ)}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M7.5 7.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.7-.9 1.4v.3" /><path d="M10 15v.4" /></svg>Question</button>
+                  <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><Mail size={14} />Email</button>
+                  <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}><Pin size={14} />Pin</button>
+                  <button type="button" onClick={() => setWhatsappOn((v) => !v)} title="WhatsApp alert (coming soon)" style={opt(whatsappOn)}><MessageCircle size={14} />WhatsApp</button>
+                  <button type="button" onClick={() => setShowQ((v) => !v)} style={opt(showQ)}><CircleHelp size={14} />Question</button>
                   <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                 </div>
                 {whatsappOn && <div style={{ font: "500 11.5px/16px var(--font-sans)", color: "var(--amber)", marginBottom: 8 }}>WhatsApp alerts are coming soon, this message posts to the chat for now.</div>}
@@ -285,7 +286,7 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, padding: "4px 5px 4px 8px", boxShadow: "0 6px 18px rgba(23,35,58,.06)" }}>
                   <button type="button" onClick={() => fileRef.current?.click()} aria-label="Attach a file" title="Attach a file" style={{ flex: "none", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, border: "none", background: "none", cursor: "pointer", color: "var(--ink-soft)" }}>
-                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>
+                    <Paperclip size={18} />
                   </button>
                   <input placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0, height: 38, border: "none", background: "transparent", outline: "none", font: "400 14px/1 var(--font-sans)", color: "var(--ink)" }} />
                   <button type="button" disabled={sending} onClick={send} style={{ height: 38, flex: "none", padding: "0 16px", borderRadius: 999, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 13.5px/1 var(--font-sans)", cursor: sending ? "not-allowed" : "pointer", opacity: sending ? 0.5 : 1 }}>{sending ? "…" : emailOn ? "Send & email" : "Send"}</button>
@@ -313,9 +314,9 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
             <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 10 }}>Documents</div>
             {!selUser ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>—</div> : files.length === 0 ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>No files shared yet.</div> : files.map((m) => (
               <div key={m.id} onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "file" }); }} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--indigo-600)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "none" }}><path d="M6 3h5l3 3v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M11 3v3h3" /></svg>
+                <FileText size={16} />
                 <span style={{ flex: 1, minWidth: 0, font: "500 12px/16px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.file_name || "file"}</span>
-                <button type="button" onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left - 150, y: r.bottom, msg: m, kind: "file" }); }} title="Options" style={{ flex: "none", background: "none", border: "none", cursor: "pointer", color: "var(--ink-faint)", padding: 2 }}><svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="4" r="1.6" /><circle cx="10" cy="10" r="1.6" /><circle cx="10" cy="16" r="1.6" /></svg></button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left - 150, y: r.bottom, msg: m, kind: "file" }); }} title="Options" style={{ flex: "none", background: "none", border: "none", cursor: "pointer", color: "var(--ink-faint)", padding: 2 }}><EllipsisVertical size={16} /></button>
               </div>
             ))}
           </div>
@@ -324,10 +325,10 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
 
       {menu && (
         <div style={{ position: "fixed", top: Math.min(menu.y, typeof window !== "undefined" ? window.innerHeight - 190 : menu.y), left: Math.max(8, Math.min(menu.x, typeof window !== "undefined" ? window.innerWidth - 170 : menu.x)), zIndex: 200, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, boxShadow: "0 16px 40px rgba(23,35,58,.2)", padding: 6, minWidth: 158 }} onClick={(e) => e.stopPropagation()}>
-          <button type="button" onClick={() => { setReplyTo(menu.msg); setMenu(null); }} style={menuItem}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6 4 10l5 4M4 10h7a5 5 0 0 1 5 5v1" /></svg>Reply</button>
-          {menu.msg.file_path && <button type="button" onClick={() => { downloadFile(menu.msg.file_path, menu.msg.file_name); setMenu(null); }} style={menuItem}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg>Download</button>}
-          {menu.kind === "file" && menu.msg.file_path && <button type="button" onClick={() => renameFile(menu.msg)} style={menuItem}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 13.5V16h2.5l8-8L12 5.5l-8 8z" /><path d="M11.5 6 14 8.5" /></svg>Rename</button>}
-          {menu.msg.sender === "admin" && <button type="button" onClick={() => deleteMsg(menu.msg)} style={{ ...menuItem, color: "var(--red)" }}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 6h10M8 6V4h4v2M6 6l1 10h6l1-10" /></svg>Delete</button>}
+          <button type="button" onClick={() => { setReplyTo(menu.msg); setMenu(null); }} style={menuItem}><Reply size={15} />Reply</button>
+          {menu.msg.file_path && <button type="button" onClick={() => { downloadFile(menu.msg.file_path, menu.msg.file_name); setMenu(null); }} style={menuItem}><Download size={15} />Download</button>}
+          {menu.kind === "file" && menu.msg.file_path && <button type="button" onClick={() => renameFile(menu.msg)} style={menuItem}><Pencil size={15} />Rename</button>}
+          {menu.msg.sender === "admin" && <button type="button" onClick={() => deleteMsg(menu.msg)} style={{ ...menuItem, color: "var(--red)" }}><Trash2 size={15} />Delete</button>}
         </div>
       )}
 

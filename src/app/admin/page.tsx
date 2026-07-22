@@ -15,6 +15,7 @@ import WalletGrid from "@/components/admin/dashboard/WalletGrid";
 import { Flag } from "@/components/ds";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
+import { LayoutDashboard, UserCog, Receipt, CreditCard, Users, Crown, Package, Bell, MessageCircle, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Page = { id: string; label: string; superOnly?: boolean };
 const PAGES: Page[] = [
@@ -29,15 +30,15 @@ const COUNTRY_GROUPS: { code: string; pages: Page[] }[] = [
 ];
 const ALL_SUB_PAGES = COUNTRY_GROUPS.flatMap((g) => g.pages);
 
-const svg = (d: React.ReactNode) => <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "none" }}>{d}</svg>;
+const II = 18;
 const PAGE_ICONS: Record<string, React.ReactNode> = {
-  dashboard: svg(<><rect x="3" y="3" width="6" height="7" rx="1.5" /><rect x="11" y="3" width="6" height="4" rx="1.5" /><rect x="11" y="10" width="6" height="7" rx="1.5" /><rect x="3" y="13" width="6" height="4" rx="1.5" /></>),
-  admins: svg(<><circle cx="7" cy="7" r="3" /><path d="M2 17c0-2.8 2.2-5 5-5s5 2.2 5 5" /><path d="M14 4a3 3 0 0 1 0 6M14 12c2.2 0 4 1.8 4 4" /></>),
-  reviews: svg(<><rect x="4" y="3" width="12" height="14" rx="2" /><path d="M7 8h6M7 11h6M7 14h3" /></>),
-  methods: svg(<><rect x="3" y="5" width="14" height="10" rx="2" /><path d="M3 9h14" /></>),
-  users: svg(<><circle cx="10" cy="7" r="3" /><path d="M4 16c0-3 2.7-5 6-5s6 2 6 5" /></>),
-  full: svg(<><path d="M3 7l3 2.5L10 4l4 5.5L17 7l-1 8H4L3 7z" /></>),
-  self: svg(<><path d="M10 3l6.5 3.2v6.6L10 16l-6.5-3.2V6.2L10 3z" /><path d="M3.5 6.5 10 9.7l6.5-3.2M10 9.7V16.5" /></>),
+  dashboard: <LayoutDashboard size={II} />,
+  admins: <UserCog size={II} />,
+  reviews: <Receipt size={II} />,
+  methods: <CreditCard size={II} />,
+  users: <Users size={II} />,
+  full: <Crown size={II} />,
+  self: <Package size={II} />,
 };
 
 async function logout(router: ReturnType<typeof useRouter>) {
@@ -294,7 +295,7 @@ export default function AdminPage() {
               </div>
             )}
             <button type="button" className="adm-collapse-btn" onClick={() => setCollapsed((c) => !c)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{collapsed ? <path d="M7 5l5 5-5 5" /> : <path d="M13 5l-5 5 5 5" />}</svg>
+              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </button>
           </div>
 
@@ -306,7 +307,7 @@ export default function AdminPage() {
                 <div>
                   <button type="button" onClick={() => { if (collapsed) { setCollapsed(false); setOpenGroups((o) => ({ ...o, DASH: true })); } else setOpenGroups((o) => ({ ...o, DASH: !o.DASH })); }} title={lbl("Dashboard")} className={cls(false)} style={{ justifyContent: collapsed ? "center" : "space-between" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}><span className="adm-item-ico">{PAGE_ICONS.dashboard}</span>{!collapsed && "Dashboard"}</span>
-                    {!collapsed && <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }}><path d="M7 5l5 5-5 5" /></svg>}
+                    {!collapsed && <ChevronRight size={14} style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }} />}
                   </button>
                   {open && !collapsed && (
                     <>
@@ -332,7 +333,7 @@ export default function AdminPage() {
                     <span style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                       {c ? <Flag stripes={c.stripes} size="sm" /> : null}{!collapsed && <span>{c?.name} control</span>}
                     </span>
-                    {!collapsed && <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }}><path d="M7 5l5 5-5 5" /></svg>}
+                    {!collapsed && <ChevronRight size={14} style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 140ms" }} />}
                   </button>
                   {open && !collapsed && g.pages.map((p) => (
                     <button key={p.id} type="button" onClick={() => setPage(p.id)} className={cls(p.id === page, "sub")}>
@@ -348,14 +349,14 @@ export default function AdminPage() {
           <div className="adm-foot">
             <button type="button" onClick={() => setPage("reports")} title={lbl("Reports")} className={cls(page === "reports")}>
               <span className="adm-item-ico" style={{ position: "relative" }}>
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3a4 4 0 0 0-4 4v3l-1.5 3h11L14 10V7a4 4 0 0 0-4-4z" /><path d="M8.5 16a1.5 1.5 0 0 0 3 0" /></svg>
+                <Bell size={18} />
                 {unread > 0 && <span style={{ position: "absolute", top: -6, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 999, background: "var(--red)", color: "#fff", font: "700 9.5px/16px var(--font-sans)", textAlign: "center" }}>{unread > 9 ? "9+" : unread}</span>}
               </span>
               {!collapsed && "Reports"}
             </button>
             <button type="button" onClick={() => setPage("chat")} title={lbl("Messages")} className={cls(page === "chat")}>
               <span className="adm-item-ico" style={{ position: "relative" }}>
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-4 3V6a1 1 0 0 1 1-1z" /></svg>
+                <MessageCircle size={18} />
                 {chatUnread && <span style={{ position: "absolute", top: -3, right: -3, width: 9, height: 9, borderRadius: 999, background: "var(--red)", border: "2px solid #fff" }} />}
               </span>
               {!collapsed && "Messages"}
@@ -367,7 +368,7 @@ export default function AdminPage() {
           <div className="adm-foot">
             {!collapsed && <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", padding: "2px 12px 4px", wordBreak: "break-all" }}>{email}</div>}
             <button type="button" onClick={() => logout(router)} title={lbl("Log out")} className={cls(false, "danger")}>
-              <span className="adm-item-ico"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M13 14v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v2M9 10h8m0 0-3-3m3 3-3 3" /></svg></span>
+              <span className="adm-item-ico"><LogOut size={16} /></span>
               {!collapsed && "Log out"}
             </button>
           </div>

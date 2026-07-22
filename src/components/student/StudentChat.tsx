@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import { notify, requestNotify } from "@/lib/notify";
 import { uploadUserFile, fileUrl } from "@/lib/r2";
 import { parseAsk } from "@/lib/chat";
+import { Paperclip, Reply, Download, Trash2 } from "lucide-react";
 
 type Msg = { id: string; sender: string; body: string; file_path: string | null; file_name: string | null; created_at: string; reply_to: string | null };
 
@@ -112,13 +113,13 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
                     <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>Tap an answer, then press Send.</div>
                   </div>
                 ) : m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
-                {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>{m.file_name || "file"}</button>}
+                {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><Paperclip size={13} />{m.file_name || "file"}</button>}
                 <div style={{ font: "400 10px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 5 }}>{new Date(m.created_at).toLocaleString()}</div>
               </div>
               {/* Actions OUTSIDE the bubble */}
               <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "none" }}>
-                <button type="button" onClick={() => setReplyTo(m)} title="Reply" style={actIco}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6 4 10l5 4M4 10h7a5 5 0 0 1 5 5v1" /></svg></button>
-                {m.file_path && <button type="button" onClick={() => downloadFile(m.file_path, m.file_name)} title="Download" style={actIco}><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg></button>}
+                <button type="button" onClick={() => setReplyTo(m)} title="Reply" style={actIco}><Reply size={14} /></button>
+                {m.file_path && <button type="button" onClick={() => downloadFile(m.file_path, m.file_name)} title="Download" style={actIco}><Download size={14} /></button>}
               </div>
             </div>
           );
@@ -144,7 +145,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
         {file && <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}><span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Attached: {file.name}</span><button type="button" onClick={() => setFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button></div>}
         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, padding: "4px 5px 4px 8px", boxShadow: "0 6px 18px rgba(23,35,58,.06)" }}>
           <button type="button" onClick={() => fileRef.current?.click()} disabled={blocked} aria-label="Attach a file" title="Attach a file" style={{ flex: "none", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, border: "none", background: "none", cursor: blocked ? "not-allowed" : "pointer", color: "var(--ink-soft)", opacity: blocked ? 0.5 : 1 }}>
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M8 10l4-4a2.8 2.8 0 0 1 4 4l-6 6a4 4 0 0 1-6-6l6-6" /></svg>
+            <Paperclip size={18} />
           </button>
           <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           <input placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0, height: 38, border: "none", background: "transparent", outline: "none", font: "400 16px/1 var(--font-sans)", color: "var(--ink)" }} />
@@ -154,9 +155,9 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
 
       {menu && (
         <div style={{ position: "fixed", top: Math.min(menu.y, typeof window !== "undefined" ? window.innerHeight - 100 : menu.y), left: Math.min(menu.x, typeof window !== "undefined" ? window.innerWidth - 170 : menu.x), zIndex: 200, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, boxShadow: "0 16px 40px rgba(23,35,58,.2)", padding: 6, minWidth: 150 }} onClick={(e) => e.stopPropagation()}>
-          <button type="button" onClick={() => { setReplyTo(menu.msg); setMenu(null); }} style={menuItem}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6 4 10l5 4M4 10h7a5 5 0 0 1 5 5v1" /></svg>Reply</button>
-          {menu.msg.file_path && <button type="button" onClick={() => { downloadFile(menu.msg.file_path, menu.msg.file_name); setMenu(null); }} style={menuItem}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15v2h12v-2" /></svg>Download</button>}
-          {menu.msg.sender === "user" && <button type="button" onClick={() => deleteMsg(menu.msg)} style={{ ...menuItem, color: "var(--red)" }}><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 6h10M8 6V4h4v2M6 6l1 10h6l1-10" /></svg>Delete</button>}
+          <button type="button" onClick={() => { setReplyTo(menu.msg); setMenu(null); }} style={menuItem}><Reply size={15} />Reply</button>
+          {menu.msg.file_path && <button type="button" onClick={() => { downloadFile(menu.msg.file_path, menu.msg.file_name); setMenu(null); }} style={menuItem}><Download size={15} />Download</button>}
+          {menu.msg.sender === "user" && <button type="button" onClick={() => deleteMsg(menu.msg)} style={{ ...menuItem, color: "var(--red)" }}><Trash2 size={15} />Delete</button>}
         </div>
       )}
     </div>

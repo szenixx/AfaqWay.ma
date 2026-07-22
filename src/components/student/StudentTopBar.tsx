@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { X, Check, MessageCircle, Menu } from "lucide-react";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import { planById } from "@/lib/plans";
 
@@ -24,7 +25,7 @@ function SubscriptionModal({ plan, onClose }: { plan: string | null | undefined;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(23,35,58,.55)", overflowY: "auto", padding: "48px 16px" }}>
       <button type="button" onClick={onClose} aria-label="Close" style={{ position: "fixed", top: 16, right: 16, zIndex: 101, width: 40, height: 40, borderRadius: 999, border: "none", cursor: "pointer", background: "var(--card)", boxShadow: "var(--shadow-card)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M5 5l10 10M15 5L5 15" /></svg>
+        <X size={20} />
       </button>
       <div style={{ maxWidth: 640, margin: "0 auto", background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "var(--shadow-card)", padding: "34px 38px" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 20 }}>
@@ -45,7 +46,7 @@ function SubscriptionModal({ plan, onClose }: { plan: string | null | undefined;
               {p.features.map((f, i) => (
                 <li key={i} style={{ display: "flex", gap: 10, font: "400 13.5px/20px var(--font-sans)", color: "var(--ink)" }}>
                   <span aria-hidden style={{ flex: "none", width: 20, height: 20, borderRadius: 999, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
-                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
+                    <Check size={12} />
                   </span>{f}
                 </li>
               ))}
@@ -80,7 +81,7 @@ export default function StudentTopBar({ nav, onNav, userId, plan, fullName, chat
             {navItems.map((n) => navBtn(n.id, n.label))}
             <span style={{ width: 1, height: 24, background: "var(--line)" }} />
             <button type="button" onClick={() => onNav("chat")} aria-label="Messages" style={{ position: "relative", background: nav === "chat" ? "var(--indigo-tint)" : "none", border: "none", cursor: "pointer", color: nav === "chat" ? "var(--indigo-600)" : "var(--ink-soft)", width: 36, height: 36, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-4 3V6a1 1 0 0 1 1-1z" /></svg>
+              <MessageCircle size={20} />
               {chatUnread && <span style={{ position: "absolute", top: 6, right: 6, width: 9, height: 9, borderRadius: 999, background: "var(--red)", border: "2px solid var(--card)" }} />}
             </button>
             <div style={{ position: "relative" }}>
@@ -93,7 +94,7 @@ export default function StudentTopBar({ nav, onNav, userId, plan, fullName, chat
 
           {/* Mobile hamburger */}
           <button className="af-hamburger" onClick={() => setMobile((v) => !v)} aria-label="Menu" style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "var(--ink-soft)", alignItems: "center" }}>
-            <svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{mobile ? <path d="M5 5l10 10M15 5L5 15" /> : <path d="M3 7h14M3 13h14" />}</svg>
+            {mobile ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
