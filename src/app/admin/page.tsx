@@ -80,7 +80,7 @@ function PasscodeGate({ onPass, onLogout }: { onPass: () => void; onLogout: () =
             <input key={i} ref={refs[i]} value={d} inputMode="numeric" maxLength={1} autoFocus={i === 0}
               onChange={(e) => setDigit(i, e.target.value)}
               onKeyDown={(e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs[i - 1].current?.focus(); }}
-              style={{ width: 56, height: 64, textAlign: "center", font: "700 26px/1 var(--font-sans)", color: "var(--ink)", borderRadius: 16, border: "1px solid var(--line)", background: "var(--subtle)", outlineColor: "var(--indigo-600)" }} />
+              className="af" style={{ width: 56, height: 64, textAlign: "center", font: "700 26px/1 var(--font-sans)", color: "var(--ink)", padding: 0 }} />
           ))}
         </div>
         <div style={{ height: 20, marginTop: 12, font: "500 13px/20px var(--font-sans)", color: err ? "var(--red)" : "var(--ink-faint)" }}>{checking ? "Checking…" : err}</div>
@@ -229,6 +229,8 @@ export default function AdminPage() {
     void refreshUnread();
   }, [refreshUnread]);
   const openChat = useCallback((userId: string) => { setChatUser(userId); setPage("chat"); }, []);
+  // "Track journey" from the student profile modal → that student's plan module.
+  const openPlanModule = useCallback((plan: string) => { setPage(plan === "full_service" ? "full" : "self"); }, []);
 
   useEffect(() => {
     if (status !== "ready") return;
@@ -384,7 +386,7 @@ export default function AdminPage() {
             : page === "full" ? <UserManagement initialPlan="full_service" initialCountry="LT" title="Full Service users — Lithuania" onOpenChat={openChat} />
             : page === "self" ? <UserManagement initialPlan="self_service" initialCountry="LT" title="Self Service users — Lithuania" onOpenChat={openChat} />
             : page === "reports" ? <ReportBox version={reportVersion} onGo={goFromReport} onChanged={refreshUnread} />
-            : page === "chat" ? <AdminChat initialUserId={chatUser} />
+            : page === "chat" ? <AdminChat initialUserId={chatUser} onOpenPlanModule={openPlanModule} />
             : <Placeholder title={[...PAGES, ...ALL_SUB_PAGES].find((p) => p.id === page)?.label ?? page} />}
         </main>
       </div>

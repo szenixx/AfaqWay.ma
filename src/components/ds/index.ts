@@ -1,6 +1,9 @@
 export { Button } from "./Button";
 export { Field } from "./Field";
+export { Input, TextArea, Select, Toggle, Checkbox, type SelectOption } from "./Controls";
+export { fieldIcon, iconForLabel, FIELD_ICON_SIZE, type FieldIconName } from "./fieldIcons";
 export { Card } from "./Card";
+export { FeatureCard, InfoCard, CompactCard, StatCard, ActionCard } from "./Cards";
 export { Divider } from "./Divider";
 export { Icon, ICON_NAMES, type IconName } from "./Icon";
 export { GoogleIcon } from "./GoogleIcon";

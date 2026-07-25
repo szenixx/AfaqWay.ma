@@ -7,9 +7,11 @@
 import type { ReactNode } from "react";
 import {
   GraduationCap, Building2, Home, Wallet, Bus, HeartPulse, Landmark, Users,
-  Lightbulb, CircleCheckBig, Clock3, TriangleAlert, CircleDashed, Lock,
+  Lightbulb, CircleCheckBig, Clock3, TriangleAlert, CircleDashed, Lock, Info,
 } from "lucide-react";
 export { DefaultAvatar } from "@/components/ds/DefaultAvatar";
+import { StatCard, CompactCard } from "@/components/ds/Cards";
+export { CompactCard };
 
 export function Panel({ children, style, className }: { children: ReactNode; style?: React.CSSProperties; className?: string }) {
   return <div className={`sw-tile${className ? " " + className : ""}`} style={style}>{children}</div>;
@@ -40,17 +42,10 @@ export function CardTitle({ title, sub, action }: { title: string; sub?: string;
   );
 }
 
-export function StatTile({ label, value, accent, icon, sub }: { label: string; value: string; accent: string; icon: ReactNode; sub?: string }) {
-  return (
-    <div className="sw-tile" style={{ padding: 16, borderTop: `3px solid ${accent}` }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ font: "600 11.5px/15px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</span>
-        <span style={{ width: 30, height: 30, borderRadius: 10, flex: "none", background: `${accent}22`, color: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>
-      </div>
-      <div style={{ font: "800 24px/30px var(--font-sans)", color: "var(--ink)", marginTop: 8, letterSpacing: "-.3px" }}>{value}</div>
-      {sub && <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
+/* Statistics tile — the platform's one metric card, on the workspace glass
+   surface. `trend` shows the change against the previous period. */
+export function StatTile({ label, value, accent, icon, sub, trend }: { label: string; value: string; accent: string; icon: ReactNode; sub?: string; trend?: { value: string; up: boolean } }) {
+  return <StatCard className="sw-tile" title={label} value={value} accent={accent} icon={icon} sub={sub} trend={trend} />;
 }
 
 export function ProgressLine({ pct, color = "var(--indigo-600)", height = 9 }: { pct: number; color?: string; height?: number }) {
@@ -81,9 +76,54 @@ export function BtnPrimary({ children, onClick, disabled, style }: { children: R
   );
 }
 
-export function BtnGhost({ children, onClick, style }: { children: ReactNode; onClick?: () => void; style?: React.CSSProperties }) {
+/* One tone system for every tinted surface on the platform: buttons, icon
+   chips and info notices all read their colours from here, so a "red button"
+   looks the same in every module. Values are design-system tokens only. */
+export type Tone = "neutral" | "blue" | "red" | "green" | "amber";
+export const TONES: Record<Exclude<Tone, "neutral">, { tint: string; line: string; ink: string }> = {
+  blue: { tint: "var(--indigo-tint)", line: "var(--indigo-line)", ink: "var(--indigo-text)" },
+  red: { tint: "var(--red-tint)", line: "var(--red-line)", ink: "var(--red)" },
+  green: { tint: "var(--green-tint)", line: "var(--green-line)", ink: "var(--green)" },
+  amber: { tint: "var(--amber-tint)", line: "var(--amber-line)", ink: "var(--amber)" },
+};
+
+/* Secondary button. `tone` only recolours it — size, radius and spacing are
+   identical across tones so swapping a tone never shifts a layout. */
+export function BtnGhost({ children, onClick, style, tone = "neutral", disabled, title }: { children: ReactNode; onClick?: () => void; style?: React.CSSProperties; tone?: Tone; disabled?: boolean; title?: string }) {
+  const t = tone === "neutral" ? null : TONES[tone];
   return (
-    <button type="button" onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "rgba(255,255,255,.7)", color: "var(--ink)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", ...style }}>{children}</button>
+    <button
+      type="button" onClick={onClick} disabled={disabled} title={title}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 16px", borderRadius: 14,
+        border: `1px solid ${t ? t.line : "var(--line)"}`,
+        background: t ? t.tint : "rgba(255,255,255,.7)",
+        color: t ? t.ink : "var(--ink)",
+        cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1,
+        font: "600 13.5px/1 var(--font-sans)", ...style,
+      }}
+    >{children}</button>
+  );
+}
+
+/* Slim information frame (locked fields, onboarding-sourced data, warnings).
+   Tinted background + matching border, icon and text — same padding and radius
+   wherever it appears. */
+export function InfoNotice({ children, icon, tone = "amber", style }: { children: ReactNode; icon?: ReactNode; tone?: Exclude<Tone, "neutral">; style?: React.CSSProperties }) {
+  const t = TONES[tone];
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, background: t.tint, border: `1px solid ${t.line}`, borderRadius: 14, padding: "10px 13px", ...style }}>
+      <span style={{ display: "flex", flex: "none", color: t.ink }}>{icon ?? <Info size={16} />}</span>
+      <span style={{ font: "500 12px/17px var(--font-sans)", color: t.ink }}>{children}</span>
+    </div>
+  );
+}
+
+/* Small square icon chip used in info rows and program cards. */
+export function IconChip({ children, tone = "blue", size = 32 }: { children: ReactNode; tone?: Exclude<Tone, "neutral">; size?: number }) {
+  const t = TONES[tone];
+  return (
+    <span style={{ width: size, height: size, borderRadius: Math.round(size * 0.32), flex: "none", background: t.tint, color: t.ink, display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</span>
   );
 }
 

@@ -1,43 +1,68 @@
-import { supabase } from "@/lib/supabase/client";
+import "server-only";
+import { S3Client } from "@aws-sdk/client-s3";
+import { StorageError } from "@/types/storage";
 
-// User uploads (chat files, receipts) go to Cloudflare R2 via the `storage-sign`
-// presign edge function — never through Supabase storage. Stored paths are
-// prefixed "r2:<key>" so the app knows to resolve them through R2.
-//
-// If R2 is unavailable (e.g. secrets not yet configured) we fall back to the
-// given Supabase bucket so uploads never hard-fail; the returned path has no
-// "r2:" prefix in that case and is resolved through Supabase instead.
+/* Cloudflare R2 client (S3-compatible, AWS SDK v3).
+   Server-only: these credentials must never reach the browser. Every upload,
+   delete and signed read on the platform goes through this one client.
+   Browser code uses `@/lib/storage/client` instead. */
 
-export type StoredFile = { path: string; storage: "r2" | "supabase" };
+export type R2Config = {
+  accountId: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  endpoint: string;
+};
 
-export async function uploadUserFile(file: File, opts: { fallbackBucket: string; fallbackPrefix: string; folder?: string }): Promise<StoredFile> {
-  try {
-    const { data, error } = await supabase.functions.invoke("storage-sign", {
-      body: { action: "upload", filename: file.name, contentType: file.type || "application/octet-stream", folder: opts.folder },
-    });
-    const key = (data as { key?: string; url?: string } | null)?.key;
-    const url = (data as { url?: string } | null)?.url;
-    if (error || !key || !url) throw error ?? new Error("no presigned url");
-    const put = await fetch(url, { method: "PUT", headers: file.type ? { "content-type": file.type } : undefined, body: file });
-    if (!put.ok) throw new Error("r2 put failed " + put.status);
-    return { path: `r2:${key}`, storage: "r2" };
-  } catch (e) {
-    console.warn("R2 upload unavailable, falling back to Supabase storage:", e);
-    const path = `${opts.fallbackPrefix}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
-    const up = await supabase.storage.from(opts.fallbackBucket).upload(path, file);
-    if (up.error) throw up.error;
-    return { path, storage: "supabase" };
-  }
+let cachedClient: S3Client | null = null;
+let cachedConfig: R2Config | null = null;
+
+const env = (name: string): string => (process.env[name] ?? "").trim();
+
+/** Reads and validates R2 config from the environment. Throws a typed error
+    (never a raw stack, never the credential values) when something is missing. */
+export function getR2Config(): R2Config {
+  if (cachedConfig) return cachedConfig;
+
+  const accountId = env("R2_ACCOUNT_ID");
+  const bucket = env("R2_BUCKET_NAME") || env("R2_BUCKET");
+  const accessKeyId = env("R2_ACCESS_KEY_ID");
+  const secretAccessKey = env("R2_SECRET_ACCESS_KEY");
+
+  // The endpoint is always derivable from the account id; an explicit
+  // R2_ENDPOINT only wins when it is a well-formed https origin.
+  const raw = env("R2_ENDPOINT");
+  const endpoint = /^https:\/\/[^/\s:]+$/.test(raw) ? raw : `https://${accountId}.r2.cloudflarestorage.com`;
+
+  const missing = (
+    [
+      ["R2_ACCOUNT_ID", accountId],
+      ["R2_BUCKET_NAME", bucket],
+      ["R2_ACCESS_KEY_ID", accessKeyId],
+      ["R2_SECRET_ACCESS_KEY", secretAccessKey],
+    ] as const
+  ).filter(([, v]) => !v).map(([k]) => k);
+
+  if (missing.length) throw new StorageError("not_configured", `Missing R2 configuration: ${missing.join(", ")}`, 500);
+
+  cachedConfig = { accountId, bucket, accessKeyId, secretAccessKey, endpoint };
+  return cachedConfig;
 }
 
-// Resolve a stored path (R2 or Supabase) to a short-lived viewable/downloadable URL.
-export async function fileUrl(path: string, supabaseBucket: string, download?: string, ttl?: number): Promise<string | null> {
-  if (path.startsWith("r2:")) {
-    const key = path.slice(3);
-    const { data, error } = await supabase.functions.invoke("storage-sign", { body: { action: "download", key, download, ttl } });
-    if (error) return null;
-    return (data as { url?: string } | null)?.url ?? null;
+/** The shared R2 client, built once per server process. */
+export function getR2Client(): S3Client {
+  if (!cachedClient) {
+    const cfg = getR2Config();
+    cachedClient = new S3Client({
+      region: "auto",
+      endpoint: cfg.endpoint,
+      credentials: { accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretAccessKey },
+    });
   }
-  const { data } = await supabase.storage.from(supabaseBucket).createSignedUrl(path, 300, download ? { download } : undefined);
-  return data?.signedUrl ?? null;
+  return cachedClient;
+}
+
+export function getR2Bucket(): string {
+  return getR2Config().bucket;
 }

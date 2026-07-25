@@ -57,7 +57,217 @@
 .pill-red{color:var(--red);background:var(--red-tint);border-color:var(--red-line);}
 .pill-green{color:var(--green);background:var(--green-tint);border-color:var(--green-line);}
 .status-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;}
-input.af,select.af,textarea.af{font-family:var(--font-sans);font-size:14.5px;color:var(--ink);background:var(--subtle);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;transition:border-color 120ms var(--ease),background 120ms var(--ease),box-shadow 120ms var(--ease);}
+/* ── Controls ──────────────────────────────────────────────────────────────
+   ONE input, dropdown, toggle and checkbox for the whole platform. Every field
+   already carries `.af`, so restyling here restyles every screen at once; the
+   React wrappers in src/components/ds add the leading icon, error message and
+   custom menu on top. Do not introduce a second control style anywhere. */
+input.af,select.af,textarea.af{font-family:var(--font-sans);font-size:14.5px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:12px 16px;min-height:44px;transition:border-color 140ms var(--ease),background 140ms var(--ease),box-shadow 140ms var(--ease);}
+input.af:hover:not(:disabled),select.af:hover:not(:disabled),textarea.af:hover:not(:disabled){border-color:var(--indigo-line);}
 input.af:focus,select.af:focus,textarea.af:focus{outline:none;border-color:var(--indigo-600);background:var(--card);box-shadow:0 0 0 3px var(--indigo-100);}
+input.af::placeholder,textarea.af::placeholder{color:var(--ink-faint);}
+input.af:disabled,select.af:disabled,textarea.af:disabled{background:var(--subtle);color:var(--ink-faint);cursor:not-allowed;opacity:.7;}
+input.af[aria-invalid="true"],select.af[aria-invalid="true"],textarea.af[aria-invalid="true"]{border-color:var(--red-line);}
+input.af[aria-invalid="true"]:focus,select.af[aria-invalid="true"]:focus,textarea.af[aria-invalid="true"]:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-tint);}
+/* Dropdowns are capsules; native selects keep their own chevron. */
+select.af{border-radius:var(--radius-pill);padding-right:38px;cursor:pointer;}
+
+/* Field shell: leading icon + input. The icon stays visible empty or filled. */
+.af-field{position:relative;display:flex;align-items:center;width:100%;}
+.af-field > .af{width:100%;}
+.af-field.has-icon > .af{padding-left:44px;}
+.af-field.has-trailing > .af{padding-right:42px;}
+.af-field-ico{position:absolute;left:16px;top:50%;transform:translateY(-50%);display:flex;color:var(--indigo-600);pointer-events:none;}
+.af-field-ico.is-textarea{top:22px;transform:none;}
+.af-field-trail{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;}
+.af-field:has(> .af:disabled) .af-field-ico{color:var(--ink-faint);}
+.af-label{display:block;font:600 11.5px/16px var(--font-sans);color:var(--ink-soft);margin-bottom:6px;}
+/* Reserved so showing an error never shifts the layout. */
+.af-error{display:block;min-height:16px;font:500 11.5px/16px var(--font-sans);color:var(--red);margin-top:5px;}
+
+/* Custom dropdown (capsule trigger + animated menu). */
+.af-select{position:relative;width:100%;}
+.af-select-btn{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:var(--radius-pill);background:var(--card);color:var(--ink);font:500 14px/20px var(--font-sans);text-align:left;cursor:pointer;transition:border-color 140ms var(--ease),box-shadow 140ms var(--ease);}
+.af-select-btn:hover:not(:disabled){border-color:var(--indigo-line);}
+.af-select-btn:disabled{background:var(--subtle);color:var(--ink-faint);cursor:not-allowed;opacity:.7;}
+.af-select.open > .af-select-btn{border-color:var(--indigo-600);box-shadow:0 0 0 3px var(--indigo-100);}
+.af-select-btn[data-invalid="true"]{border-color:var(--red-line);}
+.af-select-ico{display:flex;flex:none;color:var(--indigo-600);}
+.af-select-val{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.af-select-val.placeholder{color:var(--ink-faint);}
+.af-select-chev{display:flex;flex:none;margin-left:auto;color:var(--ink-faint);transition:transform 180ms var(--ease);}
+.af-select.open .af-select-chev{transform:rotate(180deg);}
+.af-menu{position:absolute;z-index:70;top:calc(100% + 6px);left:0;right:0;max-height:264px;overflow-y:auto;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:0 18px 44px rgba(23,35,58,.16);animation:afMenuIn 160ms var(--ease);}
+@keyframes afMenuIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+.af-opt{display:flex;align-items:center;gap:9px;width:100%;padding:10px 12px;border:none;border-radius:var(--radius-md);background:transparent;color:var(--ink);font:500 13.5px/18px var(--font-sans);text-align:left;cursor:pointer;transition:background 120ms var(--ease),color 120ms var(--ease);}
+.af-opt + .af-opt{margin-top:2px;}
+.af-opt:hover{background:var(--indigo-100);}
+.af-opt.selected{background:var(--indigo-tint);color:var(--indigo-text);font-weight:600;}
+.af-opt-check{margin-left:auto;display:flex;color:var(--indigo-600);}
+
+/* Toggle: slim pill track, circular thumb, X when off, check when on. */
+.af-toggle{position:relative;flex:none;width:52px;height:30px;padding:0;border:1px solid var(--line);border-radius:999px;background:var(--subtle);cursor:pointer;transition:background 200ms var(--ease),border-color 200ms var(--ease);}
+.af-toggle:hover:not(:disabled){border-color:var(--indigo-line);}
+.af-toggle[aria-checked="true"]{background:var(--indigo-600);border-color:var(--indigo-600);}
+.af-toggle:disabled{opacity:.45;cursor:not-allowed;}
+.af-toggle-thumb{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:999px;background:var(--card);box-shadow:0 2px 6px rgba(23,35,58,.22);transition:transform 220ms var(--ease);}
+.af-toggle[aria-checked="true"] .af-toggle-thumb{transform:translateX(22px);}
+.af-toggle-ico{position:absolute;top:50%;display:flex;transform:translateY(-50%);transition:opacity 180ms var(--ease);}
+.af-toggle-ico.off{right:7px;color:var(--ink-faint);opacity:1;}
+.af-toggle-ico.on{left:7px;color:#fff;opacity:0;}
+.af-toggle[aria-checked="true"] .af-toggle-ico.off{opacity:0;}
+.af-toggle[aria-checked="true"] .af-toggle-ico.on{opacity:1;}
+.af-toggle-row{display:inline-flex;align-items:center;gap:10px;font:500 13px/18px var(--font-sans);color:var(--ink);}
+
+/* Checkbox: rounded square, fills on check. */
+.af-check{flex:none;width:20px;height:20px;padding:0;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);border-radius:7px;background:var(--card);color:transparent;cursor:pointer;transition:background 140ms var(--ease),border-color 140ms var(--ease),color 140ms var(--ease);}
+.af-check:hover:not(:disabled){border-color:var(--indigo-line);}
+.af-check[aria-checked="true"]{background:var(--indigo-600);border-color:var(--indigo-600);color:#fff;}
+.af-check[data-invalid="true"]{border-color:var(--red-line);background:var(--red-tint);}
+.af-check:disabled{opacity:.45;cursor:not-allowed;}
+.af-check-row{display:flex;align-items:flex-start;gap:10px;font:400 13px/20px var(--font-sans);color:var(--ink);cursor:pointer;}
+/* Message composer: the capsule IS the field, so the inner input is bare.
+   One definition shared by the student and admin chats. */
+.af-composer{display:flex;align-items:center;gap:4px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 5px 4px 8px;box-shadow:0 6px 18px rgba(23,35,58,.06);transition:border-color 140ms var(--ease),box-shadow 140ms var(--ease);}
+.af-composer:focus-within{border-color:var(--indigo-600);box-shadow:0 0 0 3px var(--indigo-100);}
+.af-composer-input{flex:1 1 auto;min-width:0;height:38px;border:none;background:transparent;outline:none;font:400 14.5px/1 var(--font-sans);color:var(--ink);}
+.af-composer-input::placeholder{color:var(--ink-faint);}
+
+@media (prefers-reduced-motion:reduce){
+  .af-toggle-thumb,.af-toggle-ico,.af-select-chev,.af-menu{transition:none;animation:none;}
+}
 a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 :focus-visible{outline:2.5px solid var(--indigo-600);outline-offset:2px;}
+
+/* Card roles share one hover so every list, grid and dashboard reacts alike. */
+.af-card{transition:box-shadow 180ms var(--ease),transform 180ms var(--ease),border-color 180ms var(--ease);}
+.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(43,76,155,.5);transform:translateY(-1px);}
+
+/* ══ Chat workspace ════════════════════════════════════════════════════════
+   One visual language for both chats: the admin console (3 columns) and the
+   student workspace (2 columns, no conversation list). Radii, borders, shadows
+   and motion all come from the tokens above. */
+
+/* The workspace fills its area and renders 10% larger than the surrounding page. */
+.chat-zoom{zoom:1.1;}
+@supports not (zoom:1.1){.chat-zoom{transform:scale(1.1);transform-origin:top left;width:90.9091%;height:90.9091%;}}
+
+.chat-shell{display:grid;min-height:0;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--card);box-shadow:0 12px 34px -22px rgba(23,35,58,.35);}
+.chat-col{display:flex;flex-direction:column;min-width:0;min-height:0;}
+.chat-col + .chat-col{border-left:1px solid var(--line-soft);}
+
+/* ── Conversation list ── */
+.chat-list{padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;}
+.chat-tabs{display:inline-flex;gap:6px;padding:4px;background:var(--subtle);border:1px solid var(--line);border-radius:var(--radius-pill);}
+.chat-tab{flex:1;height:30px;padding:0 12px;border:none;border-radius:var(--radius-pill);background:transparent;color:var(--ink-soft);font:600 11.5px/1 var(--font-sans);cursor:pointer;transition:background 160ms var(--ease),color 160ms var(--ease),box-shadow 160ms var(--ease);white-space:nowrap;}
+.chat-tab:hover:not(.active){background:var(--indigo-100);color:var(--indigo-text);}
+.chat-tab.active{background:var(--card);color:var(--indigo-text);box-shadow:0 2px 8px rgba(23,35,58,.10);}
+
+.chat-convo{position:relative;display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;text-align:left;border:1px solid transparent;border-radius:var(--radius-lg);background:transparent;cursor:pointer;transition:background 160ms var(--ease),border-color 160ms var(--ease),transform 160ms var(--ease);}
+.chat-convo:hover{background:var(--subtle);border-color:var(--line);}
+.chat-convo.active{background:var(--indigo-tint);border-color:var(--indigo-line);}
+/* Active indicator rail. */
+.chat-convo.active::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:999px;background:var(--indigo-600);}
+.chat-convo-name{display:block;font:600 13.5px/18px var(--font-sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chat-convo-meta{display:flex;align-items:center;gap:6px;margin-top:3px;font:400 11px/15px var(--font-sans);color:var(--ink-faint);}
+.chat-unread{flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--indigo-600);color:#fff;font:700 11px/20px var(--font-sans);text-align:center;}
+
+/* Avatar with an optional presence dot. */
+.chat-avatar{position:relative;display:inline-flex;flex:none;}
+.chat-presence{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:999px;border:2px solid var(--card);background:var(--grey);}
+.chat-presence.online{background:var(--green);}
+
+/* ── Header ── */
+.chat-header{flex:none;display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-soft);background:var(--card);}
+.chat-header-btn{display:flex;align-items:center;gap:12px;min-width:0;flex:1;padding:6px 8px;margin:-6px -8px;border:none;border-radius:var(--radius-lg);background:transparent;text-align:left;cursor:pointer;transition:background 160ms var(--ease);}
+.chat-header-btn:hover{background:var(--subtle);}
+.chat-header-name{font:700 14.5px/20px var(--font-sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chat-header-sub{display:flex;align-items:center;gap:5px;font:400 11.5px/16px var(--font-sans);color:var(--ink-faint);margin-top:1px;}
+
+/* ── Thread ── */
+.chat-thread{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;padding:18px;display:flex;flex-direction:column;gap:12px;}
+.chat-row{display:flex;align-items:flex-end;gap:6px;max-width:min(78%,560px);animation:afBubbleIn 260ms var(--ease) both;}
+.chat-row.mine{flex-direction:row-reverse;align-self:flex-end;}
+@keyframes afBubbleIn{from{opacity:0;transform:translateY(10px) scale(.965);}to{opacity:1;transform:none;}}
+.chat-bubble{min-width:0;padding:10px 14px;border-radius:20px;background:var(--card);border:1px solid var(--line);box-shadow:0 2px 10px rgba(23,35,58,.05);transition:box-shadow 160ms var(--ease);}
+.chat-row:hover .chat-bubble{box-shadow:0 6px 18px rgba(23,35,58,.09);}
+.chat-row.mine .chat-bubble{background:var(--indigo-600);border-color:var(--indigo-600);color:#fff;}
+.chat-row.mine .chat-bubble .chat-text{color:#fff;}
+.chat-row.mine .chat-time{color:rgba(255,255,255,.72);}
+.chat-bubble.pinned{box-shadow:0 0 0 2px var(--indigo-line);}
+.chat-text{font:400 13.5px/20px var(--font-sans);color:var(--ink);white-space:pre-wrap;word-break:break-word;}
+.chat-time{display:flex;align-items:center;gap:8px;margin-top:5px;font:400 10.5px/14px var(--font-sans);color:var(--ink-faint);}
+/* Row actions fade in on hover. */
+.chat-acts{display:flex;flex-direction:column;gap:4px;flex:none;opacity:0;transition:opacity 160ms var(--ease);}
+.chat-row:hover .chat-acts,.chat-row:focus-within .chat-acts{opacity:1;}
+.chat-act{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;transition:color 140ms var(--ease),border-color 140ms var(--ease),transform 140ms var(--ease);}
+.chat-act:hover{color:var(--indigo-600);border-color:var(--indigo-line);transform:translateY(-1px);}
+
+/* ── Quick actions bar (admin only), pinned above the thread ── */
+.chat-actions{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line-soft);background:var(--card);}
+.chat-chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--card);color:var(--ink-soft);font:600 12.5px/1 var(--font-sans);cursor:pointer;transition:background 160ms var(--ease),color 160ms var(--ease),border-color 160ms var(--ease),transform 160ms var(--ease);}
+.chat-chip:hover:not(:disabled){border-color:var(--indigo-line);color:var(--indigo-text);transform:translateY(-1px);}
+.chat-chip.on{background:var(--indigo-tint);border-color:var(--indigo-line);color:var(--indigo-text);}
+.chat-chip:disabled{opacity:.45;cursor:not-allowed;}
+
+/* ── Composer + send ── */
+.chat-composer{flex:none;padding:14px 16px;border-top:1px solid var(--line-soft);background:var(--card);}
+.chat-send{display:inline-flex;align-items:center;gap:7px;height:40px;flex:none;padding:0 20px;border-radius:var(--radius-pill);border:none;background:var(--indigo-600);color:#fff;font:600 13.5px/1 var(--font-sans);cursor:pointer;transition:background 140ms var(--ease),transform 120ms var(--ease),box-shadow 140ms var(--ease);}
+.chat-send:hover:not(:disabled){background:var(--indigo-500);box-shadow:0 8px 20px -10px rgba(43,76,155,.8);}
+.chat-send:active:not(:disabled){transform:scale(.97);background:var(--indigo-700);}
+.chat-send:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── Right information panel ── */
+.chat-panel{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px;gap:10px;overflow:hidden;}
+.chat-panel + .chat-panel{border-top:1px solid var(--line-soft);}
+.chat-panel-head{flex:none;display:flex;align-items:center;gap:9px;}
+.chat-panel-title{flex:1;min-width:0;font:700 12.5px/17px var(--font-sans);color:var(--ink);}
+.chat-panel-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.chat-panel-item{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card);transition:border-color 160ms var(--ease),box-shadow 160ms var(--ease);}
+.chat-panel-item:hover{border-color:var(--indigo-line);box-shadow:0 6px 16px -12px rgba(43,76,155,.7);}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:12px;animation:afFadeUp 320ms var(--ease) both;}
+.chat-empty img{width:100%;max-width:150px;height:auto;opacity:.92;}
+@keyframes afFadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+@media (max-width:1100px){
+  .chat-shell{grid-template-columns:1fr !important;}
+  .chat-col + .chat-col{border-left:none;border-top:1px solid var(--line-soft);}
+  .chat-zoom{zoom:1;}
+}
+@media (prefers-reduced-motion:reduce){
+  .chat-row,.chat-empty{animation:none;}
+  .chat-thread{scroll-behavior:auto;}
+}
+
+/* ── Student profile modal (admin) ───────────────────────────────────────── */
+.spm-overlay{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(23,35,58,.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:afFade 180ms var(--ease) both;}
+@keyframes afFade{from{opacity:0;}to{opacity:1;}}
+.spm-card{display:flex;flex-direction:column;width:100%;max-width:720px;max-height:min(86vh,760px);background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:0 30px 80px rgba(23,35,58,.3);overflow:hidden;animation:afPop 220ms var(--ease) both;}
+@keyframes afPop{from{opacity:0;transform:translateY(10px) scale(.97);}to{opacity:1;transform:none;}}
+.spm-head{flex:none;display:flex;align-items:flex-start;gap:16px;padding:20px 22px;border-bottom:1px solid var(--line-soft);}
+.spm-headmeta{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;}
+.spm-headmeta > span{display:inline-flex;align-items:center;gap:6px;font:400 12px/17px var(--font-sans);color:var(--ink-soft);}
+.spm-headmeta svg{color:var(--indigo-600);flex:none;}
+.spm-actions{display:flex;align-items:center;gap:8px;flex:none;}
+.spm-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:5;min-width:212px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 44px rgba(23,35,58,.2);animation:afMenuIn 160ms var(--ease);}
+.spm-tabs{flex:none;display:flex;gap:6px;padding:12px 22px;border-bottom:1px solid var(--line-soft);overflow-x:auto;}
+.spm-tabs .chat-tab{flex:0 0 auto;height:34px;font-size:12.5px;}
+.spm-body{flex:1;min-height:0;overflow-y:auto;padding:20px 22px 24px;animation:afFadeUp 220ms var(--ease) both;}
+.spm-row{display:flex;align-items:center;gap:12px;padding:12px 14px;}
+.spm-row + .spm-row{border-top:1px solid var(--line-soft);}
+.spm-ico{flex:none;width:32px;height:32px;border-radius:10px;background:var(--indigo-tint);color:var(--indigo-600);display:flex;align-items:center;justify-content:center;}
+.spm-label{font:400 11px/15px var(--font-sans);color:var(--ink-faint);}
+.spm-value{font:600 13px/19px var(--font-sans);color:var(--ink);overflow-wrap:anywhere;}
+.spm-timeline{padding:14px 16px;display:flex;flex-direction:column;gap:2px;}
+.spm-step{display:flex;gap:12px;padding:7px 0;}
+.spm-dot{flex:none;width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--subtle);color:var(--ink-faint);border:1px solid var(--line);}
+.spm-dot.done{background:var(--green-tint);color:var(--green);border-color:var(--green-line);}
+.spm-dot.now{background:var(--indigo-tint);color:var(--indigo-600);border-color:var(--indigo-line);}
+.spm-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;}
+@media (max-width:640px){
+  .spm-overlay{padding:0;}
+  .spm-card{max-width:none;max-height:100vh;height:100vh;border-radius:0;border:none;}
+  .spm-head{flex-wrap:wrap;}
+  .spm-summary{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){.spm-overlay,.spm-card,.spm-body{animation:none;}}

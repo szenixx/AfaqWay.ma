@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { Input, Select, fieldIcon } from "@/components/ds";
 
 type Admin = { id: string; email: string; role: string; name: string | null; phone: string | null; describe_role: string | null; banned: boolean; must_reset_pw: boolean; created_at: string };
 type Form = { id?: string; name: string; email: string; phone: string; role: string; describe_role: string };
@@ -130,15 +131,12 @@ export default function AdminManagement() {
           <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 24 }}>
             <h2 style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)", margin: "0 0 16px" }}>{form.id ? "Edit admin" : "Add admin"}</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <label style={lbl}>Full name<input className="af" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" /></label>
-              <label style={lbl}>Email (login)<input className="af" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@email.com" /></label>
-              <label style={lbl}>Phone number<input className="af" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" /></label>
-              <label style={lbl}>Role
-                <select className="af" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="admin">Admin</option><option value="superadmin">Super admin</option></select>
-              </label>
-              <label style={lbl}>Describe role <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(keywords)</span>
-                <input className="af" value={form.describe_role} onChange={(e) => setForm({ ...form, describe_role: e.target.value })} placeholder="e.g. reviews documents, drives Full Service files" />
-              </label>
+              <Input label="Full name" icon={fieldIcon("name")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
+              <Input label="Email (login)" icon={fieldIcon("email")} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@email.com" />
+              <Input label="Phone number" icon={fieldIcon("phone")} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" />
+              <Select label="Role" value={form.role} onChange={(v) => setForm({ ...form, role: v })} icon={fieldIcon("status")}
+                options={[{ value: "admin", label: "Admin" }, { value: "superadmin", label: "Super admin" }]} />
+              <Input label="Describe role (keywords)" icon={fieldIcon("note")} value={form.describe_role} onChange={(e) => setForm({ ...form, describe_role: e.target.value })} placeholder="e.g. reviews documents, drives Full Service files" />
             </div>
             {err && <div style={{ font: "500 13px/18px var(--font-sans)", color: "var(--red)", marginTop: 10 }}>{err}</div>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>

@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { Flag } from "@/components/ds";
-import { DefaultAvatar } from "@/components/ds/DefaultAvatar";
+import { Input, Toggle, Flag, fieldIcon } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
-import { fileUrl } from "@/lib/r2";
+import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import { parseAsk } from "@/lib/chat";
-import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Reply, Trash2 } from "lucide-react";
+import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
+import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import StudentProfileModal from "@/components/chat/StudentProfileModal";
 
 type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null };
 type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
 
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 
-export default function AdminChat({ initialUserId }: { initialUserId?: string | null }) {
+export default function AdminChat({ initialUserId, onOpenPlanModule }: { initialUserId?: string | null; onOpenPlanModule?: (plan: string, userId: string) => void }) {
   const [country, setCountry] = useState<string | null>(initialUserId ? "LT" : null);
   const [users, setUsers] = useState<U[]>([]);
   const [avatars, setAvatars] = useState<Record<string, string>>({});
@@ -37,9 +38,10 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; msg: Msg; kind: "msg" | "file" } | null>(null);
   const [showInfo, setShowInfo] = useState(false);
-  const [trackOpen, setTrackOpen] = useState(false);
-  const [infoProfile, setInfoProfile] = useState<Record<string, unknown> | null>(null);
+  // Unread student messages per conversation, for the list badges.
+  const [unread, setUnread] = useState<Record<string, number>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menu) return;
@@ -67,7 +69,10 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
   }, []);
   const selRef = useRef<string | null>(sel);
   useEffect(() => { selRef.current = sel; }, [sel]);
+  useEffect(() => { if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight; }, [msgs]);
   useEffect(() => { if (sel) void loadMsgs(sel); else setMsgs([]); }, [sel, loadMsgs]);
+  // Opening a conversation clears its unread badge.
+  const openConvo = (id: string) => { setSel(id); setUnread((u) => (u[id] ? { ...u, [id]: 0 } : u)); };
 
   // Sound + notification for any incoming student message (B3).
   useEffect(() => {
@@ -76,7 +81,11 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
         const m = payload.new as Msg;
         if (m.user_id === selRef.current) void loadMsgs(m.user_id);
-        if (m.sender === "user") { notify("New message from a student", m.body?.slice(0, 90) || "Sent a file"); void loadUsers(); }
+        if (m.sender === "user") {
+          if (m.user_id !== selRef.current) setUnread((u) => ({ ...u, [m.user_id]: (u[m.user_id] ?? 0) + 1 }));
+          notify("New message from a student", m.body?.slice(0, 90) || "Sent a file");
+          void loadUsers();
+        }
       }).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [loadMsgs, loadUsers]);
@@ -94,12 +103,6 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
     const name = window.prompt("Rename file", m.file_name ?? "");
     setMenu(null);
     if (name && name.trim()) { await supabase.from("messages").update({ file_name: name.trim() }).eq("id", m.id); if (sel) void loadMsgs(sel); }
-  }
-  async function openInfo() {
-    setShowInfo(true); setInfoProfile(null);
-    if (!sel) return;
-    const { data } = await supabase.from("profiles").select("full_name, email, user_number, plan, plan_status, plan_activated_at, destination_country, city, date_of_birth, whatsapp_country_code, whatsapp_number, onboarding_completed_at").eq("id", sel).maybeSingle();
-    setInfoProfile((data ?? null) as Record<string, unknown> | null);
   }
   // Task 2: download ONLY the pinned/important messages, as a roadmap conversation file.
   function downloadConversation() {
@@ -131,11 +134,10 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
       let file_path: string | null = null, file_name: string | null = null, attachUrl: string | null = null;
       if (file) {
         setUploadingName(file.name);
-        const path = `${sel}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
-        const up = await supabase.storage.from("update_files").upload(path, file);
-        if (up.error) throw up.error;
-        file_path = path; file_name = file.name;
-        if (emailOn) { const s = await supabase.storage.from("update_files").createSignedUrl(path, 60 * 60 * 24 * 7); attachUrl = s.data?.signedUrl ?? null; }
+        // Filed under the recipient student so they can read it back from R2.
+        const up = await uploadUserFile(file, { folder: "chat", ownerId: sel });
+        file_path = up.path; file_name = file.name;
+        if (emailOn) attachUrl = await fileUrl(up.path, "update_files", undefined, 60 * 60 * 24 * 7);
       }
       const { data: { user } } = await supabase.auth.getUser();
       const ins = await supabase.from("messages").insert({ user_id: sel, sender: "admin", body: finalBody, file_path, file_name, pinned: pinOn, emailed: emailOn, created_by: user?.id, reply_to: replyTo?.id ?? null });
@@ -173,164 +175,167 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
     );
   }
 
-  const opt = (on: boolean): CSSProperties => ({ display: "inline-flex", alignItems: "center", gap: 6, height: 32, padding: "0 11px", borderRadius: 8, cursor: "pointer", font: "600 12px/1 var(--font-sans)", border: on ? "1px solid var(--indigo-line)" : "1px solid var(--line)", background: on ? "var(--indigo-tint)" : "var(--card)", color: on ? "var(--indigo-text)" : "var(--ink-soft)" });
-  const actIco: CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, cursor: "pointer", color: "var(--ink-soft)", flex: "none" };
+  // Label style shared by the composer's option toggles.
+  const optLbl: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 5, font: "600 12px/1 var(--font-sans)", color: "var(--ink-soft)" };
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <h1 style={{ font: "700 24px/30px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Messages</h1>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 172px)", minHeight: 520 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flex: "none" }}>
+        <h1 style={{ font: "700 22px/28px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Messages</h1>
         <span className="pill pill-grey">{countryByCode(country)?.name}</span>
         <button type="button" onClick={() => { setCountry(null); setSel(null); }} style={{ background: "none", border: "none", cursor: "pointer", font: "600 12px/1 var(--font-sans)", color: "var(--indigo-600)" }}>change</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr) 250px", height: "calc(100vh - 150px)", minHeight: 460, border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", background: "var(--card)" }}>
-        {/* LEFT: search + filter + users */}
-        <div style={{ borderRight: "1px solid var(--line-soft)", padding: 12, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", minHeight: 0 }}>
-          <input className="af" placeholder="Search name, ID or email" value={q} onChange={(e) => setQ(e.target.value)} />
-          <div style={{ display: "inline-flex", background: "var(--subtle)", border: "1px solid var(--line)", borderRadius: 9, padding: 3 }}>
-            {(["all", "full", "self"] as const).map((f) => (
-              <button key={f} type="button" onClick={() => setFilter(f)} style={{ flex: 1, height: 28, borderRadius: 7, border: "none", cursor: "pointer", font: "600 10.5px/1 var(--font-sans)", background: filter === f ? "var(--card)" : "transparent", color: filter === f ? "var(--ink)" : "var(--ink-soft)" }}>{f === "all" ? "All" : f === "full" ? "Full" : "Self"}</button>
+      <div className="chat-shell" style={{ gridTemplateColumns: "282px minmax(0,1fr) 272px", flex: 1, minHeight: 0 }}>
+        {/* ── LEFT: conversations ── */}
+        <div className="chat-col">
+          <div className="chat-list">
+            <Input icon={fieldIcon("search")} placeholder="Search name, ID or email" aria-label="Search students" value={q} onChange={(e) => setQ(e.target.value)} />
+            <div className="chat-tabs">
+              {([["all", "All plans"], ["full", "Full service"], ["self", "Self service"]] as const).map(([f, label]) => (
+                <button key={f} type="button" className={`chat-tab${filter === f ? " active" : ""}`} onClick={() => setFilter(f)}>{label}</button>
+              ))}
+            </div>
+            {shown.length === 0 ? (
+              <ChatEmpty icon={<Users size={22} />} title="No conversations" sub="No student matches this search or filter." />
+            ) : shown.map((u) => (
+              <button key={u.id} type="button" onClick={() => openConvo(u.id)} className={`chat-convo${sel === u.id ? " active" : ""}`}>
+                <ChatAvatar size={38} src={avatars[u.id]} online={u.id === sel} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="chat-convo-name">{u.full_name || "Unnamed"}</span>
+                  <span className="chat-convo-meta">
+                    <span>{awu(u.user_number)}</span>
+                    <span className={u.plan === "full_service" ? "pill pill-indigo" : "pill pill-green"} style={{ padding: "2px 8px", fontSize: 9 }}>{u.plan === "full_service" ? "Full" : "Self"}</span>
+                    <span>Direct</span>
+                  </span>
+                </span>
+                {(unread[u.id] ?? 0) > 0 && <span className="chat-unread">{unread[u.id] > 9 ? "9+" : unread[u.id]}</span>}
+              </button>
             ))}
           </div>
-          {shown.length === 0 ? <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-faint)", padding: 8 }}>No users.</div> : shown.map((u) => (
-            <button key={u.id} type="button" onClick={() => setSel(u.id)} style={{ textAlign: "left", display: "flex", gap: 10, alignItems: "center", padding: 9, borderRadius: 10, border: "none", background: sel === u.id ? "var(--indigo-tint)" : "transparent", cursor: "pointer" }}>
-              <DefaultAvatar size={34} src={avatars[u.id]} />
-              <span style={{ minWidth: 0 }}>
-                <span style={{ display: "block", font: "600 13px/18px var(--font-sans)", color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.full_name || "Unnamed"}</span>
-                <span style={{ display: "block", font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{awu(u.user_number)} · {u.plan === "full_service" ? "Full" : "Self"}</span>
-              </span>
-            </button>
-          ))}
         </div>
 
-        {/* CENTER: thread + composer */}
-        <div style={{ display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
+        {/* ── CENTER: header, actions, thread, composer ── */}
+        <div className="chat-col">
           {!selUser ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Select a conversation.</div>
+            <ChatEmpty icon={<MessageCircle size={24} />} title="Select a conversation" sub="Pick a student on the left to open the conversation." />
           ) : (
             <>
-              <button type="button" onClick={openInfo} title="View student information" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--line-soft)", border: "none", background: "transparent", cursor: "pointer" }}>
-                <DefaultAvatar size={30} src={avatars[selUser.id]} />
-                <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{selUser.full_name || "Unnamed"} <span style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}>· {selUser.email}</span></span>
-                <Info size={15} />
-              </button>
-              <div className="stu-chat-texture" style={{ flex: 1, minHeight: 0, padding: 14, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-                {msgs.length === 0 && <div style={{ color: "var(--ink-faint)", font: "400 13px var(--font-sans)", textAlign: "center", marginTop: 20 }}>No messages yet. Send the first update.</div>}
-                {msgs.map((m) => {
-                  const mine = m.sender === "admin";
-                  const quoted = m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null;
-                  const ask = parseAsk(m.body);
-                  return (
-                    <div key={m.id} style={{ display: "flex", flexDirection: mine ? "row-reverse" : "row", alignItems: "center", gap: 6, alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "90%" }}
-                      onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "msg" }); }}>
-                      <div style={{ minWidth: 0, background: mine ? "var(--indigo-tint)" : "rgba(255,255,255,.94)", border: m.pinned ? "1px solid var(--indigo-line)" : "none", borderRadius: 16, padding: "9px 13px", boxShadow: "0 2px 8px rgba(23,35,58,.06)" }}>
-                        {quoted && (
-                          <div style={{ borderLeft: "3px solid var(--indigo-600)", background: "rgba(43,76,155,.06)", borderRadius: 6, padding: "4px 8px", marginBottom: 6 }}>
-                            <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: "var(--indigo-600)" }}>{quoted.sender === "admin" ? "You" : selUser?.full_name || "Student"}</span>
-                            <span style={{ display: "block", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{parseAsk(quoted.body)?.q ?? quoted.body?.slice(0, 60) ?? quoted.file_name ?? "Attachment"}</span>
-                          </div>
-                        )}
-                        {ask ? (
-                          <div>
-                            <div style={{ font: "600 13px/19px var(--font-sans)", color: "var(--ink)" }}>{ask.q}</div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 6 }}>
-                              {ask.opts.map((o, i) => <div key={i} style={{ border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", font: "500 12.5px/17px var(--font-sans)", color: "var(--indigo-text)", background: "var(--card)" }}>{i + 1}. {o}</div>)}
-                            </div>
-                            <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 5 }}>Interactive question, the student taps an answer to reply.</div>
-                          </div>
-                        ) : m.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{m.body}</div>}
-                        {m.file_path && <button type="button" onClick={() => viewFile(m.file_path)} style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: m.body ? 6 : 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 9px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: "var(--indigo-600)" }}><Paperclip size={13} />{m.file_name || "file"}</button>}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5, font: "400 10px/14px var(--font-sans)", color: "var(--ink-faint)" }}>
-                          <span>{new Date(m.created_at).toLocaleString()}</span>
-                          {m.emailed && <span style={{ color: "var(--green)" }}>emailed</span>}
-                          {mine && <button type="button" onClick={() => togglePin(m)} style={{ background: "none", border: "none", cursor: "pointer", color: m.pinned ? "var(--indigo-600)" : "var(--ink-faint)", font: "600 10px/1 var(--font-sans)", padding: 0 }}>{m.pinned ? "unpin" : "pin"}</button>}
-                        </div>
-                      </div>
-                      {/* Actions OUTSIDE the bubble (Task 4 + 5) */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "none" }}>
-                        <button type="button" onClick={() => setReplyTo(m)} title="Reply" style={actIco}><Reply size={14} /></button>
-                        {m.file_path && <button type="button" onClick={() => downloadFile(m.file_path, m.file_name)} title="Download" style={actIco}><Download size={14} /></button>}
-                      </div>
-                    </div>
-                  );
-                })}
-                {uploadingName && (
-                  <div style={{ alignSelf: "flex-end", maxWidth: "80%", background: "var(--indigo-tint)", borderRadius: 16, padding: "9px 13px", display: "flex", alignItems: "center", gap: 8 }}>
-                    <span aria-hidden style={{ width: 14, height: 14, flex: "none", border: "2px solid var(--indigo-line)", borderTopColor: "var(--indigo-600)", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />
-                    <span style={{ font: "500 12.5px/17px var(--font-sans)", color: "var(--indigo-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uploading {uploadingName}…</span>
-                  </div>
-                )}
+              <header className="chat-header">
+                <button type="button" className="chat-header-btn" onClick={() => setShowInfo(true)} title="Open student profile">
+                  <ChatAvatar size={40} src={avatars[selUser.id]} online />
+                  <span style={{ minWidth: 0 }}>
+                    <span className="chat-header-name">{selUser.full_name || "Unnamed"}</span>
+                    <span className="chat-header-sub"><Mail size={12} />{selUser.email || "—"}</span>
+                  </span>
+                  <Info size={15} style={{ color: "var(--indigo-600)", flex: "none" }} />
+                </button>
+                <button type="button" className="chat-act" onClick={downloadConversation} title="Download the pinned conversation" aria-label="Download conversation"><Download size={15} /></button>
+              </header>
+
+              {/* Quick actions sit above the thread. */}
+              <div className="chat-actions">
+                <Toggle checked={emailOn} onChange={setEmailOn} ariaLabel="Also email this message" label={<span style={optLbl}><Mail size={14} />Email</span>} />
+                <Toggle checked={pinOn} onChange={setPinOn} ariaLabel="Pin this message" label={<span style={optLbl}><Pin size={14} />Pin</span>} />
+                <Toggle checked={whatsappOn} onChange={setWhatsappOn} ariaLabel="WhatsApp alert (coming soon)" label={<span style={optLbl}><MessageCircle size={14} />WhatsApp</span>} />
+                <Toggle checked={showQ} onChange={setShowQ} ariaLabel="Ask a question" label={<span style={optLbl}><CircleHelp size={14} />Question</span>} />
               </div>
 
-              {/* Composer */}
-              <div style={{ borderTop: "1px solid var(--line-soft)", padding: 12, background: "var(--card)" }}>
-                {file && <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}><span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Attached: {file.name}</span><button type="button" onClick={() => setFile(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button></div>}
+              <div ref={threadRef} className="chat-thread stu-chat-texture">
+                {msgs.length === 0 && <ChatEmpty icon={<MessageCircle size={24} />} title="No messages yet" sub="Send the first update to this student." />}
+                {msgs.map((m) => (
+                  <MessageBubble
+                    key={m.id}
+                    msg={m}
+                    mine={m.sender === "admin"}
+                    quoted={m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null}
+                    quotedAuthor={m.reply_to && msgs.find((x) => x.id === m.reply_to)?.sender === "admin" ? "You" : selUser.full_name || "Student"}
+                    onReply={() => setReplyTo(m)}
+                    onDownload={() => downloadFile(m.file_path, m.file_name)}
+                    onViewFile={() => viewFile(m.file_path)}
+                    onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "msg" }); }}
+                    footer={m.sender === "admin" ? (
+                      <button type="button" onClick={() => togglePin(m)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", font: "600 10px/1 var(--font-sans)", padding: 0, textDecoration: "underline" }}>{m.pinned ? "unpin" : "pin"}</button>
+                    ) : null}
+                  />
+                ))}
+                {uploadingName && <UploadingBubble name={uploadingName} />}
+              </div>
+
+              <div className="chat-composer">
+                {file && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 12, padding: "7px 12px", marginBottom: 8 }}>
+                    <span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Attached: {file.name}</span>
+                    <button type="button" className="chat-act" onClick={() => setFile(null)} aria-label="Remove attachment"><X size={14} /></button>
+                  </div>
+                )}
                 {showQ && (
-                  <div style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, marginBottom: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <input className="af" placeholder="Question" value={qText} onChange={(e) => setQText(e.target.value)} />
-                    {qOpts.map((o, i) => <input key={i} className="af" placeholder={`Answer ${i + 1}`} value={o} onChange={(e) => setQOpts(qOpts.map((x, j) => j === i ? e.target.value : x))} />)}
+                  <div style={{ border: "1px solid var(--line)", borderRadius: 16, padding: 12, marginBottom: 10, display: "flex", flexDirection: "column", gap: 8, background: "var(--subtle)" }}>
+                    <Input icon={fieldIcon("message")} placeholder="Question" value={qText} onChange={(e) => setQText(e.target.value)} />
+                    {qOpts.map((o, i) => <Input key={i} icon={fieldIcon("text")} placeholder={`Answer ${i + 1}`} value={o} onChange={(e) => setQOpts(qOpts.map((x, j) => j === i ? e.target.value : x))} />)}
                     {qOpts.length < 4 && <button type="button" onClick={() => setQOpts([...qOpts, ""])} style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", font: "600 12px/1 var(--font-sans)", color: "var(--indigo-600)" }}>+ Add answer</button>}
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                  <button type="button" onClick={() => setEmailOn((v) => !v)} style={opt(emailOn)}><Mail size={14} />Email</button>
-                  <button type="button" onClick={() => setPinOn((v) => !v)} style={opt(pinOn)}><Pin size={14} />Pin</button>
-                  <button type="button" onClick={() => setWhatsappOn((v) => !v)} title="WhatsApp alert (coming soon)" style={opt(whatsappOn)}><MessageCircle size={14} />WhatsApp</button>
-                  <button type="button" onClick={() => setShowQ((v) => !v)} style={opt(showQ)}><CircleHelp size={14} />Question</button>
-                  <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                </div>
                 {whatsappOn && <div style={{ font: "500 11.5px/16px var(--font-sans)", color: "var(--amber)", marginBottom: 8 }}>WhatsApp alerts are coming soon, this message posts to the chat for now.</div>}
                 {replyTo && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--subtle)", borderLeft: "3px solid var(--indigo-600)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--subtle)", borderLeft: "3px solid var(--indigo-600)", borderRadius: 12, padding: "7px 12px", marginBottom: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ font: "600 10.5px/14px var(--font-sans)", color: "var(--indigo-600)" }}>Replying to {replyTo.sender === "admin" ? "yourself" : selUser?.full_name || "student"}</div>
                       <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{replyTo.body?.slice(0, 70) || replyTo.file_name || "Attachment"}</div>
                     </div>
-                    <button type="button" onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)" }}>✕</button>
+                    <button type="button" className="chat-act" onClick={() => setReplyTo(null)} aria-label="Cancel reply"><X size={14} /></button>
                   </div>
                 )}
-                <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, padding: "4px 5px 4px 8px", boxShadow: "0 6px 18px rgba(23,35,58,.06)" }}>
-                  <button type="button" onClick={() => fileRef.current?.click()} aria-label="Attach a file" title="Attach a file" style={{ flex: "none", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, border: "none", background: "none", cursor: "pointer", color: "var(--ink-soft)" }}>
+                <div className="af-composer">
+                  <button type="button" onClick={() => fileRef.current?.click()} aria-label="Attach a file" title="Attach a file" style={{ flex: "none", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, border: "none", background: "none", cursor: "pointer", color: "var(--indigo-600)" }}>
                     <Paperclip size={18} />
                   </button>
-                  <input placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={{ flex: "1 1 auto", minWidth: 0, height: 38, border: "none", background: "transparent", outline: "none", font: "400 14px/1 var(--font-sans)", color: "var(--ink)" }} />
-                  <button type="button" disabled={sending} onClick={send} style={{ height: 38, flex: "none", padding: "0 16px", borderRadius: 999, border: "none", background: "var(--indigo-600)", color: "#fff", font: "600 13.5px/1 var(--font-sans)", cursor: sending ? "not-allowed" : "pointer", opacity: sending ? 0.5 : 1 }}>{sending ? "…" : emailOn ? "Send & email" : "Send"}</button>
+                  <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <input placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} className="af-composer-input" />
+                  <button type="button" className="chat-send" disabled={sending} onClick={send}>
+                    {sending ? <><span aria-hidden style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,.5)", borderTopColor: "#fff", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />Sending</> : <><Send size={15} />{emailOn ? "Send & email" : "Send"}</>}
+                  </button>
                 </div>
-                {status && <div style={{ font: "500 12px/17px var(--font-sans)", color: status.startsWith("Failed") ? "var(--red)" : "var(--green)", marginTop: 6 }}>{status}</div>}
+                {status && <div style={{ font: "500 12px/17px var(--font-sans)", color: status.startsWith("Failed") ? "var(--red)" : "var(--green)", marginTop: 8 }}>{status}</div>}
               </div>
             </>
           )}
         </div>
 
-        {/* RIGHT: two independently scrollable sections (Task 2) */}
-        <div style={{ borderLeft: "1px solid var(--line-soft)", display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12 }}>
-            <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 10 }}>Pinned updates</div>
-            {!selUser ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>—</div> : pinned.length === 0 ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>Nothing pinned.</div> : pinned.map((m) => (
-              <div key={m.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, marginBottom: 8 }}>
-                <div style={{ display: "flex", gap: 6, marginBottom: 6 }}><span className="pill pill-indigo">Pinned</span>{m.emailed && <span className="pill pill-green">Emailed</span>}</div>
+        {/* ── RIGHT: pinned updates + documents ── */}
+        <div className="chat-col">
+          <PanelCard
+            icon={<Pin size={15} />} title="Pinned updates"
+            isEmpty={!selUser || pinned.length === 0}
+            empty={<ChatEmpty art="pinned" title="Nothing pinned yet" sub="Pin an important update and it stays here for the student." />}
+          >
+            {pinned.map((m) => (
+              <div key={m.id} className="chat-panel-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+                <div style={{ display: "flex", gap: 6 }}><span className="pill pill-indigo">Pinned</span>{m.emailed && <span className="pill pill-green">Emailed</span>}</div>
                 <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{parseAsk(m.body)?.q ?? m.body ?? m.file_name}</div>
               </div>
             ))}
-          </div>
+          </PanelCard>
 
-          {/* Documents section starts at the middle, own scroll */}
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 12, borderTop: "1px solid var(--line)" }}>
-            <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 10 }}>Documents</div>
-            {!selUser ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>—</div> : files.length === 0 ? <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)" }}>No files shared yet.</div> : files.map((m) => (
-              <div key={m.id} onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "file" }); }} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--line)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>
-                <FileText size={16} />
+          <PanelCard
+            icon={<FileText size={15} />} title="Documents"
+            action={<button type="button" className="chat-act" onClick={() => fileRef.current?.click()} disabled={!selUser} title="Share a new document" aria-label="Share a new document"><Plus size={15} /></button>}
+            isEmpty={!selUser || files.length === 0}
+            empty={<ChatEmpty art="documents" title="No documents shared" sub="Files you and the student exchange appear here." />}
+          >
+            {files.map((m) => (
+              <div key={m.id} className="chat-panel-item" onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "file" }); }}>
+                <span style={{ flex: "none", width: 28, height: 28, borderRadius: 9, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={14} /></span>
                 <span style={{ flex: 1, minWidth: 0, font: "500 12px/16px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.file_name || "file"}</span>
-                <button type="button" onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left - 150, y: r.bottom, msg: m, kind: "file" }); }} title="Options" style={{ flex: "none", background: "none", border: "none", cursor: "pointer", color: "var(--ink-faint)", padding: 2 }}><EllipsisVertical size={16} /></button>
+                <button type="button" className="chat-act" onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setMenu({ x: r.left - 150, y: r.bottom, msg: m, kind: "file" }); }} title="Options" aria-label="Document options"><EllipsisVertical size={15} /></button>
               </div>
             ))}
-          </div>
+          </PanelCard>
         </div>
       </div>
 
       {menu && (
-        <div style={{ position: "fixed", top: Math.min(menu.y, typeof window !== "undefined" ? window.innerHeight - 190 : menu.y), left: Math.max(8, Math.min(menu.x, typeof window !== "undefined" ? window.innerWidth - 170 : menu.x)), zIndex: 200, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, boxShadow: "0 16px 40px rgba(23,35,58,.2)", padding: 6, minWidth: 158 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ position: "fixed", top: Math.min(menu.y, typeof window !== "undefined" ? window.innerHeight - 190 : menu.y), left: Math.max(8, Math.min(menu.x, typeof window !== "undefined" ? window.innerWidth - 170 : menu.x)), zIndex: 200, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 14, boxShadow: "0 16px 40px rgba(23,35,58,.2)", padding: 6, minWidth: 158 }} onClick={(e) => e.stopPropagation()}>
           <button type="button" onClick={() => { setReplyTo(menu.msg); setMenu(null); }} style={menuItem}><Reply size={15} />Reply</button>
           {menu.msg.file_path && <button type="button" onClick={() => { downloadFile(menu.msg.file_path, menu.msg.file_name); setMenu(null); }} style={menuItem}><Download size={15} />Download</button>}
           {menu.kind === "file" && menu.msg.file_path && <button type="button" onClick={() => renameFile(menu.msg)} style={menuItem}><Pencil size={15} />Rename</button>}
@@ -339,50 +344,13 @@ export default function AdminChat({ initialUserId }: { initialUserId?: string | 
       )}
 
       {showInfo && selUser && (
-        <div onClick={() => setShowInfo(false)} style={{ position: "fixed", inset: 0, zIndex: 210, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 18, boxShadow: "0 24px 60px rgba(23,35,58,.25)", overflow: "hidden" }}>
-            <div style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid var(--line-soft)" }}>
-              <DefaultAvatar size={44} src={avatars[selUser.id]} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ font: "700 16px/21px var(--font-sans)", color: "var(--ink)" }}>{selUser.full_name || "Unnamed"}</div>
-                <div style={{ font: "600 11.5px/16px var(--font-sans)", color: "var(--indigo-600)" }}>{awu(selUser.user_number)} · {selUser.plan === "full_service" ? "Full Service" : "Self Service"}</div>
-              </div>
-            </div>
-            <div style={{ padding: 20 }}>
-              {[
-                ["Email", (infoProfile?.email as string) ?? selUser.email ?? "—"],
-                ["Country", countryByCode((infoProfile?.destination_country as string) ?? "")?.name ?? "—"],
-                ["City", (infoProfile?.city as string) || "—"],
-                ["WhatsApp", `${(infoProfile?.whatsapp_country_code as string) ?? ""} ${(infoProfile?.whatsapp_number as string) ?? ""}`.trim() || "—"],
-                ["Status", (infoProfile?.plan_status as string) || "—"],
-              ].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--line-soft)" }}>
-                  <span style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)" }}>{k}</span>
-                  <span style={{ font: "600 13px/19px var(--font-sans)", color: "var(--ink)", textAlign: "right", wordBreak: "break-word" }}>{v}</span>
-                </div>
-              ))}
-              {trackOpen && (
-                <div style={{ marginTop: 12, background: "var(--subtle)", borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-faint)", marginBottom: 6 }}>Application timeline</div>
-                  {[
-                    ["Onboarding completed", infoProfile?.onboarding_completed_at ? new Date(infoProfile.onboarding_completed_at as string).toLocaleDateString() : "—"],
-                    ["Plan activated", infoProfile?.plan_activated_at ? new Date(infoProfile.plan_activated_at as string).toLocaleDateString() : "—"],
-                    ["Messages", String(msgs.length)],
-                    ["Pinned as important", String(pinned.length)],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "3px 0", font: "400 12.5px/18px var(--font-sans)", color: "var(--ink)" }}><span style={{ color: "var(--ink-soft)" }}>{k}</span><span style={{ fontWeight: 600 }}>{v}</span></div>
-                  ))}
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
-                <button type="button" onClick={() => setTrackOpen((v) => !v)} style={{ flex: "1 1 auto", height: 40, padding: "0 12px", borderRadius: 10, border: "1px solid var(--line)", background: trackOpen ? "var(--indigo-tint)" : "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: trackOpen ? "var(--indigo-text)" : "var(--ink)" }}>Track</button>
-                <a href={selUser.email ? `mailto:${selUser.email}` : undefined} style={{ flex: "1 1 auto", textAlign: "center", height: 40, lineHeight: "40px", padding: "0 12px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)", textDecoration: "none" }}>Email</a>
-                <button type="button" onClick={downloadConversation} title="Download only the pinned (important) messages" style={{ flex: "1 1 100%", height: 40, padding: "0 12px", borderRadius: 10, border: "none", background: "var(--indigo-600)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "#fff" }}>Download conversation</button>
-              </div>
-              <div style={{ font: "400 11px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 8 }}>Download saves the roadmap conversation — only messages you pinned as important.</div>
-            </div>
-          </div>
-        </div>
+        <StudentProfileModal
+          userId={selUser.id}
+          fallbackName={selUser.full_name}
+          avatarUrl={avatars[selUser.id]}
+          onClose={() => setShowInfo(false)}
+          onOpenPlanModule={onOpenPlanModule}
+        />
       )}
     </div>
   );

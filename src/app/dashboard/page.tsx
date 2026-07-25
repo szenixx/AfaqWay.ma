@@ -8,9 +8,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { fetchAdminRole } from "@/lib/admin";
-import { fileUrl } from "@/lib/r2";
+import { fileUrl } from "@/lib/storage/client";
+import { setAvatarUrl } from "@/lib/avatar";
 import WorkspaceShell, { type Nav } from "@/components/student/workspace/WorkspaceShell";
-import type { WsProfile } from "@/components/student/workspace/Modules";
+import type { WsProfile, WsPayment } from "@/components/student/workspace/Modules";
 import { NOTIFICATIONS } from "@/components/student/workspace/data";
 import { deriveStudy, deriveAcademic } from "@/lib/studyApplication";
 import { useSingleSession } from "@/lib/useSingleSession";
@@ -50,6 +51,27 @@ export default function Dashboard() {
     const ps = (cfa?.program_setup as Record<string, unknown> | undefined);
     const avatarPath = (row.avatar_path as string) || "";
     const avatarUrl = avatarPath ? await fileUrl(avatarPath, "avatars", undefined, 86400) : null;
+    // One profile picture per user: publish it so every avatar on the platform
+    // renders the same image (and updates the moment a new one is uploaded).
+    setAvatarUrl(avatarUrl);
+
+    // The latest approved payment = active paid subscription (verified badge,
+    // service information card, invoice).
+    const { data: payRow } = await supabase.from("payments")
+      .select("id, method, amount, currency, created_at, reviewed_at, reference")
+      .eq("user_id", uid).eq("status", "approved")
+      .order("reviewed_at", { ascending: false }).limit(1).maybeSingle();
+    const pr = payRow as Record<string, unknown> | null;
+    const payment: WsPayment | null = pr ? {
+      id: pr.id as string,
+      method: (pr.method as string) ?? "",
+      amount: Number(pr.amount ?? 0),
+      currency: (pr.currency as string) ?? "MAD",
+      createdAt: pr.created_at as string,
+      reviewedAt: (pr.reviewed_at as string) ?? null,
+      reference: (pr.reference as string) ?? null,
+    } : null;
+
     return {
       fullName: (row.full_name as string) ?? null,
       email: (row.email as string) ?? userEmail ?? null,
@@ -65,6 +87,8 @@ export default function Dashboard() {
       avatarUrl,
       diplomaField: (te?.last_degree_field as string) ?? "",
       englishLevel: (ps?.english_level as string) ?? "",
+      verified: !!payment,
+      payment,
     };
   }, []);
 

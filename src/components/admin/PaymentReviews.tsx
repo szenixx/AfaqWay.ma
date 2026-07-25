@@ -5,7 +5,8 @@ import { Ban, RotateCcw } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
-import { fileUrl } from "@/lib/r2";
+import { fileUrl, deleteUserFile } from "@/lib/storage/client";
+import { Input, Select, fieldIcon } from "@/components/ds";
 
 type Payment = { id: string; user_id: string; plan: string; amount: number; currency: string; method: string; status: string; receipt_path: string | null; reference: string | null; rejection_comment: string | null; created_at: string; reviewed_at: string | null };
 type UserInfo = { full_name: string | null; email: string | null; destination_country: string | null };
@@ -102,7 +103,12 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
     const patch: Record<string, unknown> = { status, reviewed_at: new Date().toISOString(), reviewed_by: user?.id };
     if (status === "rejected") {
       patch.rejection_comment = comment.trim() || "Your receipt could not be verified.";
-      if (r.receipt_path) { if (!r.receipt_path.startsWith("r2:")) await supabase.storage.from("receipts").remove([r.receipt_path]); patch.receipt_path = null; } // reject = delete now (R2 objects expire unused)
+      // Rejecting drops the receipt file itself (R2 for current rows, Supabase for legacy ones).
+      if (r.receipt_path) {
+        if (r.receipt_path.startsWith("r2:")) await deleteUserFile(r.receipt_path).catch(() => {});
+        else await supabase.storage.from("receipts").remove([r.receipt_path]);
+        patch.receipt_path = null;
+      }
     }
     await supabase.from("payments").update(patch).eq("id", r.id);
     setBusy(""); setRejectId(null); setComment("");
@@ -143,17 +149,18 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
             <button key={t} type="button" onClick={() => setTab(t)} style={{ height: 34, padding: "0 16px", borderRadius: 11, border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", background: tab === t ? "var(--card)" : "transparent", color: tab === t ? "var(--ink)" : "var(--ink-soft)", boxShadow: tab === t ? "var(--shadow-card)" : "none" }}>{t === "pending" ? "Pending" : "History"}</button>
           ))}
         </div>
-        <input className="af" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by payment ID, name or email" style={{ flex: "1 1 220px", maxWidth: 340 }} />
-        <select className="af" value={countryFilter} onChange={(e) => { setCountryFilter(e.target.value); setPlanFilter("all"); }} style={{ height: 40, maxWidth: 180 }}>
-          <option value="all">All countries</option>
-          {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-        </select>
+        <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by payment ID, name or email" aria-label="Search payments" containerStyle={{ flex: "1 1 220px", maxWidth: 340 }} />
+        <Select
+          value={countryFilter} onChange={(v) => { setCountryFilter(v); setPlanFilter("all"); }} icon={fieldIcon("country")} ariaLabel="Filter by country"
+          options={[{ value: "all", label: "All countries" }, ...COUNTRIES.map((c) => ({ value: c.code, label: c.name }))]}
+          containerStyle={{ minWidth: 190 }}
+        />
         {countryFilter !== "all" && (
-          <select className="af" value={planFilter} onChange={(e) => setPlanFilter(e.target.value as "all" | "self_service" | "full_service")} style={{ height: 40, maxWidth: 190 }}>
-            <option value="all">All {countryByCode(countryFilter)?.name ?? ""} plans</option>
-            <option value="self_service">Self Service</option>
-            <option value="full_service">Full Service</option>
-          </select>
+          <Select
+            value={planFilter} onChange={(v) => setPlanFilter(v as "all" | "self_service" | "full_service")} icon={fieldIcon("plan")} ariaLabel="Filter by plan"
+            options={[{ value: "all", label: `All ${countryByCode(countryFilter)?.name ?? ""} plans` }, { value: "self_service", label: "Self Service" }, { value: "full_service", label: "Full Service" }]}
+            containerStyle={{ minWidth: 200 }}
+          />
         )}
       </div>
 

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { Input, Toggle, fieldIcon } from "@/components/ds";
 import { PAY_METHODS, methodById } from "@/lib/plans";
 
 type Extra = { title: string; value: string; copyable: boolean };
 type PM = { id: string; enabled: boolean; beneficiary: string | null; rib: string | null; note: string | null; sort: number; extra_details: Extra[] };
 
-const lbl = { display: "flex", flexDirection: "column", gap: 5, font: "500 12px/16px var(--font-sans)", color: "var(--ink)" } as const;
 
 function MethodRow({ pm, onSaved }: { pm: PM; onSaved: () => void }) {
   const meta = methodById(pm.id);
@@ -42,30 +42,25 @@ function MethodRow({ pm, onSaved }: { pm: PM; onSaved: () => void }) {
             <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{meta?.kind === "manual" ? "Manual transfer" : "Instant"}</div>
           </div>
         </div>
-        <button type="button" onClick={toggle} role="switch" aria-checked={enabled} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", background: "none", border: "none", font: "600 12.5px/1 var(--font-sans)", color: enabled ? "var(--green)" : "var(--ink-faint)" }}>
-          <span style={{ width: 40, height: 24, borderRadius: 999, background: enabled ? "var(--green)" : "var(--line)", position: "relative", transition: "background 150ms" }}>
-            <span style={{ position: "absolute", top: 3, left: enabled ? 19 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left 150ms" }} />
-          </span>
-          {enabled ? "On" : "Off"}
-        </button>
+        <Toggle checked={enabled} onChange={() => void toggle()} ariaLabel={`${meta?.name ?? pm.id} enabled`}
+          label={<span style={{ font: "600 12.5px/1 var(--font-sans)", color: enabled ? "var(--green)" : "var(--ink-faint)" }}>{enabled ? "On" : "Off"}</span>} />
       </div>
 
       {meta?.kind === "manual" && (
         <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <label style={lbl}>Beneficiary<input className="af" value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} /></label>
-            <label style={lbl}>RIB<input className="af" value={rib} onChange={(e) => setRib(e.target.value)} /></label>
+            <Input label="Beneficiary" icon={fieldIcon("name")} value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} />
+            <Input label="RIB" icon={fieldIcon("reference")} value={rib} onChange={(e) => setRib(e.target.value)} />
           </div>
-          <label style={lbl}>Note (optional)<input className="af" value={note} onChange={(e) => setNote(e.target.value)} /></label>
+          <Input label="Note (optional)" icon={fieldIcon("note")} value={note} onChange={(e) => setNote(e.target.value)} />
 
           <div style={{ font: "600 11px/15px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)", marginTop: 4 }}>Extra details</div>
           {extra.map((e, i) => (
             <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <input className="af" value={e.title} onChange={(ev) => setEx(i, { title: ev.target.value })} placeholder="Title" style={{ flex: "1 1 120px" }} />
-              <input className="af" value={e.value} onChange={(ev) => setEx(i, { value: ev.target.value })} placeholder="Detail" style={{ flex: "2 1 160px" }} />
-              <button type="button" onClick={() => setEx(i, { copyable: !e.copyable })} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 38, padding: "0 12px", borderRadius: 13, cursor: "pointer", font: "600 12px/1 var(--font-sans)", border: e.copyable ? "1px solid var(--green-line)" : "1px solid var(--line)", background: e.copyable ? "var(--green-tint)" : "var(--subtle)", color: e.copyable ? "var(--green)" : "var(--ink-faint)" }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: e.copyable ? "var(--green)" : "var(--ink-faint)" }} />Copy {e.copyable ? "on" : "off"}
-              </button>
+              <Input icon={fieldIcon("text")} value={e.title} onChange={(ev) => setEx(i, { title: ev.target.value })} placeholder="Title" containerStyle={{ flex: "1 1 120px" }} />
+              <Input icon={fieldIcon("note")} value={e.value} onChange={(ev) => setEx(i, { value: ev.target.value })} placeholder="Detail" containerStyle={{ flex: "2 1 160px" }} />
+              <Toggle checked={e.copyable} onChange={(v) => setEx(i, { copyable: v })} ariaLabel="Copyable detail"
+                label={<span style={{ font: "600 12px/1 var(--font-sans)", color: e.copyable ? "var(--green)" : "var(--ink-faint)" }}>Copy {e.copyable ? "on" : "off"}</span>} />
               <button type="button" onClick={() => setExtra(extra.filter((_, j) => j !== i))} style={{ height: 38, width: 38, borderRadius: 13, border: "1px solid var(--red-line)", background: "var(--red-tint)", color: "var(--red)", cursor: "pointer" }}>✕</button>
             </div>
           ))}

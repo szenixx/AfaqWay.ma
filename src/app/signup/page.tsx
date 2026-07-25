@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Divider, Icon, GoogleIcon } from "@/components/ds";
+import { Button, Field, Divider, Icon, GoogleIcon, Checkbox, fieldIcon } from "@/components/ds";
 import { StatusCircle, IconCheck, IconClock } from "@/components/home/ui";
 import { supabase } from "@/lib/supabase/client";
 import { fetchAdminRole } from "@/lib/admin";
@@ -410,9 +410,10 @@ export default function AuthPage() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Field label="Email" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Field label="Email" icon={fieldIcon("email")} type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             <Field
               label="Password"
+              icon={fieldIcon("password")}
               type={showPw ? "text" : "password"}
               required
               autoComplete={isSignup ? "new-password" : "current-password"}
@@ -428,10 +429,7 @@ export default function AuthPage() {
 
             {!isSignup && (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", font: "400 13px/18px var(--font-sans)", color: "var(--ink-soft)" }}>
-                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} style={{ accentColor: "var(--indigo-600)", width: 15, height: 15 }} />
-                  Remember me
-                </label>
+                <Checkbox checked={remember} onChange={setRemember} label={<span style={{ color: "var(--ink-soft)" }}>Remember me</span>} />
                 <button type="button" onClick={handleForgot} style={{ background: "none", border: "none", cursor: "pointer", font: "500 13px/18px var(--font-sans)", color: "var(--indigo-600)" }}>
                   Forgot password?
                 </button>

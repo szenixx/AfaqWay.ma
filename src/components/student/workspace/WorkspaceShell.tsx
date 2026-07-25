@@ -4,15 +4,20 @@
    avatar menu, matching the admin Overview/Wallet dashboards. Renders one module
    at a time. Same shell for every country/plan — only module content changes. */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard, Route, FileText, Compass, Bell, MessageCircle, LifeBuoy,
-  CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown, Menu, X,
+  CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { MobileNavigationHeader } from "./MobileNavigationHeader";
+import RightPanel from "./RightPanel";
 import StudentChat from "@/components/student/StudentChat";
 import { planById } from "@/lib/plans";
+import { supabase } from "@/lib/supabase/client";
+import { useAvatarUrl } from "@/lib/avatar";
 import { DefaultAvatar } from "./parts";
 import SidebarCarousel from "./SidebarCarousel";
 import {
@@ -34,6 +39,13 @@ const PRIMARY_NAV: { id: Nav; label: string; icon: React.ReactNode }[] = [
 
 const firstName = (n: string | null) => (n ? n.trim().split(" ")[0] : "there");
 
+/* Title shown next to the back/forward buttons in the top bar. */
+const MODULE_TITLE: Record<Nav, string> = {
+  overview: "Overview", journey: "My Journey", documents: "Documents", explore: "Explore Lithuania",
+  messages: "Messages", notifications: "Notifications", support: "Support",
+  subscription: "Subscription", profile: "Profile", settings: "Settings",
+};
+
 export default function WorkspaceShell({
   profile, nav, onNav, chatUnread, unreadNotifs, onSignOut, onProgramRequest, onReload,
 }: {
@@ -43,25 +55,91 @@ export default function WorkspaceShell({
   onReload: () => Promise<void>;
 }) {
   const [menu, setMenu] = useState(false);
-  const [mobileNav, setMobileNav] = useState(false);
+  const [sidebarMini, setSidebarMini] = useState(false);
   const full = profile.plan === "full_service";
+  const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
-  const navItem = (id: Nav, label: string, icon: React.ReactNode, onClick?: () => void) => (
-    <button key={id} type="button" className={`sw-navitem${nav === id ? " active" : ""}`} onClick={onClick ?? (() => { onNav(id); setMobileNav(false); })}>
-      <span className="sw-navico">{icon}</span>{label}
+  /* Module history powering the top-bar back/forward buttons. Every navigation
+     in the workspace goes through `navigate`, so the trail is complete; back and
+     forward replay it without recording the replay itself. */
+  const [hist, setHist] = useState<Nav[]>([nav]);
+  const [hIdx, setHIdx] = useState(0);
+  const canBack = hIdx > 0;
+  const canFwd = hIdx < hist.length - 1;
+  const navigate = (n: Nav) => {
+    if (n === nav) return;
+    setHist((h) => [...h.slice(0, hIdx + 1), n]);
+    setHIdx(hIdx + 1);
+    onNav(n);
+  };
+  const goHist = (step: -1 | 1) => {
+    const i = hIdx + step;
+    if (i < 0 || i >= hist.length) return;
+    setHIdx(i);
+    onNav(hist[i]);
+  };
+
+  /* Collapsed state persists (cookie) and toggles with ⌘/Ctrl+B, like the
+     reference sidebar. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "b" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setSidebarMini((v) => !v); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  useEffect(() => { document.cookie = `sidebar_state=${!sidebarMini}; path=/; max-age=${60 * 60 * 24 * 7}`; }, [sidebarMini]);
+
+  const navItem = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; badge?: number }) => (
+    <button
+      key={id} type="button" data-label={label} title={sidebarMini ? label : undefined}
+      className={`sw-navitem${nav === id ? " active" : ""}`}
+      onClick={opts?.onClick ?? (() => navigate(id))}
+    >
+      <span className="sw-navico">{icon}</span>
+      <span className="sw-navlabel">{label}</span>
+      {!!opts?.badge && <span className="sw-navbadge">{opts.badge > 9 ? "9+" : opts.badge}</span>}
     </button>
+  );
+
+  /* The panel's "upcoming event" is the student's latest conversation update —
+     the only dated item the platform actually has for them today. */
+  const [lastEvent, setLastEvent] = useState<{ title: string; at: string } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase.from("messages")
+        .select("body, file_name, created_at").eq("user_id", profile.userId)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const m = data as { body?: string; file_name?: string; created_at?: string } | null;
+      if (cancelled || !m?.created_at) return;
+      const d = new Date(m.created_at);
+      setLastEvent({
+        title: (m.body?.replace(/^ASK::.*/, "Advisor question") || m.file_name || "Advisor update").slice(0, 42),
+        at: `${d.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })} · ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [profile.userId]);
+
+  const withPanel = (main: React.ReactNode, hide?: "journey" | "documents") => (
+    <div className="sw-withpanel">
+      <div style={{ minWidth: 0 }}>{main}</div>
+      <RightPanel profile={profile} onNav={(n) => navigate(n as Nav)} event={lastEvent} hide={hide} />
+    </div>
   );
 
   const content = (() => {
     switch (nav) {
-      case "overview": return <Overview profile={profile} onNav={(n) => onNav(n as Nav)} />;
-      case "journey": return <Journey profile={profile} />;
-      case "documents": return <Documents profile={profile} />;
+      case "overview": return <Overview profile={profile} onNav={(n) => navigate(n as Nav)} />;
+      // Journey and Documents share the reusable right panel.
+      case "journey": return withPanel(<Journey profile={profile} />, "journey");
+      case "documents": return withPanel(<Documents profile={profile} />, "documents");
       case "explore": return <Explore />;
       case "notifications": return <Notifications />;
-      case "support": return <Support onNav={(n) => onNav(n as Nav)} />;
+      case "support": return <Support onNav={(n) => navigate(n as Nav)} />;
       case "subscription": return <Subscription profile={profile} />;
-      case "profile": return <Profile profile={profile} onNav={(n) => onNav(n as Nav)} />;
+      case "profile": return <Profile profile={profile} onNav={(n) => navigate(n as Nav)} />;
       case "settings": return <Settings profile={profile} onProgramRequest={onProgramRequest} onReload={onReload} />;
       case "messages": return <StudentChat userId={profile.userId} full={full} />;
       default: return null;
@@ -72,13 +150,26 @@ export default function WorkspaceShell({
     <div className="sw-root">
       <div className="sw-shell">
         {/* Sidebar */}
-        <aside className="sw-sidebar">
-          <Link href="/" className="sw-brand">
-            <LogoMark size={30} />
-            <div><div className="sw-brand-name">AfaqWay</div><div className="sw-brand-sub">Lithuania</div></div>
-          </Link>
+        <aside className={`sw-sidebar${sidebarMini ? " mini" : ""}`}>
+          {/* Same workspace-switcher header as /admin: framed logo badge, name +
+              subtitle, collapse control on the right. */}
+          <div className="sw-brandrow" style={{ justifyContent: sidebarMini ? "center" : "space-between" }}>
+            {!sidebarMini && (
+              <Link href="/" className="sw-brand" aria-label="AfaqWay home">
+                <span className="sw-ws-badge"><LogoMark size={22} /></span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="sw-brand-name">AfaqWay</div>
+                  <div className="sw-brand-sub">Lithuania</div>
+                </div>
+              </Link>
+            )}
+            <button
+              type="button" className="sw-sidebar-close" onClick={() => setSidebarMini((v) => !v)}
+              aria-label={sidebarMini ? "Expand sidebar" : "Collapse sidebar"} title="Toggle sidebar (⌘B)"
+            >{sidebarMini ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</button>
+          </div>
           <nav className="sw-nav">
-            <div className="sw-group-label">Workspace</div>
+            <div className="sw-group-label">Platform</div>
             {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
           </nav>
           <SidebarCarousel />
@@ -89,24 +180,24 @@ export default function WorkspaceShell({
           {/* Header */}
           <header className="sw-header">
             {/* mobile logo + menu */}
-            <button type="button" className="sw-iconbtn sw-mobilebar" onClick={() => setMobileNav(true)} aria-label="Menu"><Menu size={20} /></button>
-            {/* Overview keeps the Welcome greeting; other modules show their title in-page (below). */}
-            {nav === "overview" ? (
-              <div style={{ minWidth: 0 }}>
-                <div style={{ font: "800 clamp(19px,2.4vw,24px)/1.15 var(--font-sans)", color: "var(--ink)", letterSpacing: "-.3px" }}>Welcome back, {firstName(profile.fullName)}!</div>
-                <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>Continue your Lithuania journey and keep track of your progress from one place.</div>
-              </div>
-            ) : <div style={{ flex: 1 }} />}
+            {/* Back / forward through visited modules, then the current module name. */}
+            <div className="sw-topnav">
+              <button type="button" className="sw-navbtn" onClick={() => goHist(-1)} disabled={!canBack} aria-label="Back" title="Back"><ChevronLeft size={20} /></button>
+              <button type="button" className="sw-navbtn" onClick={() => goHist(1)} disabled={!canFwd} aria-label="Forward" title="Forward"><ChevronRight size={20} /></button>
+              <span className="sw-topnav-sep" aria-hidden />
+              <span className="sw-topnav-title">{MODULE_TITLE[nav]}</span>
+            </div>
+            <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
-              <button type="button" className={`sw-iconbtn${nav === "notifications" ? " active" : ""}`} onClick={() => onNav("notifications")} aria-label="Notifications">
+              <button type="button" className={`sw-iconbtn${nav === "notifications" ? " active" : ""}`} onClick={() => navigate("notifications")} aria-label="Notifications">
                 <Bell size={20} />{unreadNotifs > 0 && nav !== "notifications" && <span className="sw-dot">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>}
               </button>
-              <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}`} onClick={() => onNav("messages")} aria-label="Messages">
+              <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
                 <MessageCircle size={20} />{chatUnread && nav !== "messages" && <span className="sw-dot" style={{ background: "var(--red)", minWidth: 11, height: 11, padding: 0, top: 9, right: 10 }} />}
               </button>
               <div style={{ position: "relative" }}>
                 <button type="button" className="sw-profile" onClick={() => setMenu((v) => !v)} aria-label="Account menu">
-                  <DefaultAvatar size={36} src={profile.avatarUrl} />
+                  <DefaultAvatar size={36} src={avatarUrl} verified={profile.verified} />
                   <span className="sw-profile-meta">
                     <span className="sw-profile-name">{firstName(profile.fullName)}</span>
                     <span className="sw-profile-email">{profile.email || profile.profileId}</span>
@@ -121,11 +212,11 @@ export default function WorkspaceShell({
                         <div style={{ font: "700 13px/17px var(--font-sans)", color: "var(--ink)" }}>{firstName(profile.fullName)}</div>
                         <div style={{ font: "500 11px/15px var(--font-sans)", color: "var(--ink-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{profile.email || `${planById(profile.plan)?.name ?? "—"} · ${profile.profileId}`}</div>
                       </div>
-                      <MenuRow icon={<UserRound size={17} />} label="Profile" onClick={() => { onNav("profile"); setMenu(false); }} />
-                      <MenuRow icon={<CreditCard size={17} />} label="Subscription" onClick={() => { onNav("subscription"); setMenu(false); }} />
-                      <MenuRow icon={<SettingsIcon size={17} />} label="Settings" onClick={() => { onNav("settings"); setMenu(false); }} />
+                      <MenuRow icon={<UserRound size={17} />} label="Profile" onClick={() => { navigate("profile"); setMenu(false); }} />
+                      <MenuRow icon={<CreditCard size={17} />} label="Subscription" onClick={() => { navigate("subscription"); setMenu(false); }} />
+                      <MenuRow icon={<SettingsIcon size={17} />} label="Settings" onClick={() => { navigate("settings"); setMenu(false); }} />
                       <div style={{ height: 1, background: "var(--line-soft)", margin: "5px 0" }} />
-                      <MenuRow icon={<LifeBuoy size={17} />} label="Contact support" onClick={() => { onNav("support"); setMenu(false); }} />
+                      <MenuRow icon={<LifeBuoy size={17} />} label="Contact support" onClick={() => { navigate("support"); setMenu(false); }} />
                       <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={onSignOut} />
                     </div>
                   </>
@@ -134,31 +225,27 @@ export default function WorkspaceShell({
             </div>
           </header>
 
-          <div className="sw-content">{content}</div>
+          <div className={`sw-content${nav === "messages" ? " sw-content-full" : ""}`}>{content}</div>
         </div>
       </div>
 
-      {/* Mobile nav drawer */}
-      {mobileNav && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 80 }}>
-          <div onClick={() => setMobileNav(false)} style={{ position: "absolute", inset: 0, background: "rgba(23,35,58,.45)" }} aria-hidden />
-          <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "min(280px, 82vw)", background: "var(--card)", boxShadow: "0 20px 60px rgba(23,35,58,.25)", padding: 16, display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}><LogoMark size={26} /><span className="sw-brand-name" style={{ fontSize: 17 }}>AfaqWay</span></span>
-              <button type="button" onClick={() => setMobileNav(false)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 11, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-soft)" }}><X size={18} /></button>
-            </div>
-            {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
-            <div style={{ height: 1, background: "var(--line-soft)", margin: "6px 0" }} />
-            {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />)}
-            {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />)}
-            {navItem("subscription", "Subscription", <CreditCard size={NAV_ICON} />)}
-            {navItem("profile", "Profile", <UserRound size={NAV_ICON} />)}
-            {navItem("settings", "Settings", <SettingsIcon size={NAV_ICON} />)}
-            {navItem("support", "Support", <LifeBuoy size={NAV_ICON} />)}
-            <button type="button" className="sw-navitem danger" onClick={onSignOut}><span className="sw-navico"><LogOut size={NAV_ICON} /></span>Sign out</button>
-          </div>
+      {/* Mobile navigation — header + dismissable dialog (reference structure) */}
+      <MobileNavigationHeader>
+        <div className="sw-brandrow" style={{ height: "auto", marginBottom: 6 }}>
+          <Link href="/" className="sw-brand" aria-label="AfaqWay home">
+            <LogoMark size={24} />
+            <span className="sw-brand-name">AfaqWay</span>
+          </Link>
         </div>
-      )}
+        <div className="sw-group-label">Platform</div>
+        {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
+        <div style={{ height: 1, background: "var(--line-soft)", margin: "6px 0" }} />
+        {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread ? 1 : 0 })}
+        {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />, { badge: unreadNotifs })}
+        {navItem("subscription", "Subscription", <CreditCard size={NAV_ICON} />)}
+        {navItem("support", "Support", <LifeBuoy size={NAV_ICON} />)}
+      </MobileNavigationHeader>
+
     </div>
   );
 }

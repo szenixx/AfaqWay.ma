@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Field } from "@/components/ds";
+import { Field, fieldIcon } from "@/components/ds";
 import { PROGRAMS } from "@/lib/programs/catalog";
 import { recommend } from "@/lib/programs/engine";
 import type { Program, Recommendation, StudentProfile } from "@/lib/programs/types";
@@ -148,7 +148,7 @@ export default function ProgramMatch({ profile, selected, onSelect }: { profile:
         )
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <Field label="Search programs" placeholder="Search by name, field, or university" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Field label="Search programs" icon={fieldIcon("search")} placeholder="Search by name, field, or university" value={query} onChange={(e) => setQuery(e.target.value)} />
           {query.trim() ? (
             searchHits.length === 0
               ? <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-faint)", marginTop: 4 }}>No program matches “{query}”.</div>

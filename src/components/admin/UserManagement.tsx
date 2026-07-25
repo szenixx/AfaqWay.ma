@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Search, Check, X, Users as UsersIcon, Globe } from "lucide-react";
+import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Check, X, Users as UsersIcon, Globe } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
+import { Input, Select, StatCard, fieldIcon } from "@/components/ds";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 type AdminProgram = { name: string; university: string; price: string; source: "catalog" | "custom" };
@@ -13,16 +14,8 @@ type AdminProgram = { name: string; university: string; price: string; source: "
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 
 // Colored stat card (matches the /overview + /wallet dashboard icon style).
-function Stat({ label, value, tone, tint, icon }: { label: string; value: number; tone: string; tint: string; icon: React.ReactNode }) {
-  return (
-    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderTop: `3px solid ${tone}`, borderRadius: 18, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
-      <span style={{ width: 38, height: 38, borderRadius: 14, background: tint, color: tone, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
-      <div>
-        <div style={{ font: "700 22px/26px var(--font-sans)", color: tone }}>{value}</div>
-        <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</div>
-      </div>
-    </div>
-  );
+function Stat({ label, value, tone, icon }: { label: string; value: number; tone: string; tint?: string; icon: React.ReactNode }) {
+  return <StatCard title={label} value={value} accent={tone} icon={icon} style={{ flex: "1 1 0", minWidth: 140 }} />;
 }
 
 // Compact icon control button.
@@ -118,12 +111,13 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       )}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 18 }}>
         {!countryLock && (
-          <select className="af" value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} style={{ height: 40, maxWidth: 200 }}>
-            <option value="all">All countries</option>
-            {COUNTRIES.filter((c) => c.available).map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-          </select>
+          <Select
+            value={countryFilter} onChange={setCountryFilter} icon={fieldIcon("country")} ariaLabel="Filter by country"
+            options={[{ value: "all", label: "All countries" }, ...COUNTRIES.filter((c) => c.available).map((c) => ({ value: c.code, label: c.name }))]}
+            style={{ maxWidth: 220 }} containerStyle={{ minWidth: 200 }}
+          />
         )}
-        <input className="af" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" style={{ flex: "1 1 240px", maxWidth: 360 }} />
+        <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" aria-label="Search users" containerStyle={{ flex: "1 1 240px", maxWidth: 360 }} />
       </div>
 
       {loading ? <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p> : list.length === 0 ? (
@@ -149,10 +143,12 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
                   <td style={td}>{u.email || "—"}</td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</td>
                   <td style={td}>
-                    <select className="af" value={u.plan ?? ""} onChange={(e) => { const v = e.target.value; setConfirm({ title: "Change this user's plan?", body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.", tone: "orange", onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); } }); }} style={{ height: 32, padding: "0 8px", minWidth: 122 }}>
-                      <option value="self_service">Self Service</option>
-                      <option value="full_service">Full Service</option>
-                    </select>
+                    <Select
+                      value={u.plan ?? ""} icon={fieldIcon("plan")} ariaLabel="Change plan"
+                      options={[{ value: "self_service", label: "Self Service" }, { value: "full_service", label: "Full Service" }]}
+                      onChange={(v) => setConfirm({ title: "Change this user's plan?", body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.", tone: "orange", onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); } })}
+                      style={{ minWidth: 168 }}
+                    />
                   </td>
                   <td style={td}>{u.city || "—"}</td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>
@@ -174,9 +170,9 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
 
       {edit && (
         <Modal title="Edit user" onClose={() => setEdit(null)} onSave={saveEdit}>
-          <label style={lbl}>Full name<input className="af" value={edit.full_name ?? ""} onChange={(e) => setEdit({ ...edit, full_name: e.target.value })} /></label>
-          <label style={lbl}>City<input className="af" value={edit.city ?? ""} onChange={(e) => setEdit({ ...edit, city: e.target.value })} /></label>
-          <label style={lbl}>WhatsApp number<input className="af" value={edit.whatsapp_number ?? ""} onChange={(e) => setEdit({ ...edit, whatsapp_number: e.target.value })} /></label>
+          <Input label="Full name" icon={fieldIcon("name")} value={edit.full_name ?? ""} onChange={(e) => setEdit({ ...edit, full_name: e.target.value })} />
+          <Input label="City" icon={fieldIcon("city")} value={edit.city ?? ""} onChange={(e) => setEdit({ ...edit, city: e.target.value })} />
+          <Input label="WhatsApp number" icon={fieldIcon("phone")} value={edit.whatsapp_number ?? ""} onChange={(e) => setEdit({ ...edit, whatsapp_number: e.target.value })} />
         </Modal>
       )}
       {track && (
@@ -271,9 +267,8 @@ function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_nam
 
         {tab === "browse" ? (
           <>
-            <div style={{ position: "relative", marginBottom: 10 }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--ink-faint)" }}><Search size={16} /></span>
-              <input className="af" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search program, university or field" style={{ width: "100%", paddingLeft: 36 }} />
+            <div style={{ marginBottom: 10 }}>
+              <Input icon={fieldIcon("search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search program, university or field" aria-label="Search programs" />
             </div>
             <div style={{ flex: 1, overflowY: "auto", border: "1px solid var(--line-soft)", borderRadius: 12, minHeight: 180 }}>
               {results.map((p) => (
@@ -291,9 +286,9 @@ function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_nam
           </>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <label style={lbl}>Program name<input className="af" value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="e.g. MSc Data Science" /></label>
-            <label style={lbl}>University (optional)<input className="af" value={customUni} onChange={(e) => setCustomUni(e.target.value)} placeholder="e.g. Vilnius University" /></label>
-            <label style={lbl}>Tuition price<input className="af" value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} placeholder="e.g. 4000 €/yr" /></label>
+            <Input label="Program name" icon={fieldIcon("program")} value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="e.g. MSc Data Science" />
+            <Input label="University (optional)" icon={fieldIcon("university")} value={customUni} onChange={(e) => setCustomUni(e.target.value)} placeholder="e.g. Vilnius University" />
+            <Input label="Tuition price" icon={fieldIcon("payment")} value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} placeholder="e.g. 4000 €/yr" />
           </div>
         )}
 
@@ -327,4 +322,3 @@ function Modal({ title, children, onClose, onSave }: { title: string; children: 
 }
 
 const td = { padding: "9px 12px", borderBottom: "1px solid var(--line-soft)", verticalAlign: "middle" } as const;
-const lbl = { display: "flex", flexDirection: "column", gap: 6, font: "500 13px/18px var(--font-sans)", color: "var(--ink)" } as const;

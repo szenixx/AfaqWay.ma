@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import FeaturesDoc from "@/components/pricing/FeaturesDoc";
 import { PLANS, planById, PAY_METHODS, type Plan, type PayMethod } from "@/lib/plans";
-import { uploadUserFile } from "@/lib/r2";
+import { uploadUserFile, deleteUserFile } from "@/lib/storage/client";
 
 /* Pricing & Checkout. Renders its own af-frame-body + af-frame-footer so the
    Back/primary buttons stay pinned to the bottom of the frame on every view.
@@ -212,12 +212,12 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
     if (!file || !plan || !method) return;
     setBusy(true); setError("");
     try {
-      // Receipts upload to Cloudflare R2 (with a Supabase fallback if R2 is unset).
-      const up = await uploadUserFile(file, { fallbackBucket: "receipts", fallbackPrefix: userId, folder: "receipts" });
+      // Receipts upload to Cloudflare R2 through /api/upload.
+      const up = await uploadUserFile(file, { folder: "receipts" });
       const ins = await supabase.from("payments").insert({ user_id: userId, plan: plan.id, amount: plan.price, currency: "MAD", method: method.id, status: "under_review", receipt_path: up.path, reference: pricing.ref ?? null }).select("id").single();
       if (ins.error) {
-        // Insert refused (e.g. the 3-per-6h receipt limit) — remove the orphaned Supabase file (R2 objects expire unused).
-        if (up.storage === "supabase") await supabase.storage.from("receipts").remove([up.path]);
+        // Insert refused (e.g. the 3-per-6h receipt limit) — drop the orphaned object.
+        await deleteUserFile(up.path).catch(() => {});
         throw ins.error;
       }
       setPricing("payment_id", ins.data.id as string);

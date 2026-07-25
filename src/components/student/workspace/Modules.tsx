@@ -6,24 +6,36 @@
 
 import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { uploadUserFile } from "@/lib/r2";
+import { uploadUserFile, fileUrl } from "@/lib/storage/client";
+import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
+import { downloadInvoice } from "@/lib/invoice";
+import { Input, TextArea, Select, fieldIcon, iconForLabel } from "@/components/ds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
   Bell, MessageCircle, ArrowRight, Plus, Check, Pencil, Mail, Phone, MapPin,
   Calendar, CreditCard, UserRound, ChevronRight, Send, LifeBuoy, Compass,
-  TriangleAlert, X, Sparkles, GraduationCap,
+  TriangleAlert, X, Sparkles, GraduationCap, Info, Lock, Wallet,
 } from "lucide-react";
+import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { PAY_METHODS } from "@/lib/plans";
 import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
 import {
   JOURNEY, REQUIRED_DOCS, DOC_LABEL, DOC_TONE, NOTIFICATIONS, RECENT_ACTIVITY,
-  UPCOMING_TASKS, EXPLORE, FAQ, type DocStatus,
+  UPCOMING_TASKS, FAQ, type DocStatus,
 } from "./data";
 import {
   Panel, CardTitle, StatTile, ProgressLine, Pill, EmptyState,
-  BtnPrimary, BtnGhost, StatusGlyph, exploreIcon, DefaultAvatar,
+  BtnPrimary, BtnGhost, StatusGlyph, DefaultAvatar, InfoNotice, IconChip, CompactCard,
 } from "./parts";
+
+/* The approved payment behind the user's subscription. Drives the verified
+   badge, the service information card and the invoice. */
+export type WsPayment = {
+  id: string; method: string; amount: number; currency: string;
+  createdAt: string; reviewedAt: string | null; reference: string | null;
+};
 
 export type WsProfile = {
   fullName: string | null; email: string | null; plan: string | null;
@@ -31,6 +43,8 @@ export type WsProfile = {
   whatsapp: string | null; dob: string | null; program: string | null;
   study: StudyApp | null; academic: AcademicInfo | null;
   avatarUrl: string | null; diplomaField: string; englishLevel: string;
+  /* Active paid subscription — shows the badge on the avatar everywhere. */
+  verified: boolean; payment: WsPayment | null;
 };
 
 const totalTasks = JOURNEY.reduce((s, st) => s + st.tasks.length, 0);
@@ -122,10 +136,7 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
                 { label: "Explore Lithuania", icon: <Compass size={17} />, to: "explore" },
                 { label: "Get support", icon: <LifeBuoy size={17} />, to: "support" },
               ].map((a) => (
-                <button key={a.label} type="button" onClick={() => onNav(a.to)} style={{ display: "flex", flexDirection: "column", gap: 8, padding: "14px 12px", borderRadius: 15, border: "1px solid var(--line)", background: "rgba(255,255,255,.6)", cursor: "pointer", textAlign: "left" }}>
-                  <span style={{ width: 34, height: 34, borderRadius: 11, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}>{a.icon}</span>
-                  <span style={{ font: "600 12.5px/16px var(--font-sans)", color: "var(--ink)" }}>{a.label}</span>
-                </button>
+                <CompactCard key={a.label} icon={a.icon} title={a.label} onClick={() => onNav(a.to)} />
               ))}
             </div>
           </Panel>
@@ -270,39 +281,7 @@ export function Documents({ profile }: { profile: WsProfile }) {
 const iconBtnSt: React.CSSProperties = { width: 36, height: 36, borderRadius: 11, border: "1px solid var(--line)", background: "rgba(255,255,255,.7)", color: "var(--ink-soft)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
 
 /* ── Explore Lithuania ────────────────────────────────────────────────────── */
-export function Explore() {
-  const [open, setOpen] = useState<string>(EXPLORE[0].key);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }} className="sw-explore">
-        {EXPLORE.map((sec) => {
-          const isOpen = open === sec.key;
-          return (
-            <Panel key={sec.key} style={{ cursor: "pointer", outline: isOpen ? "2px solid var(--indigo-line)" : "none" }}>
-              <button type="button" onClick={() => setOpen(isOpen ? "" : sec.key)} style={{ all: "unset", cursor: "pointer", display: "block", width: "100%" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ width: 44, height: 44, borderRadius: 14, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}>{exploreIcon(sec.icon, 21)}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)" }}>{sec.title}</div><div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{sec.blurb}</div></div>
-                  <ChevronRight size={18} color="var(--ink-faint)" style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 160ms" }} />
-                </div>
-              </button>
-              {isOpen && (
-                <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {sec.items.map((it) => (
-                    <div key={it.name} style={{ padding: "10px 12px", borderRadius: 12, background: "var(--subtle)" }}>
-                      <div style={{ font: "600 12.5px/17px var(--font-sans)", color: "var(--ink)" }}>{it.name}</div>
-                      <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{it.note}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+export { default as Explore } from "./explore/ExploreLithuania";
 
 /* ── Notifications ────────────────────────────────────────────────────────── */
 const NOTIF_ICON = { doc: <FileText size={16} />, journey: <Route size={16} />, message: <MessageCircle size={16} />, deadline: <Calendar size={16} />, system: <Bell size={16} /> };
@@ -386,8 +365,20 @@ const SUPPORT_CARDS: { icon: React.ReactNode; title: string; desc: string; cta: 
 /* ── Subscription ─────────────────────────────────────────────────────────── */
 export function Subscription({ profile }: { profile: WsProfile }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  const [invoiceErr, setInvoiceErr] = useState("");
   const p = planById(profile.plan);
   const full = profile.plan === "full_service";
+  const pay = profile.payment;
+  const methodName = pay ? (PAY_METHODS.find((m) => m.id === pay.method)?.name ?? pay.method) : "—";
+  const paidOn = pay ? new Date(pay.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+  async function getInvoice() {
+    setInvoiceBusy(true); setInvoiceErr("");
+    try { await downloadInvoice(); } catch (e) { setInvoiceErr(e instanceof Error ? e.message : "Could not generate the invoice."); }
+    setInvoiceBusy(false);
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">
@@ -396,14 +387,42 @@ export function Subscription({ profile }: { profile: WsProfile }) {
           <div style={{ font: "800 26px/32px var(--font-sans)", color: "var(--ink)", margin: "12px 0 2px", letterSpacing: "-.3px" }}>{p?.name ?? "—"}</div>
           <div style={{ font: "600 15px/22px var(--font-sans)", color: "var(--indigo-600)" }}>{p ? `${p.price.toLocaleString("en-US")} ${p.currency}` : ""}</div>
           <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 8 }}>{p?.tagline}</div>
-          <div style={{ marginTop: 16 }}><BtnPrimary onClick={() => setShowDetails((v) => !v)}><CreditCard size={16} />{showDetails ? "Hide plan details" : "View plan details"}</BtnPrimary></div>
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <BtnPrimary onClick={() => setShowDetails((v) => !v)}><CreditCard size={16} />{showDetails ? "Hide plan details" : "View plan details"}</BtnPrimary>
+            {pay && (
+              <BtnGhost tone="blue" onClick={getInvoice} disabled={invoiceBusy}><Download size={16} />{invoiceBusy ? "Preparing…" : "Download Invoice"}</BtnGhost>
+            )}
+          </div>
+          {invoiceErr && <div style={{ font: "500 12px/17px var(--font-sans)", color: "var(--red)", marginTop: 8 }}>{invoiceErr}</div>}
         </Panel>
-        <Panel>
-          <CardTitle title="Billing" />
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {[["Status", "Active"], ["Billing", "One-time payment"], ["Country", "Lithuania"], ["Started", "This month"], ["Next invoice", "None"]].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid var(--line-soft)", font: "500 13px/18px var(--font-sans)", color: "var(--ink)" }}><span style={{ color: "var(--ink-soft)" }}>{k}</span><b>{v}</b></div>
-            ))}
+
+        {/* Service information — the decorative logo sits behind the content. */}
+        <Panel style={{ position: "relative", overflow: "hidden" }}>
+          <span aria-hidden style={{ position: "absolute", right: -26, bottom: -34, opacity: 0.06, pointerEvents: "none", lineHeight: 0 }}><LogoMark size={210} /></span>
+          <div style={{ position: "relative" }}>
+            <CardTitle title="Service information" sub="Your subscription and how you paid for it" />
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {[
+                ["Status", "Active"],
+                ["Billing", "One-time payment"],
+                ["Destination", profile.study?.country ?? "Lithuania"],
+                ["Payment method", methodName],
+                ["Amount paid", pay ? `${pay.amount.toLocaleString("en-US")} ${pay.currency}` : "—"],
+                ["Paid on", paidOn],
+                ["Next invoice", "None"],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 0", borderBottom: "1px solid var(--line-soft)", font: "500 13px/18px var(--font-sans)", color: "var(--ink)" }}><span style={{ color: "var(--ink-soft)" }}>{k}</span><b>{v}</b></div>
+              ))}
+            </div>
+            {pay && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+                <IconChip tone="green" size={34}><Wallet size={17} /></IconChip>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>Payment reference</div>
+                  <div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)" }}>{pay.reference ?? pay.id.slice(0, 8).toUpperCase()}</div>
+                </div>
+              </div>
+            )}
           </div>
         </Panel>
       </div>
@@ -425,6 +444,7 @@ export function Subscription({ profile }: { profile: WsProfile }) {
 
 /* ── Profile (read-only) ──────────────────────────────────────────────────── */
 export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
+  const avatarUrl = useAvatarUrl(profile.avatarUrl);
   const rows = [
     { label: "Full name", value: profile.fullName || "—", icon: <UserRound size={15} /> },
     { label: "Email", value: profile.email || "—", icon: <Mail size={15} /> },
@@ -439,12 +459,12 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Panel>
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18, borderBottom: "1px solid var(--line-soft)", marginBottom: 6 }}>
-          <DefaultAvatar size={68} src={profile.avatarUrl} />
+          <DefaultAvatar size={68} src={avatarUrl} verified={profile.verified} />
           <div style={{ minWidth: 0 }}>
             <div style={{ font: "800 20px/26px var(--font-sans)", color: "var(--ink)" }}>{profile.fullName || "Student"}</div>
             <div style={{ font: "500 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>ID {profile.profileId} · {planById(profile.plan)?.name ?? "—"}</div>
           </div>
-          <BtnGhost style={{ marginLeft: "auto" }} onClick={() => onNav("settings")}><Pencil size={15} />Edit</BtnGhost>
+          <BtnGhost tone="blue" style={{ marginLeft: "auto" }} onClick={() => onNav("settings")}><Pencil size={15} />Edit</BtnGhost>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 26px" }} className="sw-2col">
           {rows.map((r) => (
@@ -454,7 +474,7 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
             </div>
           ))}
         </div>
-        <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", marginTop: 14 }}>These details come from your onboarding. To change them, use Settings.</div>
+        <InfoNotice icon={<Info size={16} />} style={{ marginTop: 14 }}>These details come from your onboarding. To change them, use Settings.</InfoNotice>
       </Panel>
 
       {/* Personal Academic Information — sits above Study Application (always shown) */}
@@ -473,25 +493,27 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
 
       {/* Study Application — locked; changes go to the admin as a request (always shown) */}
       <Panel>
-        <CardTitle title="Study Application" sub="Set from your application — locked" action={<BtnGhost onClick={() => onNav("settings")}><Pencil size={15} />Request a change</BtnGhost>} />
+        <CardTitle title="Study Application" sub="Set from your application — locked" action={<BtnGhost tone="red" onClick={() => onNav("settings")}><Pencil size={15} />Request a change</BtnGhost>} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
-          <InfoRow label="Program Name" value={st.program} icon={<GraduationCap size={15} />} />
+          <InfoRow label="Program Name" value={st.program} icon={<GraduationCap size={15} />} iconTone="amber" />
           <InfoRow label="Tuition Fees" value={st.tuition} />
           <InfoRow label="City" value={st.city} />
           <InfoRow label="Country" value={st.country} />
           <InfoRow label="Program Language" value={st.language} />
           <InfoRow label="University Name" value={st.university} />
         </div>
-        <div style={{ marginTop: 12, font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", background: "var(--subtle)", borderRadius: 12, padding: "10px 12px" }}>These fields are locked. To change any of them, submit a change request in Settings and our team will review it.</div>
+        <InfoNotice icon={<Lock size={16} />} style={{ marginTop: 12 }}>These fields are locked. To change any of them, submit a change request in Settings and our team will review it.</InfoNotice>
       </Panel>
     </div>
   );
 }
 
-function InfoRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+function InfoRow({ label, value, icon, iconTone }: { label: string; value: string; icon?: React.ReactNode; iconTone?: "blue" | "amber" | "green" | "red" }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--line-soft)" }}>
-      {icon && <span style={{ width: 32, height: 32, borderRadius: 10, flex: "none", background: "var(--subtle)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>}
+      {icon && (iconTone
+        ? <IconChip tone={iconTone}>{icon}</IconChip>
+        : <span style={{ width: 32, height: 32, borderRadius: 10, flex: "none", background: "var(--subtle)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</span>)}
       <div style={{ minWidth: 0 }}>
         <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{label}</div>
         <div style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{value}</div>
@@ -511,6 +533,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
   const [busy, setBusy] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
   const flash = (k: string) => { setSavedKey(k); setTimeout(() => setSavedKey(""), 2200); };
 
@@ -538,8 +561,11 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
     if (!file) return;
     setUploading(true);
     try {
-      const { path } = await uploadUserFile(file, { fallbackBucket: "avatars", fallbackPrefix: `${profile.userId}/avatars`, folder: "avatars" });
+      const { path } = await uploadUserFile(file, { folder: "avatars" });
       await supabase.from("profiles").update({ avatar_path: path }).eq("id", profile.userId);
+      // Publish the new photo platform-wide before the profile reload finishes,
+      // so the top bar and every other avatar update instantly.
+      setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
       await onReload();
     } catch (err) { console.warn("avatar upload failed", err); }
     setUploading(false);
@@ -553,7 +579,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
       <Panel>
         <CardTitle title="Profile photo" sub="Upload a picture — stored securely in your private storage" />
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <DefaultAvatar size={64} src={profile.avatarUrl} />
+          <DefaultAvatar size={64} src={avatarUrl} verified={profile.verified} />
           <div>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickAvatar} />
             <BtnPrimary onClick={() => fileRef.current?.click()} disabled={uploading}><Upload size={16} />{uploading ? "Uploading…" : "Upload photo"}</BtnPrimary>
@@ -588,13 +614,11 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
         <CardTitle title="Academic information" sub="Update your previous field of study and your English level" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
           <Field label="Field of study (previous diploma)" value={diploma} onChange={setDiploma} placeholder="e.g. Economics" />
-          <label style={{ display: "block", marginBottom: 12 }}>
-            <span style={{ display: "block", font: "600 11.5px/16px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 5 }}>English level</span>
-            <select className="af" value={english} onChange={(e) => setEnglish(e.target.value)} style={{ width: "100%", height: 42 }}>
-              <option value="">Choose a level</option>
-              {ENGLISH_LEVELS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
+          <Select
+            label="English level" value={english} onChange={setEnglish} icon={fieldIcon("language")} placeholder="Choose a level"
+            options={ENGLISH_LEVELS.map((o) => ({ value: o.value, label: o.label }))}
+            containerStyle={{ marginBottom: 12 }}
+          />
         </div>
         <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 12 }}>
           <BtnPrimary onClick={saveAcademic} disabled={busy === "academic"}>Save academic info</BtnPrimary>
@@ -605,8 +629,8 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
       <Panel>
         <CardTitle title="Your program" sub="Set by our team, based on your profile and requests" />
         {profile.program ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)" }}>
-            <span style={{ width: 38, height: 38, borderRadius: 12, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={19} /></span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 22, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)" }}>
+            <span style={{ width: 38, height: 38, borderRadius: 999, flex: "none", background: "var(--green-tint)", color: "var(--green)", border: "1px solid var(--green-line)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={19} /></span>
             <div style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{profile.program}</div>
           </div>
         ) : (
@@ -640,7 +664,7 @@ function ProgramChangeCard({ onProgramRequest }: { onProgramRequest: (r: { progr
           <div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)" }}>Request a program change</div>
           <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>Ask our team to switch you to a different program. We review and update your file.</div>
         </div>
-        {!open && <BtnGhost onClick={() => setOpen(true)}><Plus size={15} />New request</BtnGhost>}
+        {!open && <BtnGhost tone="red" onClick={() => setOpen(true)}><Plus size={15} />New request</BtnGhost>}
         {open && <button type="button" onClick={() => setOpen(false)} aria-label="Close" style={{ ...iconBtnSt, flex: "none" }}><X size={16} /></button>}
       </div>
       {open && (
@@ -664,14 +688,11 @@ function ProgramChangeCard({ onProgramRequest }: { onProgramRequest: (r: { progr
   );
 }
 
-function Field({ label, value, onChange, readOnly, textarea, placeholder }: { label: string; value: string; onChange: (v: string) => void; readOnly?: boolean; textarea?: boolean; placeholder?: string }) {
-  const st: React.CSSProperties = { width: "100%", boxSizing: "border-box", borderRadius: 12, border: "1px solid var(--line)", background: readOnly ? "var(--subtle)" : "#fff", padding: "10px 13px", font: "500 13.5px/20px var(--font-sans)", color: "var(--ink)", outlineColor: "var(--indigo-600)", resize: "vertical" };
-  return (
-    <label style={{ display: "block", marginBottom: 12 }}>
-      <span style={{ display: "block", font: "600 11.5px/16px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 5 }}>{label}</span>
-      {textarea
-        ? <textarea value={value} onChange={(e) => onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder} rows={3} style={st} />
-        : <input value={value} onChange={(e) => onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder} style={st} />}
-    </label>
-  );
+/* Thin adapter so this module's value/onChange call sites keep working while
+   rendering the platform Input / TextArea. */
+function Field({ label, value, onChange, readOnly, textarea, placeholder, icon }: { label: string; value: string; onChange: (v: string) => void; readOnly?: boolean; textarea?: boolean; placeholder?: string; icon?: React.ReactNode }) {
+  const common = { label, value, placeholder, readOnly, icon: icon ?? iconForLabel(label), containerStyle: { marginBottom: 12 } };
+  return textarea
+    ? <TextArea {...common} rows={3} onChange={(e) => onChange(e.target.value)} />
+    : <Input {...common} onChange={(e) => onChange(e.target.value)} />;
 }

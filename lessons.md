@@ -43,3 +43,47 @@
   ~26px saturate + inset highlight + soft shadow) floating over a refractive backdrop (gradient +
   two blurred colour blobs on .dash-root). This is the dashboard-only system; do not flatten it.
 - Admin sidebar "Dashboard" is an expandable group → Overview + Wallet (routes /admin/dashboard/*).
+
+## Storage: one gateway, server-side R2 (2026-07-25)
+- ALL uploads go through `uploadUserFile` (`src/lib/storage/client`) → `POST /api/upload`
+  → `src/services/storage.service.ts` → Cloudflare R2. Never call `supabase.storage.upload`
+  again, never write files into the project, never presign in the browser.
+- `src/lib/r2.ts` is server-only (S3 client + credentials). Browser code must import
+  `@/lib/storage/client` instead — importing `@/lib/r2` from a component is a build error.
+- Keys are `users/<ownerId>/<folder>/<uuid>.<ext>`; access control is a prefix check, so an
+  admin sending a file to a student must upload with `ownerId: <studentId>` or the student
+  cannot read it back. See docs/storage.md.
+
+## One control set for the whole platform (2026-07-25)
+- Inputs, dropdowns, toggles and checkboxes come from `@/components/ds`
+  (`Input`, `TextArea`, `Select`, `Toggle`, `Checkbox`) and are styled once in
+  `src/app/ds.css` (`.af`, `.af-select`, `.af-toggle`, `.af-check`). Never hand-roll
+  a field, a `<select>`, a switch or a checkbox again — and never add a second variant.
+- Every field carries a leading icon from `fieldIcon(name)` / `iconForLabel(label)`.
+  One concept = one glyph, 17px, platform indigo.
+- Cards have five roles (`FeatureCard`, `InfoCard`, `CompactCard`, `StatCard`,
+  `ActionCard`). Metric tiles everywhere render `StatCard`.
+- Deliberate exceptions, do not "fix" them: the chat composer (`.af-composer`, the
+  capsule IS the field) and the admin dashboard glass system (`.dash-*`).
+- Reference: docs/design-system.md.
+
+## Chat = one shared component set (2026-07-25)
+- Admin and student chats share `src/components/chat/parts.tsx` and the `.chat-*` CSS.
+  Never restyle one side alone, change the shared part.
+- `/admin` already zooms 110% via `.adm-root`; do NOT add `.chat-zoom` there (it compounds
+  to 121%). `.chat-zoom` is for the student workspace chat only.
+- `StudentProfileModal` shows only real profile data. Where the platform has no source
+  (offers received, deadlines), it says "Not tracked yet" instead of inventing a number.
+
+## Student sidebar mirrors the admin one (2026-07-25)
+- The workspace sidebar follows the shadcn "sidebar" geometry ported onto our tokens:
+  256px expanded / 60px icon-only, 34px rows, 8px radius, flat tint on hover+active,
+  group label fades out when collapsed, tooltips on the right. Toggle = PanelLeft button
+  or ⌘/Ctrl+B; state persists in the `sidebar_state` cookie.
+  the brand row — the same control and placement as `/admin`. It no longer hides entirely,
+  so there is no "reopen" button in the top bar.
+- Nav states: default transparent/neutral · hover light indigo wash + indigo ink + 1px lift ·
+  active = the single `.sw-navpill` element that SLIDES between items (measured from the
+  active button) with a left accent bar, indigo ink and 600 weight. Never two active items.
+- Sidebar illustrations live at `public/document/{1,2,3}.png` (cache-busted with `?v=`).
+  Bump the `?v=` in SidebarCarousel whenever they are replaced.

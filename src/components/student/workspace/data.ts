@@ -206,3 +206,10 @@ export const FAQ: { q: string; a: string }[] = [
   { q: "Can I switch my program later?", a: "Yes. Go to Settings, request a program change, and our team updates your file." },
   { q: "What's the difference between the two plans?", a: "Self-Service, you complete each step and we review it. Full-Service, a dedicated advisor drives the whole file for you." },
 ];
+
+/* Completion of the journey, shared by the Overview module and the sidebar
+   progress indicator so both always agree. */
+export const JOURNEY_PCT = Math.round(
+  (JOURNEY.reduce((s, st) => s + st.tasks.filter((t) => t.done).length, 0) /
+    JOURNEY.reduce((s, st) => s + st.tasks.length, 0)) * 100,
+);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Card, Icon, Flag } from "@/components/ds";
+import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon } from "@/components/ds";
 import OnboardingHeroPanel, { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import ProgramMatch from "@/components/programs/ProgramMatch";
 import PricingCheckout from "@/components/pricing/PricingCheckout";
@@ -184,17 +184,22 @@ function SaveIndicator({ state }: { state: "idle" | "saving" | "saved" | "error"
 
 function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { field: FieldDef; value: string; stepValues: Record<string, string>; onChange: (v: string) => void; onFlush: () => void; invalid?: boolean }) {
   if (field.kind === "text") {
-    return <Field label={field.label} hint={field.hint} placeholder={field.placeholder} required={field.required} inputMode={field.inputMode} maxLength={field.maxLength} value={value} aria-invalid={invalid || undefined} onChange={(e) => onChange(sanitize(field, e.target.value))} onBlur={onFlush} />;
+    return <Field label={field.label} icon={iconForLabel(field.label)} hint={field.hint} placeholder={field.placeholder} required={field.required} inputMode={field.inputMode} maxLength={field.maxLength} value={value} aria-invalid={invalid || undefined} onChange={(e) => onChange(sanitize(field, e.target.value))} onBlur={onFlush} />;
   }
   if (field.kind === "select") {
     return (
-      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ font: "500 13px/20px var(--font-sans)", color: "var(--ink)" }}>{field.label}{field.hint && <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}> · {field.hint}</span>}</span>
-        <select className="af" value={value} aria-invalid={invalid || undefined} onChange={(e) => onChange(e.target.value)} onBlur={onFlush}>
-          <option value="" disabled>{field.placeholder ?? "Select"}</option>
-          {field.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </label>
+      <div>
+        <span className="af-label">{field.label}{field.hint && <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}> · {field.hint}</span>}</span>
+        <Select
+          value={value}
+          onChange={(v) => { onChange(v); onFlush(); }}
+          options={(field.options ?? []).map((o) => ({ value: o.value, label: o.label }))}
+          icon={iconForLabel(field.label)}
+          placeholder={field.placeholder ?? "Select"}
+          ariaLabel={field.label}
+          error={invalid ? " " : undefined}
+        />
+      </div>
     );
   }
   if (field.kind === "multiselect") {
@@ -346,12 +351,9 @@ function ageFromDob(dob: string): number | null {
 }
 
 function LegalCheck({ checked, onToggle, onRead, label, invalid }: { checked: boolean; onToggle: () => void; onRead: () => void; label: string; invalid?: boolean }) {
-  const stroke = invalid ? "2px solid var(--red)" : "2px solid var(--ink)";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 9, textAlign: "left" }}>
-      <button type="button" role="checkbox" aria-checked={checked} onClick={onToggle} style={{ flex: "none", width: 18, height: 18, borderRadius: 5, border: checked ? "none" : stroke, background: checked ? "var(--indigo-600)" : (invalid ? "var(--red-tint)" : "transparent"), cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: invalid ? "0 0 0 3px var(--red-tint)" : "none" }}>
-        {checked && <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>}
-      </button>
+      <Checkbox checked={checked} invalid={invalid} onChange={onToggle} ariaLabel={label} />
       <span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>
         {label}{" "}
         <button type="button" onClick={onRead} style={{ background: "none", border: "none", cursor: "pointer", font: "600 12.5px/18px var(--font-sans)", color: "var(--indigo-600)", padding: 0, textDecoration: "underline" }}>Read</button>
@@ -575,10 +577,10 @@ export default function ProfileSetup() {
               <div style={eyebrow}>Personal details</div>
               <div style={sectionTitle}>Who you are</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <Field label="Full name" hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", e.target.value)} onBlur={flushSave} placeholder="Your full name" />
+                <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", e.target.value)} onBlur={flushSave} placeholder="Your full name" />
                 <div className="af-row-2">
-                  <Field label="Date of birth" type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
-                  <Field label="City you live in" required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} onChange={(e) => setP("city", e.target.value)} onBlur={flushSave} placeholder="e.g. Casablanca" />
+                  <Field label="Date of birth" icon={fieldIcon("dob")} type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
+                  <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} onChange={(e) => setP("city", e.target.value)} onBlur={flushSave} placeholder="e.g. Casablanca" />
                 </div>
                 <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <span style={{ font: "500 13px/20px var(--font-sans)", color: "var(--ink)" }}>WhatsApp number</span>

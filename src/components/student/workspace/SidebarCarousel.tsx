@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 
 // ?v bumped whenever the images are replaced, so browsers don't serve a stale cache.
-const IMAGES = ["/document/1.png?v=3", "/document/2.png?v=3", "/document/3.png?v=3"];
+const IMAGES = ["/document/1.png?v=4", "/document/2.png?v=4", "/document/3.png?v=4"];
 const INTERVAL = 22000;
 
 export default function SidebarCarousel() {
