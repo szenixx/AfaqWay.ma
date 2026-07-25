@@ -8,8 +8,10 @@ import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
+import { regenerateAvatar, removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
+import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, fieldIcon, iconForLabel } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, fieldIcon, iconForLabel } from "@/components/ds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
@@ -27,7 +29,7 @@ import {
 } from "./data";
 import {
   Panel, CardTitle, StatTile, ProgressLine, Pill, EmptyState,
-  BtnPrimary, BtnGhost, StatusGlyph, DefaultAvatar, InfoNotice, IconChip, CompactCard,
+  BtnPrimary, BtnGhost, StatusGlyph, InfoNotice, IconChip, CompactCard,
 } from "./parts";
 
 /* The approved payment behind the user's subscription. Drives the verified
@@ -43,6 +45,8 @@ export type WsProfile = {
   whatsapp: string | null; dob: string | null; program: string | null;
   study: StudyApp | null; academic: AcademicInfo | null;
   avatarUrl: string | null; diplomaField: string; englishLevel: string;
+  /* Avatar identity: uploaded photo wins, otherwise the generated avatar. */
+  gender: string | null; avatarSeed: string | null; avatarStyle: string | null; avatarType: string | null;
   /* Active paid subscription — shows the badge on the avatar everywhere. */
   verified: boolean; payment: WsPayment | null;
 };
@@ -459,7 +463,7 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Panel>
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18, borderBottom: "1px solid var(--line-soft)", marginBottom: 6 }}>
-          <DefaultAvatar size={68} src={avatarUrl} verified={profile.verified} />
+          <UserAvatar size={64} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: profile.avatarSeed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
           <div style={{ minWidth: 0 }}>
             <div style={{ font: "800 20px/26px var(--font-sans)", color: "var(--ink)" }}>{profile.fullName || "Student"}</div>
             <div style={{ font: "500 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>ID {profile.profileId} · {planById(profile.plan)?.name ?? "—"}</div>
@@ -532,6 +536,8 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
   const [savedKey, setSavedKey] = useState("");
   const [busy, setBusy] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [seed, setSeed] = useState(profile.avatarSeed);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
@@ -559,31 +565,60 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
   async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
+    setUploading(true); setProgress(10);
     try {
-      const { path } = await uploadUserFile(file, { folder: "avatars" });
-      await supabase.from("profiles").update({ avatar_path: path }).eq("id", profile.userId);
+      // Cropped square and compressed in the browser before it ever leaves the device.
+      const prepared = await squareCompress(file);
+      setProgress(45);
+      const { path } = await uploadUserFile(prepared, { folder: "avatars" });
+      setProgress(80);
+      await setUploadedPhoto(profile.userId, path);
       // Publish the new photo platform-wide before the profile reload finishes,
       // so the top bar and every other avatar update instantly.
       setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
+      setProgress(100);
       await onReload();
     } catch (err) { console.warn("avatar upload failed", err); }
-    setUploading(false);
+    setUploading(false); setProgress(0);
     if (fileRef.current) fileRef.current.value = "";
+  }
+  async function regenerate() {
+    const next = await regenerateAvatar(profile.userId);
+    setSeed(next);
+    setAvatarUrl(null); // back to the generated avatar, no reload needed
+    await onReload();
+  }
+  async function removePhoto() {
+    await removeUploadedPhoto(profile.userId);
+    setAvatarUrl(null);
+    await onReload();
   }
   const SavedTag = ({ k }: { k: string }) => savedKey === k ? <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "600 12.5px/1 var(--font-sans)", color: "var(--green)" }}><Check size={15} />Saved</span> : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Profile photo */}
+      {/* Profile picture: uploaded photo, or the generated avatar. */}
       <Panel>
-        <CardTitle title="Profile photo" sub="Upload a picture — stored securely in your private storage" />
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <DefaultAvatar size={64} src={avatarUrl} verified={profile.verified} />
-          <div>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onPickAvatar} />
-            <BtnPrimary onClick={() => fileRef.current?.click()} disabled={uploading}><Upload size={16} />{uploading ? "Uploading…" : "Upload photo"}</BtnPrimary>
-            <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>JPG or PNG. Replaces your current photo.</div>
+        <CardTitle title="Profile picture" sub="Your photo replaces the generated avatar everywhere on the platform" />
+        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+          <UserAvatar size={96} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: seed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" style={{ display: "none" }} onChange={onPickAvatar} />
+              <BtnPrimary onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <Upload size={16} />{uploading ? `Uploading ${progress}%` : "Upload photo"}
+              </BtnPrimary>
+              <BtnGhost tone="blue" onClick={regenerate} disabled={uploading}><Sparkles size={15} />Generate new avatar</BtnGhost>
+              {avatarUrl && <BtnGhost tone="red" onClick={removePhoto} disabled={uploading}><X size={15} />Remove photo</BtnGhost>}
+            </div>
+            {uploading && (
+              <span style={{ display: "block", height: 6, borderRadius: 999, background: "var(--subtle)", overflow: "hidden", maxWidth: 260 }}>
+                <span style={{ display: "block", height: "100%", width: `${progress}%`, background: "var(--indigo-600)", borderRadius: 999, transition: "width 200ms var(--ease)" }} />
+              </span>
+            )}
+            <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)" }}>
+              PNG, JPG or WEBP. Images are cropped square and compressed before upload.
+            </div>
           </div>
         </div>
       </Panel>

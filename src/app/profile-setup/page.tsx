@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon } from "@/components/ds";
+import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon, Loader } from "@/components/ds";
+import { Confetti } from "@/components/ds/Confetti";
+import { GENDER_OPTIONS, type Gender } from "@/lib/avatarIdentity";
+import { ensureGeneratedAvatar } from "@/lib/avatarProfile";
 import OnboardingHeroPanel, { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import ProgramMatch from "@/components/programs/ProgramMatch";
 import PricingCheckout from "@/components/pricing/PricingCheckout";
@@ -22,6 +25,7 @@ import { supabase } from "@/lib/supabase/client";
 
 type Personal = {
   full_name: string;
+  gender: string;
   date_of_birth: string;
   city: string;
   whatsapp_country_code: string;
@@ -29,7 +33,7 @@ type Personal = {
   destination_country: string;
   has_passport: string; // yes | no
 };
-const EMPTY_P: Personal = { full_name: "", date_of_birth: "", city: "", whatsapp_country_code: "+212", whatsapp_number: "", destination_country: "", has_passport: "" };
+const EMPTY_P: Personal = { full_name: "", gender: "", date_of_birth: "", city: "", whatsapp_country_code: "+212", whatsapp_number: "", destination_country: "", has_passport: "" };
 type Cfa = Record<string, Record<string, string>>;
 
 // Longer per-step descriptions for the desktop hero panel (keyed by step label).
@@ -46,14 +50,14 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 
 function personalFromRow(r: Record<string, unknown>): Personal {
   return {
-    full_name: str(r.full_name), date_of_birth: str(r.date_of_birth), city: str(r.city),
+    full_name: str(r.full_name), gender: str(r.gender), date_of_birth: str(r.date_of_birth), city: str(r.city),
     whatsapp_country_code: str(r.whatsapp_country_code) || "+212", whatsapp_number: str(r.whatsapp_number),
     destination_country: str(r.destination_country), has_passport: str(r.has_passport),
   };
 }
 function personalPatch(p: Personal) {
   return {
-    full_name: p.full_name || null, date_of_birth: p.date_of_birth || null, city: p.city || null,
+    full_name: p.full_name || null, gender: p.gender || null, date_of_birth: p.date_of_birth || null, city: p.city || null,
     whatsapp_country_code: p.whatsapp_country_code || null, whatsapp_number: p.whatsapp_number || null,
     destination_country: p.destination_country || null, has_passport: p.has_passport || null,
   };
@@ -89,7 +93,7 @@ function cfaToJson(flow: CountryFlow | null, cfa: Cfa) {
 const hasCfaData = (cfa: Cfa) => Object.values(cfa).some((s) => Object.values(s).some((v) => v !== ""));
 
 function validatePersonal(p: Personal): boolean {
-  if (!p.full_name.trim() || !p.date_of_birth || !p.city.trim()) return false;
+  if (!p.full_name.trim() || !p.gender || !p.date_of_birth || !p.city.trim()) return false;
   if (!/^\d{6,15}$/.test(p.whatsapp_number.replace(/\s/g, ""))) return false;
   const c = countryByCode(p.destination_country);
   return !!(c && c.available);
@@ -177,7 +181,7 @@ function Segmented({ options, value, onChange }: { options: { value: string; lab
 
 function SaveIndicator({ state }: { state: "idle" | "saving" | "saved" | "error" }) {
   if (state === "idle") return <span />;
-  if (state === "saving") return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}><span style={{ width: 12, height: 12, borderRadius: 999, border: "2px solid var(--ink-faint)", borderTopColor: "transparent", animation: "afSpin .7s linear infinite", display: "inline-block" }} />Saving…</span>;
+  if (state === "saving") return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}><Loader size={16} />Saving…</span>;
   if (state === "saved") return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}><Icon name="check" size={14} style={{ color: "var(--green)" }} />Saved just now</span>;
   return <span style={{ font: "400 13px/20px var(--font-sans)", color: "var(--red)" }}>{"Couldn’t save, retrying"}</span>;
 }
@@ -433,7 +437,14 @@ export default function ProfileSetup() {
     const id = uidRef.current;
     if (!id) return;
     setSaveState("saving");
-    const { error } = await supabase.from("profiles").upsert({ id, ...personalPatch(pRef.current), country_flow_answers: cfaToJson(getCountryFlow(pRef.current.destination_country), cRef.current) });
+    const patch = { id, ...personalPatch(pRef.current), country_flow_answers: cfaToJson(getCountryFlow(pRef.current.destination_country), cRef.current) };
+    let { error } = await supabase.from("profiles").upsert(patch);
+    if (error && /gender/i.test(error.message)) {
+      // The avatar migration has not been applied yet: save everything else.
+      const { gender: _gender, ...withoutGender } = patch;
+      void _gender;
+      ({ error } = await supabase.from("profiles").upsert(withoutGender));
+    }
     if (error) { if (retry) { setTimeout(() => save(false), 1000); return; } setSaveState("error"); return; }
     setSaveState("saved");
   }
@@ -480,7 +491,11 @@ export default function ProfileSetup() {
   }
   async function finish() {
     const id = uidRef.current;
-    if (id) await supabase.from("profiles").update({ onboarding_completed_at: new Date().toISOString(), onboarding_phase: "country_flow", onboarding_step: flow?.steps.length ?? 1 }).eq("id", id);
+    if (id) {
+      await supabase.from("profiles").update({ onboarding_completed_at: new Date().toISOString(), onboarding_phase: "country_flow", onboarding_step: flow?.steps.length ?? 1 }).eq("id", id);
+      // Nobody leaves onboarding without an avatar.
+      await ensureGeneratedAvatar(id, (personal.gender || "prefer_not_to_say") as Gender);
+    }
     router.replace("/dashboard");
   }
 
@@ -577,7 +592,16 @@ export default function ProfileSetup() {
               <div style={eyebrow}>Personal details</div>
               <div style={sectionTitle}>Who you are</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", e.target.value)} onBlur={flushSave} placeholder="Your full name" />
+                <div className="af-row-name">
+                  <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", e.target.value)} onBlur={flushSave} placeholder="Your full name" />
+                  <Select
+                    label="Gender" icon={fieldIcon("gender")} value={personal.gender}
+                    onChange={(v) => { setP("gender", v); flushSave(); }}
+                    options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))}
+                    placeholder="Select"
+                    error={showErrors && !personal.gender ? " " : undefined}
+                  />
+                </div>
                 <div className="af-row-2">
                   <Field label="Date of birth" icon={fieldIcon("dob")} type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
                   <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} onChange={(e) => setP("city", e.target.value)} onBlur={flushSave} placeholder="e.g. Casablanca" />
@@ -678,7 +702,11 @@ export default function ProfileSetup() {
                       <span style={{ width: 54, height: 54, borderRadius: 999, flex: "none", background: "var(--green-tint)", border: "1px solid var(--green-line)", color: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", animation: "afNodePop .5s cubic-bezier(.4,0,.2,1) both" }}>
                         <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
                       </span>
-                      <h2 style={{ font: "700 21px/27px var(--font-sans)", color: "var(--ink)", margin: "10px 0 0" }}>Congratulations!</h2>
+                      {/* Celebration fires twice, behind the heading only. */}
+                      <span style={{ position: "relative", display: "block" }}>
+                        <Confetti bursts={2} />
+                        <h2 style={{ position: "relative", font: "700 21px/27px var(--font-sans)", color: "var(--ink)", margin: "10px 0 0" }}>Congratulations!</h2>
+                      </span>
                       <p style={{ font: "600 13.5px/20px var(--font-sans)", color: "var(--indigo-600)", margin: "4px 0 0" }}>Good luck in your roadmap.</p>
 
                       {/* Task 6: colorless, extra-blurred transparent glass card */}

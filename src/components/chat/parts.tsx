@@ -2,7 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { Download, Paperclip, Reply } from "lucide-react";
-import { DefaultAvatar } from "@/components/ds/DefaultAvatar";
+import { UserAvatar, type UserAvatarUser, Loader } from "@/components/ds";
 import { parseAsk } from "@/lib/chat";
 
 /* Pieces shared by the admin console chat and the student workspace chat, so
@@ -11,12 +11,14 @@ import { parseAsk } from "@/lib/chat";
 
 /* ── Avatar with presence ─────────────────────────────────────────────────── */
 
-export function ChatAvatar({ size = 38, src, online, verified }: { size?: number; src?: string | null; online?: boolean; verified?: boolean }) {
+export function ChatAvatar({ size = 38, src, online, verified, user }: {
+  size?: number; src?: string | null; online?: boolean; verified?: boolean; user?: UserAvatarUser | null;
+}) {
   return (
-    <span className="chat-avatar">
-      <DefaultAvatar size={size} src={src} verified={verified} />
-      {online !== undefined && <span className={`chat-presence${online ? " online" : ""}`} title={online ? "Online" : "Offline"} />}
-    </span>
+    <UserAvatar
+      size={size} showStatus={online !== undefined}
+      user={{ ...(user ?? {}), avatarUrl: src ?? user?.avatarUrl ?? null, online, verified }}
+    />
   );
 }
 
@@ -140,7 +142,7 @@ export function UploadingBubble({ name }: { name: string }) {
   return (
     <div className="chat-row mine">
       <div className="chat-bubble" style={{ display: "flex", alignItems: "center", gap: 9 }}>
-        <span aria-hidden style={{ width: 14, height: 14, flex: "none", border: "2px solid rgba(255,255,255,.45)", borderTopColor: "#fff", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />
+        <Loader size={16} onDark />
         <span className="chat-text" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uploading {name}…</span>
       </div>
     </div>

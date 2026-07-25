@@ -4,6 +4,12 @@ export { Input, TextArea, Select, Toggle, Checkbox, type SelectOption } from "./
 export { fieldIcon, iconForLabel, FIELD_ICON_SIZE, type FieldIconName } from "./fieldIcons";
 export { Card } from "./Card";
 export { FeatureCard, InfoCard, CompactCard, StatCard, ActionCard } from "./Cards";
+export { MetricCard, trendBadge, type MetricTone } from "./MetricCard";
+export { UserAvatar, type UserAvatarUser } from "./UserAvatar";
+export { UniversityBrand } from "./UniversityBrand";
+export { AnimatedModal } from "./AnimatedModal";
+export { Loader } from "./Loader";
+export { Confetti } from "./Confetti";
 export { Divider } from "./Divider";
 export { Icon, ICON_NAMES, type IconName } from "./Icon";
 export { GoogleIcon } from "./GoogleIcon";

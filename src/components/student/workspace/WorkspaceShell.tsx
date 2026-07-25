@@ -9,16 +9,17 @@ import Link from "next/link";
 import {
   LayoutDashboard, Route, FileText, Compass, Bell, MessageCircle, LifeBuoy,
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import { MobileNavigationHeader } from "./MobileNavigationHeader";
 import RightPanel from "./RightPanel";
+import Schedule from "./schedule/Schedule";
 import StudentChat from "@/components/student/StudentChat";
 import { planById } from "@/lib/plans";
 import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
-import { DefaultAvatar } from "./parts";
+import { UserAvatar } from "@/components/ds";
 import SidebarCarousel from "./SidebarCarousel";
 import {
   Overview, Journey, Documents, Explore, Notifications, Support,
@@ -27,13 +28,14 @@ import {
 
 export type Nav =
   | "overview" | "journey" | "documents" | "explore"
-  | "messages" | "notifications" | "support" | "subscription" | "profile" | "settings";
+  | "messages" | "notifications" | "support" | "subscription" | "profile" | "settings" | "schedule";
 
 const NAV_ICON = 20;
 const PRIMARY_NAV: { id: Nav; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard size={NAV_ICON} /> },
   { id: "journey", label: "My Journey", icon: <Route size={NAV_ICON} /> },
   { id: "documents", label: "Documents", icon: <FileText size={NAV_ICON} /> },
+  { id: "schedule", label: "Schedule", icon: <CalendarDays size={NAV_ICON} /> },
   { id: "explore", label: "Explore Lithuania", icon: <Compass size={NAV_ICON} /> },
 ];
 
@@ -41,7 +43,7 @@ const firstName = (n: string | null) => (n ? n.trim().split(" ")[0] : "there");
 
 /* Title shown next to the back/forward buttons in the top bar. */
 const MODULE_TITLE: Record<Nav, string> = {
-  overview: "Overview", journey: "My Journey", documents: "Documents", explore: "Explore Lithuania",
+  overview: "Overview", journey: "My Journey", documents: "Documents", explore: "Explore Lithuania", schedule: "Schedule",
   messages: "Messages", notifications: "Notifications", support: "Support",
   subscription: "Subscription", profile: "Profile", settings: "Settings",
 };
@@ -135,6 +137,7 @@ export default function WorkspaceShell({
       // Journey and Documents share the reusable right panel.
       case "journey": return withPanel(<Journey profile={profile} />, "journey");
       case "documents": return withPanel(<Documents profile={profile} />, "documents");
+      case "schedule": return <Schedule profile={profile} onNav={(n) => navigate(n as Nav)} />;
       case "explore": return <Explore />;
       case "notifications": return <Notifications />;
       case "support": return <Support onNav={(n) => navigate(n as Nav)} />;
@@ -197,7 +200,7 @@ export default function WorkspaceShell({
               </button>
               <div style={{ position: "relative" }}>
                 <button type="button" className="sw-profile" onClick={() => setMenu((v) => !v)} aria-label="Account menu">
-                  <DefaultAvatar size={36} src={avatarUrl} verified={profile.verified} />
+                  <UserAvatar size={40} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: profile.avatarSeed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
                   <span className="sw-profile-meta">
                     <span className="sw-profile-name">{firstName(profile.fullName)}</span>
                     <span className="sw-profile-email">{profile.email || profile.profileId}</span>

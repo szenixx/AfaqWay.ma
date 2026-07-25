@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, type ReactNode, useState } from "react";
+import { Loader } from "./Loader";
 
 /* Ported from design/AfaqWay-Design-System/components/buttons/Button.jsx,
    with TS types + loading + fullWidth + type props for form use. */
@@ -68,7 +69,7 @@ export function Button({
       }}
     >
       {loading ? (
-        <span style={{ width: 16, height: 16, borderRadius: 999, border: "2px solid currentColor", borderTopColor: "transparent", animation: "afSpin .7s linear infinite", display: "inline-block", flex: "none" }} />
+        <Loader size={16} />
       ) : (
         icon
       )}

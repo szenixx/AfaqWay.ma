@@ -1,22 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Check, X, Users as UsersIcon, Globe } from "lucide-react";
+import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Check, X, Users, UserCheck, UserX } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { Loader } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
-import { Input, Select, StatCard, fieldIcon } from "@/components/ds";
+import { Input, Select, MetricCard, trendBadge, fieldIcon } from "@/components/ds";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
+type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
 type AdminProgram = { name: string; university: string; price: string; source: "catalog" | "custom" };
 
-const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
+/* Session-stable clock for the 30/60-day trend windows: the comparison must
+   not shift between renders, and it keeps render pure. */
+const NOW = Date.now();
 
-// Colored stat card (matches the /overview + /wallet dashboard icon style).
-function Stat({ label, value, tone, icon }: { label: string; value: number; tone: string; tint?: string; icon: React.ReactNode }) {
-  return <StatCard title={label} value={value} accent={tone} icon={icon} style={{ flex: "1 1 0", minWidth: 140 }} />;
-}
+const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 
 // Compact icon control button.
 const ctrl = { width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", color: "var(--ink-soft)", cursor: "pointer", textDecoration: "none", flex: "none" } as const;
@@ -29,6 +30,8 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
   const planLock = initialPlan ?? null;
   const countryLock = initialCountry ?? null;
   const [rows, setRows] = useState<U[]>([]);
+  const [allProfiles, setAllProfiles] = useState<PRow[]>([]);
+  const [year, setYear] = useState(String(new Date(NOW).getFullYear()));
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [edit, setEdit] = useState<U | null>(null);
@@ -41,6 +44,10 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
     setLoading(true);
     const { data } = await supabase.from("profiles").select("id, user_number, full_name, email, city, plan, banned, whatsapp_country_code, whatsapp_number, destination_country").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
     setRows((data ?? []) as U[]);
+    // Statistics cover every registered profile, not only the paid users listed
+    // in the table, so they are fetched alongside it.
+    const { data: everyone } = await supabase.from("profiles").select("id, banned, created_at, plan_status, plan_activated_at");
+    setAllProfiles((everyone ?? []) as PRow[]);
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -50,6 +57,34 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
     rows.forEach((r) => { const c = r.destination_country || "—"; byCountry[c] = (byCountry[c] ?? 0) + 1; });
     return { total: rows.length, countries: Object.keys(byCountry).filter((c) => c !== "—").length, banned: rows.filter((r) => r.banned).length, byCountry };
   }, [rows]);
+
+  const cards = useMemo(() => {
+    const now = NOW, day = 86_400_000;
+    const since = (d: number) => now - d * day;
+    const inRange = (t: string | null | undefined, from: number, to: number) => {
+      const v = t ? new Date(t).getTime() : 0;
+      return v >= from && v < to;
+    };
+    const total = allProfiles.length;
+    const newThisMonth = allProfiles.filter((p) => inRange(p.created_at, since(30), now)).length;
+    const newPrevMonth = allProfiles.filter((p) => inRange(p.created_at, since(60), since(30))).length;
+
+    const activeInYear = allProfiles.filter((p) => p.plan_status === "active" && new Date(p.plan_activated_at ?? p.created_at ?? 0).getFullYear() === Number(year)).length;
+    const activePrevYear = allProfiles.filter((p) => p.plan_status === "active" && new Date(p.plan_activated_at ?? p.created_at ?? 0).getFullYear() === Number(year) - 1).length;
+
+    const banned = allProfiles.filter((p) => p.banned).length;
+    const bannedShare = total ? Math.round((banned / total) * 100) : 0;
+
+    const years = [...new Set(allProfiles.map((p) => new Date(p.plan_activated_at ?? p.created_at ?? 0).getFullYear()).filter((y) => y > 2000))]
+      .sort((a, b) => b - a).map((y) => ({ value: String(y), label: String(y) }));
+
+    return {
+      total, banned, bannedShare, activeInYear,
+      growth: trendBadge(newThisMonth, newPrevMonth),
+      activeGrowth: trendBadge(activeInYear, activePrevYear),
+      years: years.length ? years : [{ value: year, label: year }],
+    };
+  }, [allProfiles, year]);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,10 +130,24 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       </div>
       {!planLock && (
         <>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-            <Stat label="Paid users" value={stats.total} tone="var(--indigo-600)" tint="var(--indigo-tint)" icon={<UsersIcon size={19} />} />
-            <Stat label="Countries picked" value={stats.countries} tone="var(--green)" tint="var(--green-tint)" icon={<Globe size={19} />} />
-            <Stat label="Banned" value={stats.banned} tone="var(--red)" tint="var(--red-tint)" icon={<Ban size={19} />} />
+          <div className="mc-grid">
+            <MetricCard
+              tone="blue" title="Total Users" subtitle="All registered users on the platform"
+              value={cards.total} icon={<Users size={24} strokeWidth={1.6} />} badge={cards.growth}
+              menu={[{ label: "Refresh statistics", onSelect: () => { void load(); } }]}
+            />
+            <MetricCard
+              tone="green" title="Active Users" subtitle="Users active during the selected year"
+              value={cards.activeInYear} icon={<UserCheck size={24} strokeWidth={1.6} />} badge={cards.activeGrowth}
+              control={<Select value={year} onChange={setYear} options={cards.years} ariaLabel="Year" />}
+              menu={[{ label: "Refresh statistics", onSelect: () => { void load(); } }]}
+            />
+            <MetricCard
+              tone="red" title="Banned Users" subtitle="Users permanently or temporarily banned"
+              value={cards.banned} icon={<UserX size={24} strokeWidth={1.6} />}
+              badge={cards.banned ? { value: `${cards.bannedShare}% of users`, dir: "down" } : undefined}
+              menu={[{ label: "Refresh statistics", onSelect: () => { void load(); } }]}
+            />
           </div>
           {Object.keys(stats.byCountry).length > 0 && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
@@ -120,7 +169,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
         <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" aria-label="Search users" containerStyle={{ flex: "1 1 240px", maxWidth: 360 }} />
       </div>
 
-      {loading ? <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p> : list.length === 0 ? (
+      {loading ? <Loader block /> : list.length === 0 ? (
         <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No paid users yet. They appear here once a payment is approved.</div>
       ) : (
         <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)" }}>

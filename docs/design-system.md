@@ -130,3 +130,47 @@ onboarding answers, stage and progress from the journey source, document counts
 from the document source, and the calendar's upcoming event from their latest
 conversation update. Tablet narrows the panel to 34%; below 1024px it moves
 under the main content.
+
+## Schedule module
+
+`src/components/student/workspace/schedule/` + `src/lib/schedule.ts`.
+Calendar in the centre column, right panel = Quick add · Pinned notes ·
+the shared `JourneySnapshotCard` (reused, not redesigned).
+
+Event kinds and colours: note (purple), official (grey, read-only), deadline
+(green), interview (amber), reminder (red), appointment (blue). Students may
+only edit what they created; advisor and official events are read-only to them.
+
+Official dates are generated per year from Lithuanian public holidays that close
+universities and MIGRIS, plus the intake and residence-permit milestones — no
+unrelated national observances.
+
+**WhatsApp reminders are architecture only.** `reminderPlan(event)` returns
+`{ sendAt, message, channel: "whatsapp", enabled: false }` using a per-kind
+template; the default timing is 24 hours before. Connect the API by consuming
+that plan — no interface change needed.
+
+Student and advisor events persist in local storage per user (`readEvents` /
+`writeEvents`); swapping those two helpers for a Supabase table is the only
+change required for a server-side store.
+
+## Avatars
+
+`UserAvatar` (`@/components/ds`) is the platform's only avatar. Priority is
+always **uploaded photo → generated avatar**; the generated face comes from
+`@avatune/react` with the `yanliu` theme, driven by the user's stored seed, so
+it is identical forever and never regenerates on render (memoised, lazily
+imported, skeleton while loading, fade+scale in, hover lift).
+
+Props: `size` (24…160), `user`, `className`, `showStatus`, `clickable`.
+`DefaultAvatar` is a thin compatibility wrapper over it.
+
+Identity lives in `src/lib/avatarIdentity.ts` (seed, style, gender→style
+mapping, per-style theme config) and `src/lib/avatarProfile.ts` (read/write the
+profile columns, `ensureGeneratedAvatar`, `regenerateAvatar`,
+`setUploadedPhoto`, `removeUploadedPhoto`).
+
+**Migration required:** `supabase/migrations/20260725_avatar_identity.sql` adds
+`gender`, `avatar_type`, `avatar_seed`, `avatar_style` to `public.profiles` and
+backfills seeds. Until it is applied every helper degrades silently and avatars
+fall back to a deterministic seed derived from the user id.

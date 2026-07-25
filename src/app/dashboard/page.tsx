@@ -7,9 +7,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { Loader } from "@/components/ds";
 import { fetchAdminRole } from "@/lib/admin";
 import { fileUrl } from "@/lib/storage/client";
 import { setAvatarUrl } from "@/lib/avatar";
+import { loadAvatarFieldsFor } from "@/lib/avatarProfile";
 import WorkspaceShell, { type Nav } from "@/components/student/workspace/WorkspaceShell";
 import type { WsProfile, WsPayment } from "@/components/student/workspace/Modules";
 import { NOTIFICATIONS } from "@/components/student/workspace/data";
@@ -49,6 +51,9 @@ export default function Dashboard() {
     const academic = deriveAcademic(cfa);
     const te = (cfa?.timing_education as Record<string, unknown> | undefined);
     const ps = (cfa?.program_setup as Record<string, unknown> | undefined);
+    // Avatar columns are read separately so the workspace keeps working before
+    // the avatar migration is applied.
+    const av = await loadAvatarFieldsFor(uid);
     const avatarPath = (row.avatar_path as string) || "";
     const avatarUrl = avatarPath ? await fileUrl(avatarPath, "avatars", undefined, 86400) : null;
     // One profile picture per user: publish it so every avatar on the platform
@@ -89,6 +94,10 @@ export default function Dashboard() {
       englishLevel: (ps?.english_level as string) ?? "",
       verified: !!payment,
       payment,
+      gender: (av?.gender as string) ?? null,
+      avatarSeed: av?.avatar_seed ?? null,
+      avatarStyle: av?.avatar_style ?? null,
+      avatarType: av?.avatar_type ?? null,
     };
   }, []);
 
@@ -140,7 +149,7 @@ export default function Dashboard() {
   const unreadNotifs = NOTIFICATIONS.filter((n) => !n.read).length;
 
   if (loading || !profile) {
-    return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)", color: "var(--ink-faint)", font: "400 15px/24px var(--font-sans)" }}>Loading your workspace…</div>;
+    return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block label="Loading your workspace" /></div>;
   }
 
   return (

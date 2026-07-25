@@ -5,6 +5,7 @@ import {
   ArrowRight, Calendar, ChevronLeft, ChevronRight, CircleCheck, Clock3,
   Coins, FileText, Landmark, Languages, Route, TriangleAlert,
 } from "lucide-react";
+import { UniversityBrand } from "@/components/ds";
 import { JOURNEY, JOURNEY_PCT, REQUIRED_DOCS } from "./data";
 import type { WsProfile } from "./Modules";
 
@@ -65,7 +66,8 @@ export function UniversityCard({ profile, onNav }: { profile: WsProfile; onNav: 
       action={<TextButton onClick={() => onNav("profile")}>View profile</TextButton>}
     >
       <div className="rp-uni">
-        <span className="rp-uni-logo" aria-hidden><Landmark size={20} /></span>
+        {/* The student's own university, resolved from their programme data. */}
+        <UniversityBrand name={st?.university} size={42} />
         <div style={{ minWidth: 0 }}>
           <div className="rp-uni-name">{st?.university && st.university !== "—" ? st.university : "No university yet"}</div>
           <div className="rp-uni-country">{st?.country ?? "Lithuania"}</div>
@@ -103,7 +105,7 @@ const startOfWeek = (d: Date) => {
   return x;
 };
 
-export function MiniCalendarCard({ event }: { event?: { title: string; at: string } | null }) {
+export function MiniCalendarCard({ event, onNav }: { event?: { title: string; at: string } | null; onNav?: (id: string) => void }) {
   const today = useMemo(() => new Date(), []);
   const [offset, setOffset] = useState(0); // weeks from the current one
 
@@ -119,7 +121,7 @@ export function MiniCalendarCard({ event }: { event?: { title: string; at: strin
   return (
     <Card
       title="Mini calendar" icon={<Calendar size={15} />}
-      action={<TextButton href="/soon">Schedule</TextButton>}
+      action={<TextButton onClick={() => onNav?.("schedule")}>Schedule</TextButton>}
     >
       <div className="rp-month">
         <span className="rp-month-label">{monthLabel}</span>
@@ -234,7 +236,7 @@ export default function RightPanel({ profile, onNav, event, hide }: {
   return (
     <aside className="rp-panel">
       <UniversityCard profile={profile} onNav={onNav} />
-      <MiniCalendarCard event={event} />
+      <MiniCalendarCard event={event} onNav={onNav} />
       {hide !== "journey" && <JourneySnapshotCard onNav={onNav} />}
       {hide !== "documents" && <DocumentsOverviewCard onNav={onNav} />}
     </aside>

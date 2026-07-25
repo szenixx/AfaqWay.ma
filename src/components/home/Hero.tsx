@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import SiteHeader from "./SiteHeader";
 import { StatusCircle, IconCheck, IconClock, IconArrow } from "./ui";
+import { AnimatedGridPattern } from "./AnimatedGridPattern";
 
 const eyebrow = {
   font: "600 10.5px/14px var(--font-sans)",
@@ -82,32 +83,12 @@ export default function Hero() {
         textAlign: "center",
       }}
     >
-      {/* Full-bleed background, spans the whole hero, behind the top bar */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 0,
-          backgroundImage: "url(/hero-ambient.webp)",
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.45,
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
-          backgroundImage: "radial-gradient(rgba(90,107,133,.16) 1.1px, transparent 1.1px)",
-          backgroundSize: "22px 22px",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Full-bleed animated grid, spans the whole hero, behind the top bar.
+          Replaces the previous ambient image + dot pattern; hero content,
+          widgets and layout are untouched. */}
+      <div aria-hidden style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <AnimatedGridPattern />
+      </div>
 
       {/* Top bar sits on the background */}
       <SiteHeader />
@@ -219,7 +200,7 @@ export default function Hero() {
         </p>
 
         <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap", justifyContent: "center" }}>
-          <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: 999, font: "600 15px/1 var(--font-sans)" }}>
+          <Link className="af-btn-primary af-shimmer" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: 999, font: "600 15px/1 var(--font-sans)" }}>
             Start your roadmap
           </Link>
           <Link className="af-btn-ghost" href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 26px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>

@@ -7,6 +7,7 @@ import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import FeaturesDoc from "@/components/pricing/FeaturesDoc";
 import { PLANS, planById, PAY_METHODS, type Plan, type PayMethod } from "@/lib/plans";
 import { uploadUserFile, deleteUserFile } from "@/lib/storage/client";
+import { Loader } from "@/components/ds";
 
 /* Pricing & Checkout. Renders its own af-frame-body + af-frame-footer so the
    Back/primary buttons stay pinned to the bottom of the frame on every view.
@@ -244,7 +245,7 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
         <div className="af-review-overlay" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24, background: "rgba(255,255,255,.72)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
           {!confirmCancel ? (
             <>
-              <span style={{ width: 56, height: 56, borderRadius: 999, border: "3px solid var(--amber-line)", borderTopColor: "var(--amber)", animation: "afSpin 1s linear infinite", display: "inline-block" }} />
+              <Loader size={16} />
               <div style={{ font: "600 18px/24px var(--font-sans)", color: "var(--ink)", marginTop: 18 }}>Under review</div>
               <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink-soft)", maxWidth: 380, margin: "8px 0 20px" }}>We received your receipt and our team is verifying your payment. This usually takes a few hours, you can safely close this page and come back, your progress is saved.</p>
               <button type="button" onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink-faint)", textDecoration: "underline" }}>Cancel this payment</button>

@@ -2,16 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { Input, Toggle, Flag, fieldIcon } from "@/components/ds";
+import { Input, Toggle, Flag, fieldIcon, Loader } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
+import { loadAvatarFields } from "@/lib/avatarProfile";
 import { parseAsk } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
 import StudentProfileModal from "@/components/chat/StudentProfileModal";
 
-type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null };
+type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null; gender?: string | null; avatar_seed?: string | null; avatar_style?: string | null };
 type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
 
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
@@ -56,7 +57,11 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
   const loadUsers = useCallback(async () => {
     const { data } = await supabase.from("profiles").select("id, full_name, email, user_number, plan, avatar_path").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
     const list = (data ?? []) as U[];
-    setUsers(list);
+    // Avatar identity is fetched separately so the console keeps working before
+    // the avatar migration is applied.
+    const ids = list.map((u) => u.id);
+    const fields = await loadAvatarFields(ids);
+    setUsers(list.map((u) => ({ ...u, ...(fields.get(u.id) ?? {}) })));
     const withAvatar = list.filter((u) => u.avatar_path);
     const entries = await Promise.all(withAvatar.map(async (u) => [u.id, await fileUrl(u.avatar_path as string, "avatars", undefined, 86400)] as const));
     setAvatars(Object.fromEntries(entries.filter(([, url]) => url)) as Record<string, string>);
@@ -200,7 +205,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
               <ChatEmpty icon={<Users size={22} />} title="No conversations" sub="No student matches this search or filter." />
             ) : shown.map((u) => (
               <button key={u.id} type="button" onClick={() => openConvo(u.id)} className={`chat-convo${sel === u.id ? " active" : ""}`}>
-                <ChatAvatar size={38} src={avatars[u.id]} online={u.id === sel} />
+                <ChatAvatar size={38} src={avatars[u.id]} online={u.id === sel} user={{ id: u.id, name: u.full_name, gender: u.gender, avatarSeed: u.avatar_seed, avatarStyle: u.avatar_style }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="chat-convo-name">{u.full_name || "Unnamed"}</span>
                   <span className="chat-convo-meta">
@@ -223,7 +228,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
             <>
               <header className="chat-header">
                 <button type="button" className="chat-header-btn" onClick={() => setShowInfo(true)} title="Open student profile">
-                  <ChatAvatar size={40} src={avatars[selUser.id]} online />
+                  <ChatAvatar size={40} src={avatars[selUser.id]} online user={{ id: selUser.id, name: selUser.full_name, gender: selUser.gender, avatarSeed: selUser.avatar_seed, avatarStyle: selUser.avatar_style }} />
                   <span style={{ minWidth: 0 }}>
                     <span className="chat-header-name">{selUser.full_name || "Unnamed"}</span>
                     <span className="chat-header-sub"><Mail size={12} />{selUser.email || "—"}</span>
@@ -293,7 +298,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
                   <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                   <input placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} className="af-composer-input" />
                   <button type="button" className="chat-send" disabled={sending} onClick={send}>
-                    {sending ? <><span aria-hidden style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,.5)", borderTopColor: "#fff", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />Sending</> : <><Send size={15} />{emailOn ? "Send & email" : "Send"}</>}
+                    {sending ? <><Loader size={16} onDark />Sending</> : <><Send size={15} />{emailOn ? "Send & email" : "Send"}</>}
                   </button>
                 </div>
                 {status && <div style={{ font: "500 12px/17px var(--font-sans)", color: status.startsWith("Failed") ? "var(--red)" : "var(--green)", marginTop: 8 }}>{status}</div>}

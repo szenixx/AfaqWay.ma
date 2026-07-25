@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { Loader } from "@/components/ds";
 import { Input, Toggle, fieldIcon } from "@/components/ds";
 import { PAY_METHODS, methodById } from "@/lib/plans";
 
@@ -94,7 +95,7 @@ export default function PaymentMethodsAdmin() {
     <div>
       <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: "0 0 4px" }}>Payment methods</h1>
       <p style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", margin: "0 0 20px" }}>Turn methods on or off, edit account details, and add custom detail rows (each can be copyable). Changes apply to checkout immediately.</p>
-      {loading ? <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p> : (
+      {loading ? <Loader block /> : (
         <div className="af-method-grid">
           {rows.map((pm) => <MethodRow key={pm.id} pm={pm} onSaved={load} />)}
         </div>

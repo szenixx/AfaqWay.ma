@@ -1,30 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Ban, RotateCcw } from "lucide-react";
+import { Ban, Clock, CircleX, RotateCcw, ShieldCheck, Wallet } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { Loader } from "@/components/ds";
 import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { fileUrl, deleteUserFile } from "@/lib/storage/client";
-import { Input, Select, fieldIcon } from "@/components/ds";
+import { Input, Select, MetricCard, trendBadge, fieldIcon } from "@/components/ds";
 
 type Payment = { id: string; user_id: string; plan: string; amount: number; currency: string; method: string; status: string; receipt_path: string | null; reference: string | null; rejection_comment: string | null; created_at: string; reviewed_at: string | null };
+/* Session-stable clock for the 30/60-day trend windows: the comparison must
+   not shift between renders, and it keeps render pure. */
+const NOW = Date.now();
+
 type UserInfo = { full_name: string | null; email: string | null; destination_country: string | null };
 
-function Stat({ label, value, tone, tint, icon }: { label: string; value: number; tone?: string; tint?: string; icon: React.ReactNode }) {
-  const c = tone ?? "var(--indigo-600)";
-  const bg = tint ?? "var(--indigo-tint)";
-  return (
-    <div style={{ flex: "1 1 0", minWidth: 140, border: "1px solid var(--line)", borderTop: `3px solid ${c}`, borderRadius: 18, background: "var(--card)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
-      <span style={{ width: 38, height: 38, borderRadius: 14, background: bg, color: c, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>{icon}</span>
-      <div>
-        <div style={{ font: "700 22px/26px var(--font-sans)", color: c }}>{value}</div>
-        <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{label}</div>
-      </div>
-    </div>
-  );
-}
-const rIcon = (d: React.ReactNode) => <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
 
 export default function PaymentReviews({ highlightId, onHighlightDone }: { highlightId?: string | null; onHighlightDone?: () => void } = {}) {
   const [all, setAll] = useState<Payment[]>([]);
@@ -75,10 +66,28 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
 
   const stats = useMemo(() => {
     const after = (t: string | null) => !since || (t ? new Date(t).getTime() >= since : false);
+    const now = NOW, day = 86_400_000;
+    /* Trend = the last 30 days against the 30 before them. */
+    const window = (rows: Payment[], field: "created_at" | "reviewed_at", from: number, to: number) =>
+      rows.filter((r) => { const v = r[field] ? new Date(r[field] as string).getTime() : 0; return v >= from && v < to; }).length;
+
+    const visible = all.filter((r) => after(r.status === "under_review" ? r.created_at : r.reviewed_at));
+    const cancelled = visible.filter((r) => r.status === "rejected" || r.status === "cancelled");
+    const approved = visible.filter((r) => r.status === "approved");
+    const pending = visible.filter((r) => r.status === "under_review");
+
+    const trend = (rows: Payment[], field: "created_at" | "reviewed_at") =>
+      trendBadge(window(rows, field, now - 30 * day, now), window(rows, field, now - 60 * day, now - 30 * day));
+
     return {
-      pending: all.filter((r) => r.status === "under_review" && after(r.created_at)).length,
-      approved: all.filter((r) => r.status === "approved" && after(r.reviewed_at)).length,
-      rejected: all.filter((r) => r.status === "rejected" && after(r.reviewed_at)).length,
+      pending: pending.length,
+      approved: approved.length,
+      rejected: cancelled.length,
+      total: visible.length,
+      totalTrend: trend(visible, "created_at"),
+      approvedTrend: trend(approved, "reviewed_at"),
+      pendingTrend: trend(pending, "created_at"),
+      cancelledTrend: trend(cancelled, "reviewed_at"),
     };
   }, [all, since]);
 
@@ -136,11 +145,27 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <Stat label="Pending" value={stats.pending} tone="var(--amber)" tint="var(--amber-tint)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 2" /></>)} />
-        <Stat label="Approved" value={stats.approved} tone="var(--green)" tint="var(--green-tint)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M7 10l2 2 4-4" /></>)} />
-        <Stat label="Rejected" value={stats.rejected} tone="var(--red)" tint="var(--red-tint)" icon={rIcon(<><circle cx="10" cy="10" r="7" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></>)} />
-        <Stat label="Processed" value={stats.approved + stats.rejected} tone="var(--indigo-600)" tint="var(--indigo-tint)" icon={rIcon(<><path d="M4 10h12M10 4v12" /></>)} />
+      <div className="mc-grid">
+        <MetricCard
+          tone="blue" title="Total Payments" subtitle="Total payments received"
+          value={stats.total} icon={<Wallet size={24} strokeWidth={1.6} />} badge={stats.totalTrend}
+          menu={[{ label: "Refresh", onSelect: () => { void load(); } }]}
+        />
+        <MetricCard
+          tone="green" title="Approved Payments" subtitle="Successfully approved payments"
+          value={stats.approved} icon={<ShieldCheck size={24} strokeWidth={1.6} />} badge={stats.approvedTrend}
+          menu={[{ label: "Refresh", onSelect: () => { void load(); } }]}
+        />
+        <MetricCard
+          tone="amber" title="Pending Payments" subtitle="Payments awaiting review"
+          value={stats.pending} icon={<Clock size={24} strokeWidth={1.6} />} badge={stats.pendingTrend}
+          menu={[{ label: "Refresh", onSelect: () => { void load(); } }]}
+        />
+        <MetricCard
+          tone="red" title="Cancelled Payments" subtitle="Payments cancelled or rejected"
+          value={stats.rejected} icon={<CircleX size={24} strokeWidth={1.6} />} badge={stats.cancelledTrend}
+          menu={[{ label: "Refresh", onSelect: () => { void load(); } }]}
+        />
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>
@@ -165,7 +190,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       </div>
 
       {loading ? (
-        <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p>
+        <Loader block />
       ) : list.length === 0 ? (
         <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>{tab === "pending" ? "No pending payments right now." : "No processed payments yet."}</div>
       ) : (

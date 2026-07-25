@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, Field, Divider, Icon, GoogleIcon, Checkbox, fieldIcon } from "@/components/ds";
 import { StatusCircle, IconCheck, IconClock } from "@/components/home/ui";
 import { supabase } from "@/lib/supabase/client";
+import { Loader } from "@/components/ds";
 import { fetchAdminRole } from "@/lib/admin";
 import { resolvePostLoginDest } from "@/lib/authRoute";
 import { deviceId } from "@/lib/useSingleSession";
@@ -217,7 +218,7 @@ export default function AuthPage() {
   // While validating a saved session, show a neutral loader — never flash the form
   // or bounce through another page (fixes the "goes to home first" glitch).
   if (checking) {
-    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)", color: "var(--ink-faint)", font: "400 15px/24px var(--font-sans)" }}>Loading…</div>;
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block /></div>;
   }
 
   return (

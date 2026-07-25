@@ -1,0 +1,41 @@
+{
+  "universities": {
+    "kauko": {
+      "logo": "/assets/universities/kauko/logo.webp",
+      "logoDark": null
+    },
+    "klaipeda-university": {
+      "logo": "/assets/universities/klaipeda-university/logo.webp",
+      "logoDark": null
+    },
+    "ktu": {
+      "logo": "/assets/universities/ktu/logo.webp",
+      "logoDark": null
+    },
+    "mruni": {
+      "logo": "/assets/universities/mruni/logo.webp",
+      "logoDark": null
+    },
+    "smk": {
+      "logo": "/assets/universities/smk/logo.webp",
+      "logoDark": null
+    },
+    "vilnius-tech": {
+      "logo": "/assets/universities/vilnius-tech/logo.webp",
+      "logoDark": null
+    },
+    "vilnius-university": {
+      "logo": "/assets/universities/vilnius-university/logo.webp",
+      "logoDark": null
+    },
+    "vmu": {
+      "logo": "/assets/universities/vmu/logo.webp",
+      "logoDark": null
+    },
+    "vvk": {
+      "logo": "/assets/universities/vvk/logo.webp",
+      "logoDark": null
+    }
+  },
+  "indexedAt": "2026-07-25T23:04:54.723Z"
+}

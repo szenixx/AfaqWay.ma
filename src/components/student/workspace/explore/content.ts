@@ -4,7 +4,7 @@
    deliberately given as ranges: always confirm the current figure on the
    official page linked in the Sources section. */
 
-export type Stat = { label: string; value: string };
+export type Stat = { label: string; value: string; icon: string };
 export type Item = { title: string; body: string };
 export type Callout = { tone: "blue" | "amber" | "green" | "red"; title: string; body: string };
 
@@ -20,14 +20,14 @@ export const PHOTOS = {
 } as const;
 
 export const HERO_STATS: Stat[] = [
-  { label: "Capital", value: "Vilnius" },
-  { label: "Population", value: "≈ 2.9 million" },
-  { label: "Currency", value: "Euro (€)" },
-  { label: "Time zone", value: "EET (UTC+2 / +3)" },
-  { label: "Official language", value: "Lithuanian" },
-  { label: "EU / Schengen", value: "Member of both" },
-  { label: "Climate", value: "−5 °C winter, 22 °C summer" },
-  { label: "Student budget", value: "€600–900 / month" },
+  { label: "Capital", value: "Vilnius", icon: "capital" },
+  { label: "Population", value: "≈ 2.9 million", icon: "population" },
+  { label: "Currency", value: "Euro (€)", icon: "currency" },
+  { label: "Time zone", value: "EET (UTC+2 / +3)", icon: "time" },
+  { label: "Official language", value: "Lithuanian", icon: "language" },
+  { label: "EU / Schengen", value: "Member of both", icon: "eu" },
+  { label: "Climate", value: "−5 °C winter, 22 °C summer", icon: "climate" },
+  { label: "Student budget", value: "€600–900 / month", icon: "budget" },
 ];
 
 /* ── 1. Universities ──────────────────────────────────────────────────────── */
@@ -44,15 +44,6 @@ export const UNI_INTRO: Item[] = [
   { title: "Exchange opportunities", body: "Every major university participates in Erasmus+, so you can spend a semester elsewhere in Europe while enrolled in Lithuania. There are also bilateral agreements with universities in Asia and the Americas, and Erasmus+ traineeships for internships abroad." },
 ];
 
-export type Uni = { name: string; short: string; city: string; desc: string; programs: string[]; support: string };
-export const UNIVERSITIES: Uni[] = [
-  { name: "Vilnius University", short: "VU", city: "Vilnius", desc: "Founded in 1579, the oldest university in the Baltic states and the country's largest, with a UNESCO-listed old campus in the heart of Vilnius.", programs: ["Software Engineering", "Business & Economics", "Medicine", "Data Science"], support: "International Relations Office, buddy programme, dedicated arrival support" },
-  { name: "Vilnius Gediminas Technical University", short: "VILNIUS TECH", city: "Vilnius", desc: "The country's leading technical university, strong in engineering, architecture, aviation and the built environment, with modern labs and industry links.", programs: ["Civil Engineering", "Aviation", "Mechatronics", "Business Informatics"], support: "International Studies Centre, mentor scheme, career centre" },
-  { name: "Kaunas University of Technology", short: "KTU", city: "Kaunas", desc: "A major research and innovation hub in Kaunas with one of the largest ranges of English-taught engineering and IT degrees in the region.", programs: ["Informatics", "Mechanical Engineering", "Industrial Engineering", "Business"], support: "International Relations Department, KTU Startup Space, buddy programme" },
-  { name: "Vytautas Magnus University", short: "VMU", city: "Kaunas", desc: "A liberal-arts oriented university where students combine a main subject with electives across faculties, known for languages and social sciences.", programs: ["International Business", "Political Science", "Psychology", "Arts"], support: "Very international campus, language centre, ESN section" },
-  { name: "Lithuanian University of Health Sciences", short: "LSMU", city: "Kaunas", desc: "The country's medical university, with its own hospital complex and a large international cohort in medicine, dentistry and veterinary science.", programs: ["Medicine", "Dentistry", "Veterinary Medicine", "Pharmacy"], support: "International Relations & Study Centre, strong alumni network" },
-  { name: "Klaipėda University", short: "KU", city: "Klaipėda", desc: "The seaside university, specialised in marine sciences, maritime engineering and coastal economics, next to Lithuania's only port.", programs: ["Marine Technology", "Maritime Transport", "Ecology", "Business"], support: "Small campus, close staff contact, harbour industry links" },
-];
 
 /* ── 2. Cities ────────────────────────────────────────────────────────────── */
 

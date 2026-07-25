@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { Loader } from "@/components/ds";
 import { fetchAdminRole, type AdminRole } from "@/lib/admin";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import PaymentReviews from "@/components/admin/PaymentReviews";
@@ -138,7 +139,7 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Reports</h1>
         <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
       </div>
-      {loading ? <p style={{ color: "var(--ink-faint)", font: "400 14px var(--font-sans)" }}>Loading…</p> : rows.length === 0 ? (
+      {loading ? <Loader block /> : rows.length === 0 ? (
         <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No reports yet.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -268,7 +269,7 @@ export default function AdminPage() {
   }, [router]);
 
   if (status === "loading") {
-    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)", color: "var(--ink-faint)", font: "400 15px var(--font-sans)" }}>Loading…</div>;
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block /></div>;
   }
   if (status === "gate") {
     return <PasscodeGate onPass={() => { sessionStorage.setItem("af_admin_gate", "ok"); setStatus("ready"); }} onLogout={() => logout(router)} />;

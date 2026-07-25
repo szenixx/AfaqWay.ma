@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { deriveAcademic, deriveStudy, type AcademicInfo, type StudyApp } from "@/lib/studyApplication";
 import { fileUrl } from "@/lib/storage/client";
+import { loadAvatarFieldsFor } from "@/lib/avatarProfile";
 import { ChatAvatar, ChatEmpty } from "./parts";
 
 /* The platform's standard student profile card. Opens over the conversation so
@@ -57,7 +58,10 @@ export default function StudentProfileModal({ userId, fallbackName, avatarUrl, o
       .select("full_name, email, user_number, plan, plan_status, plan_activated_at, destination_country, city, date_of_birth, whatsapp_country_code, whatsapp_number, onboarding_completed_at, created_at, country_flow_answers, avatar_path")
       .eq("id", userId).maybeSingle();
     const r = (data ?? null) as Row | null;
-    setRow(r);
+    // Avatar identity comes from its own query so a missing migration cannot
+    // break the profile modal.
+    const fields = await loadAvatarFieldsFor(userId);
+    setRow(r ? { ...r, ...(fields ?? {}) } : r);
     setLoading(false);
     const path = r?.avatar_path as string | undefined;
     // The avatar always matches whatever the student last uploaded.
@@ -106,7 +110,7 @@ export default function StudentProfileModal({ userId, fallbackName, avatarUrl, o
       <div className="spm-card" onClick={(e) => e.stopPropagation()}>
         {/* ── Section 1: header ── */}
         <header className="spm-head">
-          <ChatAvatar size={72} src={avatar} online={active} verified={active} />
+          <ChatAvatar size={72} src={avatar} online={active} verified={active} user={{ id: userId, name: (row?.full_name as string) ?? fallbackName, gender: row?.gender as string, avatarSeed: row?.avatar_seed as string, avatarStyle: row?.avatar_style as string }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ font: "700 19px/25px var(--font-sans)", color: "var(--ink)" }}>{(row?.full_name as string) || fallbackName || "Unnamed student"}</span>

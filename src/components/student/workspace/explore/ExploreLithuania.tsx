@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  Banknote, Bus, ChevronDown, ExternalLink, GraduationCap, HeartPulse, Home,
-  Info, Landmark, MapPin, Quote, Sparkles, Wallet,
+  Banknote, Building2, Bus, Check, ChevronDown, Clock, CloudSnow, Coins, ExternalLink,
+  Flag, GraduationCap, HeartPulse, Home, Info, Languages, MapPin, Quote,
+  Sparkles, Trophy, Users, Wallet,
 } from "lucide-react";
 import {
   BANKING, CITIES, COSTS, HEALTHCARE, HERO_STATS, HOUSING, HOUSING_SCAMS, MARQUEE_SOURCES,
-  PHOTOS, QUOTES, SOURCES, STUDENT_LIFE, TIPS, TIP_CALLOUTS, TRANSPORT, UNIVERSITIES, UNI_INTRO,
+  PHOTOS, QUOTES, SOURCES, STUDENT_LIFE, TIPS, TIP_CALLOUTS, TRANSPORT, UNI_INTRO,
   type Callout, type Item,
 } from "./content";
+import { UNIVERSITIES } from "@/lib/universities";
+import { UniversityBrand } from "@/components/ds";
 
 /* Explore Lithuania — an editorial guide inside the workspace. Uses the
    platform's cards, radii, shadows, motion and palette only; the accent is the
@@ -27,12 +30,26 @@ const SECTIONS = [
   { id: "tips", label: "Before you move", icon: <Info size={15} /> },
 ];
 
+/* Icon per quick statistic, from the same family as the rest of the guide. */
+const STAT_ICONS: Record<string, ReactNode> = {
+  capital: <Building2 size={15} />, population: <Users size={15} />, currency: <Coins size={15} />,
+  time: <Clock size={15} />, language: <Languages size={15} />, eu: <Flag size={15} />,
+  climate: <CloudSnow size={15} />, budget: <Wallet size={15} />,
+};
+
 /* ── Small pieces ─────────────────────────────────────────────────────────── */
 
-function SectionHead({ id, eyebrow, title, sub }: { id: string; eyebrow: string; title: string; sub?: string }) {
+function SectionHead({ id, title, sub, state, icon }: {
+  id: string; title: string; sub?: string;
+  state?: "done" | "current" | "todo"; icon?: ReactNode;
+}) {
   return (
-    <header className="ex-head" id={id}>
-      <span className="ex-eyebrow">{eyebrow}</span>
+    <header className={`ex-head${state === "current" ? " current" : ""}`}>
+      {state && (
+        <span id={`node-${id}`} className={`ex-node ${state}`} aria-hidden>
+          {state === "done" ? <Check size={15} strokeWidth={3} /> : icon}
+        </span>
+      )}
       <h2 className="ex-title">{title}</h2>
       {sub && <p className="ex-sub">{sub}</p>}
     </header>
@@ -90,22 +107,49 @@ function Photo({ src, alt, caption, side = "right" }: { src: string; alt: string
 
 export default function ExploreLithuania() {
   const [city, setCity] = useState(CITIES[0].key);
+  /* The hero follows whichever university is highlighted in the section below. */
+  const [selectedUni, setSelectedUni] = useState<string | null>(null);
   const [active, setActive] = useState(SECTIONS[0].id);
+  const [fill, setFill] = useState(0);
+  const railRef = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
 
-  // Sticky table of contents follows the section currently on screen.
+  const activeIdx = Math.max(0, SECTIONS.findIndex((s) => s.id === active));
+
+  /* Which section is being read — observed, never polled on scroll. */
   useEffect(() => {
     const io = new IntersectionObserver(
       (entries) => {
         const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible) setActive(visible.target.id);
+        if (visible) setActive(visible.target.id.replace("sec-", ""));
       },
-      { rootMargin: "-20% 0px -70% 0px", threshold: 0 },
+      { rootMargin: "-15% 0px -70% 0px", threshold: 0 },
     );
-    SECTIONS.forEach((s) => { const el = document.getElementById(s.id); if (el) io.observe(el); });
+    SECTIONS.forEach((s) => { const el = document.getElementById(`sec-${s.id}`); if (el) io.observe(el); });
     return () => io.disconnect();
   }, []);
 
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  /* The connector fills down to the active node. */
+  useEffect(() => {
+    const rail = railRef.current;
+    const node = document.getElementById(`node-${active}`);
+    if (!rail || !node) return;
+    setFill(node.getBoundingClientRect().top - rail.getBoundingClientRect().top + node.offsetHeight / 2);
+  }, [active]);
+
+  /* On mobile the roadmap scrolls horizontally and keeps the active step centred. */
+  useEffect(() => {
+    mobileRef.current?.querySelector(".ex-mstep.current")?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [active]);
+
+  const stateOf = (i: number): "done" | "current" | "todo" => (i < activeIdx ? "done" : i === activeIdx ? "current" : "todo");
+
+  const hero = UNIVERSITIES.find((u) => u.slug === selectedUni) ?? null;
+
+  const go = (id: string) => {
+    document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActive(id);
+  };
   const selected = CITIES.find((c) => c.key === city) ?? CITIES[0];
 
   return (
@@ -113,42 +157,64 @@ export default function ExploreLithuania() {
       {/* ── Hero ── */}
       <section className="ex-hero">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="ex-hero-img" src={PHOTOS.hero} alt="Lithuania" />
+        <img className="ex-hero-img" src={PHOTOS.hero} alt="Lithuania" loading="eager" decoding="async" />
         <div className="ex-hero-body">
-          <span className="ex-hero-eyebrow">Country guide</span>
-          <h1 className="ex-hero-title">Lithuania</h1>
-          <p className="ex-hero-text">
-            A small Baltic country with an outsized student scene: EU degrees taught in English, tuition and living
+          {hero ? (
+            <div className="ex-hero-uni">
+              <UniversityBrand university={hero} size={54} onDark />
+              <div style={{ minWidth: 0 }}>
+                <span className="ex-hero-eyebrow">{hero.city} · {hero.tuition}</span>
+                <h1 className="ex-hero-title" style={{ fontSize: "clamp(24px,3vw,34px)" }}>{hero.name}</h1>
+              </div>
+            </div>
+          ) : (
+            <>
+              <span className="ex-hero-eyebrow">Country guide</span>
+              <h1 className="ex-hero-title">Lithuania</h1>
+            </>
+          )}
+          <p className="ex-hero-text">{hero ? hero.desc : (
+            <>A small Baltic country with an outsized student scene: EU degrees taught in English, tuition and living
             costs far below western Europe, two lively university cities, and Schengen travel on your doorstep. This
-            guide collects what you actually need before and after you arrive.
-          </p>
+            guide collects what you actually need before and after you arrive.</>
+          )}</p>
         </div>
       </section>
 
       <div className="ex-stats">
         {HERO_STATS.map((s, i) => (
           <div key={s.label} className="ex-stat" style={{ animationDelay: `${i * 40}ms` }}>
-            <span className="ex-stat-label">{s.label}</span>
-            <span className="ex-stat-value">{s.value}</span>
+            <span className="ex-stat-ico">{STAT_ICONS[s.icon]}</span>
+            <span style={{ minWidth: 0 }}>
+              <span className="ex-stat-label">{s.label}</span>
+              <span className="ex-stat-value">{s.value}</span>
+            </span>
           </div>
         ))}
       </div>
 
-      <div className="ex-layout">
-        {/* ── Sticky table of contents ── */}
-        <nav className="ex-toc" aria-label="Sections">
-          <span className="ex-toc-label">On this page</span>
-          {SECTIONS.map((s) => (
-            <button key={s.id} type="button" className={`ex-toc-item${active === s.id ? " active" : ""}`} onClick={() => go(s.id)}>
-              <span className="ex-toc-ico">{s.icon}</span>{s.label}
-            </button>
-          ))}
-        </nav>
+      {/* ── Mobile roadmap: the same steps, scrolled horizontally ── */}
+      <div className="ex-mobile-tl" ref={mobileRef} aria-label="Sections">
+        {SECTIONS.map((s, i) => (
+          <button
+            key={s.id} type="button"
+            className={`ex-mstep${i < activeIdx ? " done" : i === activeIdx ? " current" : ""}`}
+            onClick={() => go(s.id)}
+          >
+            <span className="ex-mstep-node">{i < activeIdx ? <Check size={13} strokeWidth={3} /> : s.icon}</span>
+            {s.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="ex-content">
+      <div className="ex-layout">
+        <div className="ex-content ex-timeline" ref={railRef}>
+          {/* One continuous connector behind every section, filling as you read. */}
+          <span className="ex-rail" aria-hidden />
+          <span className="ex-rail-fill" style={{ height: fill }} aria-hidden />
           {/* ── 1. Universities ── */}
-          <section className="ex-section">
-            <SectionHead id="universities" eyebrow="Section 1" title="Universities"
+          <section className="ex-section" id="sec-universities">
+            <SectionHead id="universities" state={stateOf(0)} icon={SECTIONS[0].icon} title="Universities"
               sub="How Lithuanian higher education works, what it costs, and which institutions teach in English." />
             <Photo src={PHOTOS.universities} alt="University campus in Lithuania" caption="Study in a system that has been running since 1579." side="right" />
             <ExpandableList items={UNI_INTRO} />
@@ -156,25 +222,39 @@ export default function ExploreLithuania() {
             <h3 className="ex-h3">Major universities</h3>
             <div className="ex-unis">
               {UNIVERSITIES.map((u) => (
-                <article key={u.short} className="ex-uni">
+                <article
+                  key={u.slug}
+                  className={`ex-uni${selectedUni === u.slug ? " active" : ""}`}
+                  onMouseEnter={() => setSelectedUni(u.slug)}
+                  onFocus={() => setSelectedUni(u.slug)}
+                >
                   <div className="ex-uni-top">
-                    <span className="ex-uni-logo">{u.short.slice(0, 2)}</span>
+                    <UniversityBrand university={u} size={46} />
                     <div style={{ minWidth: 0 }}>
                       <div className="ex-uni-name">{u.name}</div>
                       <div className="ex-uni-city"><MapPin size={12} />{u.city}</div>
                     </div>
+                    {u.international && <span className="pill pill-green ex-uni-badge">International</span>}
                   </div>
                   <p className="ex-uni-desc">{u.desc}</p>
+                  <div className="ex-uni-facts">
+                    <span><Coins size={12} />{u.tuition}</span>
+                    {u.students && <span><Users size={12} />{u.students}</span>}
+                    {u.ranking && <span><Trophy size={12} />{u.ranking}</span>}
+                  </div>
                   <div className="ex-tags">{u.programs.map((p) => <span key={p} className="ex-tag">{p}</span>)}</div>
-                  <div className="ex-uni-support"><Landmark size={13} />{u.support}</div>
+                  <div className="ex-uni-cta">
+                    <a className="rp-textbtn" href={u.site} target="_blank" rel="noopener noreferrer">Official site<ExternalLink size={12} /></a>
+                    <button type="button" className="chat-chip" onClick={() => setSelectedUni(u.slug)}>Show in hero</button>
+                  </div>
                 </article>
               ))}
             </div>
           </section>
 
           {/* ── 2. Cities ── */}
-          <section className="ex-section">
-            <SectionHead id="cities" eyebrow="Section 2" title="Student cities"
+          <section className="ex-section" id="sec-cities">
+            <SectionHead id="cities" state={stateOf(1)} icon={SECTIONS[1].icon} title="Student cities"
               sub="Pick a city to compare atmosphere, cost, safety, transport and where students actually live." />
             <Photo src={PHOTOS.cities} alt="Lithuanian city" caption="Vilnius old town, a UNESCO world heritage site." side="left" />
 
@@ -212,8 +292,8 @@ export default function ExploreLithuania() {
           </section>
 
           {/* ── 3. Housing ── */}
-          <section className="ex-section">
-            <SectionHead id="housing" eyebrow="Section 3" title="Housing"
+          <section className="ex-section" id="sec-housing">
+            <SectionHead id="housing" state={stateOf(2)} icon={SECTIONS[2].icon} title="Housing"
               sub="Dormitories, shared flats and private rentals, plus the contract and deposit rules that catch students out." />
             <Photo src={PHOTOS.housing} alt="Housing in Lithuania" caption="Most first-year students start in a university dormitory." side="right" />
             <ExpandableList items={HOUSING} />
@@ -223,8 +303,8 @@ export default function ExploreLithuania() {
           </section>
 
           {/* ── 4. Cost of living ── */}
-          <section className="ex-section">
-            <SectionHead id="costs" eyebrow="Section 4" title="Cost of living"
+          <section className="ex-section" id="sec-costs">
+            <SectionHead id="costs" state={stateOf(3)} icon={SECTIONS[3].icon} title="Cost of living"
               sub="Typical monthly student spending, compared between the capital and the other university cities." />
             <div className="ex-table">
               <div className="ex-tr ex-th"><span>Item</span><span>Vilnius</span><span>Other cities</span><span>Note</span></div>
@@ -244,16 +324,16 @@ export default function ExploreLithuania() {
           </section>
 
           {/* ── 5. Transport ── */}
-          <section className="ex-section">
-            <SectionHead id="transport" eyebrow="Section 5" title="Getting around"
+          <section className="ex-section" id="sec-transport">
+            <SectionHead id="transport" state={stateOf(4)} icon={SECTIONS[4].icon} title="Getting around"
               sub="City transport, student discounts, trains and coaches, and the apps that make it painless." />
             <Photo src={PHOTOS.transport} alt="Public transport in Lithuania" caption="City buses and trolleybuses cover every student district." side="left" />
             <ExpandableList items={TRANSPORT} />
           </section>
 
           {/* ── 6. Healthcare ── */}
-          <section className="ex-section">
-            <SectionHead id="healthcare" eyebrow="Section 6" title="Healthcare"
+          <section className="ex-section" id="sec-healthcare">
+            <SectionHead id="healthcare" state={stateOf(5)} icon={SECTIONS[5].icon} title="Healthcare"
               sub="Insurance is compulsory and tied to your residence permit. Here is how the system fits together." />
             <ExpandableList items={HEALTHCARE} />
             <div style={{ marginTop: 16 }}>
@@ -262,15 +342,15 @@ export default function ExploreLithuania() {
           </section>
 
           {/* ── 7. Banking ── */}
-          <section className="ex-section">
-            <SectionHead id="banking" eyebrow="Section 7" title="Banking"
+          <section className="ex-section" id="sec-banking">
+            <SectionHead id="banking" state={stateOf(6)} icon={SECTIONS[6].icon} title="Banking"
               sub="Lithuania is a fintech hub, so you have far more options than a traditional branch account." />
             <ExpandableList items={BANKING} />
           </section>
 
           {/* ── 8. Student life ── */}
-          <section className="ex-section">
-            <SectionHead id="life" eyebrow="Section 8" title="Student life"
+          <section className="ex-section" id="sec-life">
+            <SectionHead id="life" state={stateOf(7)} icon={SECTIONS[7].icon} title="Student life"
               sub="Organisations, events, sport, culture and the trips everyone ends up taking." />
             <Photo src={PHOTOS.studentLife} alt="Student life in Lithuania" caption="ESN sections run trips, buddy programmes and weekly events." side="right" />
             <ExpandableList items={STUDENT_LIFE} />
@@ -286,8 +366,8 @@ export default function ExploreLithuania() {
           </section>
 
           {/* ── 9. Tips ── */}
-          <section className="ex-section">
-            <SectionHead id="tips" eyebrow="Section 9" title="Before you move"
+          <section className="ex-section" id="sec-tips">
+            <SectionHead id="tips" state={stateOf(8)} icon={SECTIONS[8].icon} title="Before you move"
               sub="The practical checklist, including the things students say they wish they had known earlier." />
             <Photo src={PHOTOS.tips} alt="Lithuania in winter" caption="Winter is manageable with the right coat, the darkness needs more planning." side="left" />
             <div className="ex-col" style={{ marginBottom: 16 }}>
@@ -297,8 +377,8 @@ export default function ExploreLithuania() {
           </section>
 
           {/* ── Sources ── */}
-          <section className="ex-section">
-            <SectionHead id="sources" eyebrow="References" title="Sources"
+          <section className="ex-section" id="sec-sources">
+            <SectionHead id="sources" title="Sources"
               sub="Every organisation whose published information shaped this guide. Figures change: confirm current numbers on the official page." />
             <div className="ex-sources">
               {SOURCES.map((s) => (

@@ -7,6 +7,7 @@ import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { parseAsk } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import { Loader } from "@/components/ds";
 
 type Msg = { id: string; sender: string; body: string; file_path: string | null; file_name: string | null; created_at: string; reply_to: string | null; pinned: boolean; emailed: boolean };
 
@@ -153,7 +154,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
               <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               <input placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} className="af-composer-input" />
               <button type="button" className="chat-send" disabled={sending || blocked} onClick={send}>
-                {sending ? <><span aria-hidden style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,.5)", borderTopColor: "#fff", borderRadius: "50%", animation: "afSpin .7s linear infinite" }} />Sending</> : <><Send size={15} />Send</>}
+                {sending ? <><Loader size={16} onDark />Sending</> : <><Send size={15} />Send</>}
               </button>
             </div>
           </div>
