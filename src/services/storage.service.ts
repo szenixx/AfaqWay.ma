@@ -39,6 +39,9 @@ export function ownerPrefix(ownerId: string): string {
 
 function fail(code: "upload_failed" | "delete_failed" | "not_found", action: string, err: unknown): never {
   console.error(`[storage] ${action} failed:`, err);
+  // A StorageError already says exactly what is wrong (e.g. "Missing R2
+  // configuration: R2_ACCOUNT_ID"). Re-wrapping it would hide the real cause.
+  if (err instanceof StorageError) throw err;
   const status = code === "not_found" ? 404 : 502;
   // The provider's own reason (AccessDenied, NoSuchBucket, InvalidAccessKeyId,
   // SignatureDoesNotMatch…) is what makes this diagnosable. It names no secret,
@@ -61,12 +64,18 @@ export async function uploadFile(params: {
   const key = buildObjectKey(ownerId, folder, file.name);
   const contentType = resolveContentType(file.name, file.type);
 
+  // Resolve configuration FIRST. Doing this inside the request closure made a
+  // missing environment variable surface as "upload failed" instead of naming
+  // the variable that is not set.
+  const client = getR2Client();
+  const bucket = getR2Bucket();
+
   // Node streams the request body from this buffer; the SDK sets Content-Length
   // from it, which R2 requires for a single PutObject.
   const body = new Uint8Array(await file.arrayBuffer());
-  const put = () => getR2Client().send(
+  const put = () => client.send(
     new PutObjectCommand({
-      Bucket: getR2Bucket(),
+      Bucket: bucket,
       Key: key,
       Body: body,
       ContentType: contentType,
