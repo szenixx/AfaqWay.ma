@@ -38,10 +38,15 @@ export function ownerPrefix(ownerId: string): string {
 }
 
 function fail(code: "upload_failed" | "delete_failed" | "not_found", action: string, err: unknown): never {
-  // Log the real cause server-side; users only ever see the generic message.
   console.error(`[storage] ${action} failed:`, err);
   const status = code === "not_found" ? 404 : 502;
-  throw new StorageError(code, `Storage ${action} failed. Please try again.`, status);
+  // The provider's own reason (AccessDenied, NoSuchBucket, InvalidAccessKeyId,
+  // SignatureDoesNotMatch…) is what makes this diagnosable. It names no secret,
+  // so it is safe to return and is far more useful than "try again".
+  const e = err as { name?: string; Code?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+  const reason = e?.Code || e?.name || e?.message || "unknown error";
+  const http = e?.$metadata?.httpStatusCode;
+  throw new StorageError(code, `Storage ${action} failed: ${reason}${http ? ` (R2 HTTP ${http})` : ""}`, status);
 }
 
 /** Upload a file to R2 and return exactly what the database should store. */
@@ -56,23 +61,30 @@ export async function uploadFile(params: {
   const key = buildObjectKey(ownerId, folder, file.name);
   const contentType = resolveContentType(file.name, file.type);
 
+  // Node streams the request body from this buffer; the SDK sets Content-Length
+  // from it, which R2 requires for a single PutObject.
+  const body = new Uint8Array(await file.arrayBuffer());
+  const put = () => getR2Client().send(
+    new PutObjectCommand({
+      Bucket: getR2Bucket(),
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      ContentLength: body.byteLength,
+      // Original name kept as metadata only; the key stays opaque.
+      Metadata: { "original-name": encodeURIComponent(file.name), "owner-id": ownerId },
+    }),
+  );
+
   try {
-    // Node streams the request body from this buffer; the SDK sets Content-Length
-    // from it, which R2 requires for a single PutObject.
-    const body = new Uint8Array(await file.arrayBuffer());
-    await getR2Client().send(
-      new PutObjectCommand({
-        Bucket: getR2Bucket(),
-        Key: key,
-        Body: body,
-        ContentType: contentType,
-        ContentLength: body.byteLength,
-        // Original name kept as metadata only; the key stays opaque.
-        Metadata: { "original-name": encodeURIComponent(file.name), "owner-id": ownerId },
-      }),
-    );
-  } catch (err) {
-    fail("upload_failed", "upload", err);
+    await put();
+  } catch (first) {
+    // One retry: a dropped connection or a transient 5xx should not cost the
+    // student their payment submission.
+    const status = (first as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode ?? 0;
+    const transient = status === 0 || status >= 500;
+    if (!transient) fail("upload_failed", "upload", first);
+    try { await put(); } catch (second) { fail("upload_failed", "upload", second); }
   }
 
   return { path: `r2:${key}`, key, fileName: file.name, mimeType: contentType, size: file.size };

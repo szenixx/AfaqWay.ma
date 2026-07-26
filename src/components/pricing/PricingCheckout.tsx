@@ -226,7 +226,13 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
       setPricing("status", "under_review");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Upload failed, please try again.";
-      setError(/limit of 3 receipt/i.test(msg) ? "You have reached the limit of 3 receipt uploads. Please wait up to 6 hours before submitting another receipt." : msg);
+      setError(
+        /limit of 3 receipt/i.test(msg)
+          ? "You have reached the limit of 3 receipt uploads. Please wait up to 6 hours before submitting another receipt."
+          : /storage|upload/i.test(msg)
+            ? `${msg} If it keeps happening, contact support and we will submit your receipt for you.`
+            : msg,
+      );
     } finally { setBusy(false); }
   }
   async function cancelPayment() {
