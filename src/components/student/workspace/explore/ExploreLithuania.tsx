@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Banknote, Building2, Bus, Check, ChevronDown, Clock, CloudSnow, Coins, ExternalLink,
   Flag, GraduationCap, HeartPulse, Home, Info, Languages, MapPin, Quote,
-  Sparkles, Trophy, Users, Wallet,
+  Sparkles, Trophy, Users, Wallet, ArrowRight,
 } from "lucide-react";
 import {
   BANKING, CITIES, COSTS, HEALTHCARE, HERO_STATS, HOUSING, HOUSING_SCAMS, MARQUEE_SOURCES,
@@ -12,6 +12,7 @@ import {
   type Callout, type Item,
 } from "./content";
 import { UNIVERSITIES } from "@/lib/universities";
+import { hasLogo } from "@/lib/universityAssets";
 import { UniversityBrand } from "@/components/ds";
 
 /* Explore Lithuania — an editorial guide inside the workspace. Uses the
@@ -105,6 +106,11 @@ function Photo({ src, alt, caption, side = "right" }: { src: string; alt: string
 
 /* ── The module ───────────────────────────────────────────────────────────── */
 
+/* Only institutions whose real logo has been supplied are shown. The card is
+   image-first, and a card with no mark has nothing to lead with. This reads the
+   asset manifest, so adding a logo file brings its card back on its own. */
+const SHOWN_UNIVERSITIES = UNIVERSITIES.filter((u) => hasLogo(u.slug));
+
 export default function ExploreLithuania() {
   const [city, setCity] = useState(CITIES[0].key);
   /* The hero follows whichever university is highlighted in the section below. */
@@ -144,7 +150,7 @@ export default function ExploreLithuania() {
 
   const stateOf = (i: number): "done" | "current" | "todo" => (i < activeIdx ? "done" : i === activeIdx ? "current" : "todo");
 
-  const hero = UNIVERSITIES.find((u) => u.slug === selectedUni) ?? null;
+  const hero = SHOWN_UNIVERSITIES.find((u) => u.slug === selectedUni) ?? null;
 
   const go = (id: string) => {
     document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -221,31 +227,44 @@ export default function ExploreLithuania() {
 
             <h3 className="ex-h3">Major universities</h3>
             <div className="ex-unis">
-              {UNIVERSITIES.map((u) => (
+              {SHOWN_UNIVERSITIES.map((u) => (
                 <article
                   key={u.slug}
                   className={`ex-uni${selectedUni === u.slug ? " active" : ""}`}
                   onMouseEnter={() => setSelectedUni(u.slug)}
                   onFocus={() => setSelectedUni(u.slug)}
                 >
-                  <div className="ex-uni-top">
-                    <UniversityBrand university={u} size={46} />
-                    <div style={{ minWidth: 0 }}>
-                      <div className="ex-uni-name">{u.name}</div>
-                      <div className="ex-uni-city"><MapPin size={12} />{u.city}</div>
-                    </div>
-                    {u.international && <span className="pill pill-green ex-uni-badge">International</span>}
+                  {/* Media band. There is no photograph per university, and the
+                      brand marks are the only real imagery we hold, so the band
+                      is built from the institution's own colour with its logo
+                      on top rather than stock photography. */}
+                  <div className="ex-uni-media" style={{ ["--uni" as string]: u.color }}>
+                    <span className="ex-uni-wash" aria-hidden />
+                    <UniversityBrand university={u} size={62} />
+                    <span className="ex-uni-cat">{u.international ? "International" : "University"}</span>
+                    <button
+                      type="button" className="ex-uni-fab" aria-label={`Show ${u.name} in the hero`}
+                      onClick={() => setSelectedUni(u.slug)}
+                    >
+                      <ArrowRight size={17} />
+                    </button>
                   </div>
-                  <p className="ex-uni-desc">{u.desc}</p>
-                  <div className="ex-uni-facts">
+
+                  <div className="ex-uni-body">
+                    <h4 className="ex-uni-name">{u.name}</h4>
+                    <div className="ex-uni-city"><MapPin size={12} />{u.city}</div>
+                    <p className="ex-uni-desc">{u.desc}</p>
+                    <div className="ex-tags">{u.programs.slice(0, 3).map((p) => <span key={p} className="ex-tag">{p}</span>)}</div>
+                  </div>
+
+                  {/* Lightweight metadata, separated by a thin divider. */}
+                  <div className="ex-uni-meta">
                     <span><Coins size={12} />{u.tuition}</span>
                     {u.students && <span><Users size={12} />{u.students}</span>}
                     {u.ranking && <span><Trophy size={12} />{u.ranking}</span>}
-                  </div>
-                  <div className="ex-tags">{u.programs.map((p) => <span key={p} className="ex-tag">{p}</span>)}</div>
-                  <div className="ex-uni-cta">
-                    <a className="rp-textbtn" href={u.site} target="_blank" rel="noopener noreferrer">Official site<ExternalLink size={12} /></a>
-                    <button type="button" className="chat-chip" onClick={() => setSelectedUni(u.slug)}>Show in hero</button>
+                    <a className="ex-uni-link" href={u.site} target="_blank" rel="noopener noreferrer">
+                      Official site<ExternalLink size={12} />
+                    </a>
                   </div>
                 </article>
               ))}

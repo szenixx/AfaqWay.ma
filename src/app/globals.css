@@ -1982,3 +1982,83 @@ body {
 .rp-panel { gap: 12px; height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 /* No lift inside a scrolling column: it fights the scrollbar. */
 .rp-card:hover { transform: none; box-shadow: var(--elev-1); }
+
+/* ══ Explore: editorial cards ═════════════════════════════════════════════
+   Cards only. Sections, filters, tabs and every other part of the module are
+   untouched. Image-first composition, a floating action, a category capsule,
+   scannable typography and metadata behind a thin rule. */
+
+/* 3 across on desktop, 2 on tablet, 1 on phones. */
+.ex-unis { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 1280px) { .ex-unis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px)  { .ex-unis { grid-template-columns: 1fr; } }
+
+.ex-uni {
+  gap: 0; padding: 0; overflow: hidden;
+  border: var(--card-border); border-radius: 24px;
+  background: var(--card); box-shadow: var(--elev-2);
+  transition: transform 250ms var(--ease), box-shadow 250ms var(--ease);
+}
+.ex-uni:hover, .ex-uni.active { transform: translateY(-4px); box-shadow: var(--elev-hover); }
+.ex-uni.active { border-color: var(--indigo-line); }
+
+/* Media band: the institution's own colour, its real mark on top. */
+.ex-uni-media {
+  position: relative; height: 132px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--uni, var(--indigo-600)) 0%, rgba(255,255,255,.18) 140%);
+  overflow: hidden;
+}
+.ex-uni-wash { position: absolute; inset: 0; background: radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,.34), transparent 70%); }
+.ex-uni-media > :not(.ex-uni-wash) { position: relative; }
+.ex-uni-media img, .ex-uni-media svg { transition: transform 500ms var(--ease); }
+.ex-uni:hover .ex-uni-media img, .ex-uni:hover .ex-uni-media svg { transform: scale(1.05); }
+
+/* Category capsule, top left of the media. */
+.ex-uni-cat {
+  position: absolute; top: 12px; left: 12px;
+  padding: 5px 11px; border-radius: 999px;
+  background: rgba(255,255,255,.9); color: var(--ink);
+  font: 600 10px/14px var(--font-sans); letter-spacing: .05em; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(23,35,58,.14);
+}
+
+/* Floating action, overlapping the media edge. */
+.ex-uni-fab {
+  position: absolute; right: 14px; bottom: -18px; z-index: 2;
+  width: 40px; height: 40px; border-radius: 999px; border: none; cursor: pointer;
+  background: var(--indigo-600); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 20px rgba(43,76,155,.35);
+  transition: transform 200ms var(--ease), background 200ms var(--ease);
+}
+.ex-uni:hover .ex-uni-fab { transform: translateY(-2px) scale(1.06); background: var(--indigo-500); }
+.ex-uni-fab:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 3px; }
+
+.ex-uni-body { padding: 26px 24px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.ex-uni-name { margin: 0; font: 700 19px/25px var(--font-sans); color: var(--ink); letter-spacing: -.01em; }
+.ex-uni-desc {
+  margin: 4px 0 0; font: 400 13px/21px var(--font-sans); color: var(--ink-soft);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ex-uni-body .ex-tags { margin-top: auto; padding-top: 12px; }
+
+/* Metadata behind a thin rule. */
+.ex-uni-meta {
+  display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap;
+  padding: 13px 24px 18px; margin-top: 4px; border-top: 1px solid var(--divider);
+}
+.ex-uni-meta span { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px/16px var(--font-sans); color: var(--ink-soft); }
+.ex-uni-meta svg { color: var(--indigo-600); }
+.ex-uni-link { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font: 600 11.5px/16px var(--font-sans); color: var(--indigo-600); text-decoration: none; }
+.ex-uni-link:hover { text-decoration: underline; }
+
+/* The city panel joins the same surface language. */
+.ex-city { border-radius: 24px; border: var(--card-border); box-shadow: var(--elev-2); padding: 24px; }
+/* Section photography gets the card geometry too. */
+.ex-photo { border-radius: 24px; box-shadow: var(--elev-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-uni:hover { transform: none; }
+  .ex-uni:hover .ex-uni-media img, .ex-uni:hover .ex-uni-media svg, .ex-uni:hover .ex-uni-fab { transform: none; }
+}
