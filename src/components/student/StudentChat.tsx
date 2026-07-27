@@ -17,7 +17,22 @@ const menuItem: CSSProperties = { display: "flex", alignItems: "center", gap: 9,
 const SUPPORT_EMAIL = "support@afaqway.com";
 const advisorId = "ADV-001";
 
-export default function StudentChat({ userId, full }: { userId: string; full: boolean }) {
+export default function StudentChat({ userId, full, onNav }: {
+  userId: string;
+  full: boolean;
+  /** Lets a decision message send the student to the step it belongs to. */
+  onNav?: (page: string) => void;
+}) {
+  /* Hands the Journey the exact step to reopen, the same hand-off the Documents
+     module uses, then navigates. The roadmap expands that stage and opens the
+     step, so the student lands on the decision rather than on the page. */
+  const openDecision = (decision: { stageId?: string; stepId?: string }) => {
+    if (!onNav) return;
+    try {
+      sessionStorage.setItem("af.journey.open", JSON.stringify({ stepId: decision.stepId, stageId: decision.stageId }));
+    } catch { /* storage blocked */ }
+    onNav("journey");
+  };
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -31,7 +46,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
   const threadRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("messages").select("id, sender, body, file_path, file_name, created_at, reply_to, pinned, emailed").eq("user_id", userId).order("created_at", { ascending: true });
+    const { data } = await supabase.from("messages").select("id, sender, body, file_path, file_name, created_at, reply_to, pinned, emailed, meta").eq("user_id", userId).order("created_at", { ascending: true });
     setMsgs((data ?? []) as Msg[]);
   }, [userId]);
 
@@ -124,6 +139,7 @@ export default function StudentChat({ userId, full }: { userId: string; full: bo
                 onViewFile={() => viewFile(m.file_path)}
                 onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m }); }}
                 onAnswer={m.sender === "admin" ? (o) => setBody(o) : undefined}
+                onOpenDecision={openDecision}
               />
             ))}
             {uploadingName && <UploadingBubble name={uploadingName} />}

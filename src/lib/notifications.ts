@@ -85,6 +85,17 @@ export async function fetchUpdates(limit = 30): Promise<PlatformUpdate[]> {
   return error ? [] : ((data ?? []) as PlatformUpdate[]);
 }
 
+/** Removes one announcement record. Notifications already delivered stay. */
+export async function deleteUpdate(id: string): Promise<void> {
+  await supabase.from("platform_updates").delete().eq("id", id);
+}
+
+/** Clears the whole announcement history. Delivered notifications stay. */
+export async function clearUpdates(): Promise<void> {
+  // A filter is required; every real row has a created_at.
+  await supabase.from("platform_updates").delete().not("created_at", "is", null);
+}
+
 /**
  * Publishes an announcement.
  *

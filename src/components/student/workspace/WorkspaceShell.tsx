@@ -151,7 +151,7 @@ export default function WorkspaceShell({
       case "subscription": return <Subscription profile={profile} />;
       case "profile": return <Profile profile={profile} onNav={(n) => navigate(n as Nav)} />;
       case "settings": return <Settings profile={profile} onProgramRequest={onProgramRequest} onReload={onReload} />;
-      case "messages": return <StudentChat userId={profile.userId} full={full} />;
+      case "messages": return <StudentChat userId={profile.userId} full={full} onNav={(id) => onNav(id as Nav)} />;
       default: return null;
     }
   })();

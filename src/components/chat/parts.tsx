@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { Download, Paperclip, Reply } from "lucide-react";
+import { Download, Paperclip, Reply, ArrowRight } from "lucide-react";
 import { UserAvatar, type UserAvatarUser, Loader } from "@/components/ds";
 import { parseAsk } from "@/lib/chat";
 
@@ -66,11 +66,31 @@ export function PanelCard({ icon, title, action, isEmpty, empty, children }: {
 export type ChatMsg = {
   id: string; sender: string; body: string; file_path: string | null; file_name: string | null;
   created_at: string; reply_to: string | null; pinned?: boolean; emailed?: boolean;
+  /** Set on review decisions, so the card can colour itself and link back. */
+  meta?: DecisionMeta | null;
 };
+
+/** A review decision announced in the chat. Written by lib/journeyNotify. */
+export type DecisionMeta = {
+  kind?: string;
+  outcome?: "approved" | "rejected" | "changes_requested";
+  stageId?: string;
+  stepId?: string;
+  stageTitle?: string;
+  stepTitle?: string;
+};
+
+/** Outcome → the colour of the top highlight. Nothing else on the card changes. */
+const DECISION_TONE: Record<string, string> = {
+  approved: "green", rejected: "red", changes_requested: "amber",
+};
+
+export const decisionOf = (msg: ChatMsg): DecisionMeta | null =>
+  msg.meta && msg.meta.outcome && DECISION_TONE[msg.meta.outcome] ? msg.meta : null;
 
 const time = (iso: string) => new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDownload, onViewFile, onContextMenu, footer, onAnswer }: {
+export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDownload, onViewFile, onContextMenu, footer, onAnswer, onOpenDecision }: {
   msg: ChatMsg;
   mine: boolean;
   quoted?: ChatMsg | null;
@@ -84,11 +104,16 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
   footer?: ReactNode;
   /** Student side: tapping an option of an interactive question answers it. */
   onAnswer?: (option: string) => void;
+  /** Student side: opens the Journey on the step this decision belongs to. */
+  onOpenDecision?: (decision: DecisionMeta) => void;
 }) {
   const ask = parseAsk(msg.body);
+  const decision = decisionOf(msg);
   return (
     <div className={`chat-row${mine ? " mine" : ""}`} onContextMenu={onContextMenu}>
-      <div className={`chat-bubble${msg.pinned ? " pinned" : ""}`}>
+      <div className={`chat-bubble${msg.pinned ? " pinned" : ""}${decision ? ` decision tone-${DECISION_TONE[decision.outcome as string]}` : ""}`}>
+        {/* A thin bar across the top, and nothing else about the card changes. */}
+        {decision && <span className="chat-decision-bar" aria-hidden />}
         {quoted && (
           <div style={{ borderLeft: `3px solid ${mine ? "rgba(255,255,255,.65)" : "var(--indigo-600)"}`, background: mine ? "rgba(255,255,255,.14)" : "rgba(43,76,155,.06)", borderRadius: 8, padding: "5px 9px", marginBottom: 7 }}>
             <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: mine ? "rgba(255,255,255,.9)" : "var(--indigo-600)" }}>{quotedAuthor}</span>
@@ -115,6 +140,14 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
           <button type="button" onClick={onViewFile} style={{ display: "inline-flex", alignItems: "center", gap: 7, marginTop: msg.body ? 7 : 0, background: mine ? "rgba(255,255,255,.16)" : "var(--subtle)", border: `1px solid ${mine ? "rgba(255,255,255,.28)" : "var(--line)"}`, borderRadius: 10, padding: "6px 10px", cursor: "pointer", font: "600 11.5px/1 var(--font-sans)", color: mine ? "#fff" : "var(--indigo-600)" }}>
             <Paperclip size={13} />{msg.file_name || "file"}
           </button>
+        )}
+
+        {decision && onOpenDecision && (
+          <div className="chat-decision-cta">
+            <button type="button" className="chat-decision-link" onClick={() => onOpenDecision(decision)}>
+              Click Here<ArrowRight size={13} />
+            </button>
+          </div>
         )}
 
         <div className="chat-time">

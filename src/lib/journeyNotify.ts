@@ -64,11 +64,21 @@ export async function notifyReview(input: NotifyInput, options: { whatsapp?: str
 
   // The platform's existing messaging table; failure here must not block a review.
   const { data: auth } = await supabase.auth.getUser();
+  /* The decision travels as data beside the text, so the chat can colour the
+     message and link it back to the exact step without reading the wording. */
   const { error } = await supabase.from("messages").insert({
     user_id: input.userId,
     sender: "admin",
     body,
     created_by: auth.user?.id ?? null,
+    meta: input.outcome === "comment" ? null : {
+      kind: "decision",
+      outcome: input.outcome,
+      stageId: input.stageId,
+      stepId: input.stepId,
+      stageTitle: input.stageTitle,
+      stepTitle: input.stepTitle,
+    },
   });
   if (error) console.warn("review notification not delivered to chat", error.message);
 

@@ -3,6 +3,7 @@
 import { usePresenceBroadcast } from "@/lib/presence";
 import { BrandLogo } from "@/components/ds";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
+import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
@@ -156,6 +157,8 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
               <Plus size={15} />Add Update
             </button>
           )}
+          {/* History sits immediately to the right of Add Update. */}
+          <UpdateHistory updates={updates} onChanged={loadUpdates} canManage={isSuper} />
         </div>
       </div>
 

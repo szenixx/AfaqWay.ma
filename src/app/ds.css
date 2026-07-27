@@ -424,3 +424,16 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
   @keyframes afPulseDot{0%,100%{opacity:.35;}50%{opacity:1;}}
   .af-shimmer::after,.af-grid-cell{animation:none;}
 }
+
+/* Decision messages: a thin bar across the top says what happened. The card
+   keeps the platform's own background, border and shadow; only the bar changes
+   colour, and the action sits bottom-right. */
+.chat-bubble.decision{position:relative;padding-top:14px;overflow:hidden;}
+.chat-decision-bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0;background:var(--decision,var(--indigo-600));}
+.chat-bubble.decision.tone-green{--decision:var(--green);}
+.chat-bubble.decision.tone-red{--decision:var(--red);}
+.chat-bubble.decision.tone-amber{--decision:var(--amber);}
+.chat-decision-cta{display:flex;justify-content:flex-end;margin-top:8px;}
+.chat-decision-link{display:inline-flex;align-items:center;gap:5px;border:none;background:none;padding:0;cursor:pointer;
+  font:600 12px/17px var(--font-sans);color:var(--decision,var(--indigo-600));transition:gap 160ms var(--ease);}
+.chat-decision-link:hover{text-decoration:underline;gap:8px;}
