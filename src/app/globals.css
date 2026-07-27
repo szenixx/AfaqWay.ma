@@ -1950,3 +1950,35 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .card:hover, .sw-tile:hover, .rp-card:hover, .sup-card:hover, .dm-card:hover, .upd-item:hover { transform: none; }
 }
+
+/* ── Documents list: the same light frame the Journey uses ────────────────
+   The status tint was doing too much work. Journey frames are a plain white
+   surface with a thin line, and the colour lives in the icon; documents now
+   read the same way, so the two modules look like one platform. */
+.dm-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.dm-card.tone-green,
+.dm-card.tone-red,
+.dm-card.tone-amber,
+.dm-card.tone-grey,
+.dm-card.tone-indigo {
+  background: var(--card);
+}
+/* Only a hint of the status colour, on the edge rather than across the card. */
+.dm-card.tone-green  { border-color: rgba(156,203,178,.55); }
+.dm-card.tone-red    { border-color: rgba(237,179,166,.55); }
+.dm-card.tone-amber  { border-color: rgba(231,197,131,.55); }
+.dm-card.tone-grey   { border-color: var(--line); }
+.dm-card-bg { opacity: .05; }
+.dm-card-ico { background: var(--subtle); }
+
+/* ── Right panel: back to its original proportions ────────────────────────
+   The floating pass widened these cards, which pushed the panel taller than
+   the viewport. Padding and gap return to what they were, the panel stays a
+   fixed column, and only its own content scrolls. */
+.rp-card { padding: 14px; }
+.rp-panel { gap: 12px; height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* No lift inside a scrolling column: it fights the scrollbar. */
+.rp-card:hover { transform: none; box-shadow: var(--elev-1); }
