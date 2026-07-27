@@ -7,10 +7,11 @@ import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import { loadAvatarFields } from "@/lib/avatarProfile";
+import { useOnlineUsers } from "@/lib/presence";
 import { parseAsk } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
-import StudentProfileModal from "@/components/chat/StudentProfileModal";
+import { UserDetails } from "@/components/admin/users/UserDetails";
 
 type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null; gender?: string | null; avatar_seed?: string | null; avatar_style?: string | null };
 type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
@@ -18,6 +19,8 @@ type Msg = { id: string; user_id: string; sender: string; body: string; file_pat
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 
 export default function AdminChat({ initialUserId, onOpenPlanModule }: { initialUserId?: string | null; onOpenPlanModule?: (plan: string, userId: string) => void }) {
+  /* Presence is who is actually on the platform, not whose chat is open. */
+  const onlineUsers = useOnlineUsers();
   const [country, setCountry] = useState<string | null>(initialUserId ? "LT" : null);
   const [users, setUsers] = useState<U[]>([]);
   const [avatars, setAvatars] = useState<Record<string, string>>({});
@@ -205,7 +208,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
               <ChatEmpty icon={<Users size={22} />} title="No conversations" sub="No student matches this search or filter." />
             ) : shown.map((u) => (
               <button key={u.id} type="button" onClick={() => openConvo(u.id)} className={`chat-convo${sel === u.id ? " active" : ""}`}>
-                <ChatAvatar size={38} src={avatars[u.id]} online={u.id === sel} user={{ id: u.id, name: u.full_name, gender: u.gender, avatarSeed: u.avatar_seed, avatarStyle: u.avatar_style }} />
+                <ChatAvatar size={38} src={avatars[u.id]} online={onlineUsers.has(u.id)} user={{ id: u.id, name: u.full_name, gender: u.gender, avatarSeed: u.avatar_seed, avatarStyle: u.avatar_style }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="chat-convo-name">{u.full_name || "Unnamed"}</span>
                   <span className="chat-convo-meta">
@@ -349,12 +352,14 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
       )}
 
       {showInfo && selUser && (
-        <StudentProfileModal
-          userId={selUser.id}
-          fallbackName={selUser.full_name}
-          avatarUrl={avatars[selUser.id]}
+        /* The same module the users tables open, no duplicate UI. */
+        <UserDetails
+          user={{
+            id: selUser.id, full_name: selUser.full_name, email: selUser.email ?? null,
+            plan: selUser.plan ?? null, avatar_url: avatars[selUser.id] ?? null,
+          }}
           onClose={() => setShowInfo(false)}
-          onOpenPlanModule={onOpenPlanModule}
+          onNavigate={onOpenPlanModule ? () => onOpenPlanModule(selUser.plan ?? "self_service", selUser.id) : undefined}
         />
       )}
     </div>

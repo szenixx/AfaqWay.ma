@@ -6,7 +6,14 @@ import { PROGRAMS } from "@/lib/programs/catalog";
 import { countryByCode } from "@/components/profile-setup/countries";
 
 export type StudyApp = { program: string; tuition: string; city: string; country: string; language: string; university: string };
-export type AcademicInfo = { lastDegree: string; field: string; year: string; grade: string; target: string; englishLevel: string; test: string };
+export type AcademicInfo = {
+  lastDegree: string; field: string; year: string; grade: string;
+  /** Display label, e.g. "Bachelor's degree". */
+  target: string;
+  /** Raw stored value, e.g. "bachelor". Used to match a journey to a degree. */
+  targetDegree: string;
+  englishLevel: string; test: string;
+};
 
 const DEGREE_LABEL: Record<string, string> = { high_school: "High school diploma", bachelor: "Bachelor's degree", master: "Master's degree" };
 
@@ -57,6 +64,7 @@ export function deriveAcademic(cfa: Record<string, unknown> | null): AcademicInf
     year: s(te?.last_degree_year),
     grade: te?.last_degree_grade ? `${te.last_degree_grade} / 20` : "—",
     target: DEGREE_LABEL[target] ?? (target || "—"),
+    targetDegree: target,
     englishLevel: s(ps?.english_level),
     test,
   };

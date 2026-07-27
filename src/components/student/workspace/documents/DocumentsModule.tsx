@@ -1,0 +1,262 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  CircleCheckBig, Clock3, Download, ExternalLink, FileText, TriangleAlert, Upload,
+} from "lucide-react";
+import { Loader } from "@/components/ds";
+import { fileUrl, uploadUserFile } from "@/lib/storage/client";
+import {
+  fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
+  saveDocument, stepRequirements, subscribeJourney,
+  type DbDocument, type DbStep, type DocRequirement, type DocStatus, type Plan,
+} from "@/lib/journeyDb";
+import { assembleRoadmap } from "@/lib/journey";
+import { JrButton } from "../journey/parts";
+import { ReplaceDialog } from "./ReplaceDialog";
+import type { WsProfile } from "../Modules";
+
+/* Documents — the single upload location for the whole platform.
+
+   The list is not a fixed catalogue. Every requirement here was defined by an
+   administrator on a Journey step, so adding a requirement to a step makes it
+   appear for the student, and an advisor's verification appears back on the
+   step. Nothing is uploaded anywhere else. */
+
+type Row = {
+  requirement: DocRequirement;
+  step: DbStep;
+  stageTitle: string;
+  upload: DbDocument | null;
+  status: DocStatus;
+};
+
+const LABEL: Record<DocStatus, string> = {
+  pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
+  needs_changes: "Needs changes", approved: "Verified",
+};
+const TONE: Record<DocStatus, string> = {
+  pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
+};
+
+const FILTERS: { id: "all" | DocStatus; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "approved", label: "Verified" },
+  { id: "under_review", label: "Under review" },
+  { id: "needs_changes", label: "Needs changes" },
+  { id: "pending", label: "Not uploaded" },
+];
+
+export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id: string) => void }) {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | DocStatus>("all");
+  const [focusStepId, setFocusStepId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [stage, setStage] = useState<{ index: number; title: string } | null>(null);
+  /* Replace opens a dialog first, never the file picker straight away. */
+  const [replacing, setReplacing] = useState<Row | null>(null);
+
+  const load = useCallback(async () => {
+    const plan = (profile.plan ?? "self_service") as Plan;
+    const stages = await fetchStages(plan, "LT", false, profile.academic?.targetDegree);
+    const steps = await fetchSteps(stages.map((s) => s.id));
+    const [uploads, progress, approvals] = await Promise.all([
+      fetchDocuments(profile.userId), fetchProgress(profile.userId), fetchApprovals(profile.userId),
+    ]);
+
+    /* Only the stage the student is working on. Finished stages are history and
+       future ones are not theirs to prepare yet, so both are hidden entirely.
+       When the stage advances, this list follows on its own. */
+    const roadmap = assembleRoadmap(stages, steps, progress, approvals);
+    const active = roadmap.find((st) => st.state === "current" || st.state === "waiting_approval") ?? roadmap[0];
+    const activeSteps = (steps as DbStep[]).filter((st) => st.stage_id === active?.id);
+
+    const byKey = new Map(uploads.map((u) => [`${u.step_id}:${u.doc_key}`, u]));
+    const list: Row[] = [];
+    for (const step of activeSteps) {
+      for (const requirement of stepRequirements(step)) {
+        const upload = byKey.get(`${step.id}:${requirement.key}`) ?? null;
+        list.push({
+          requirement, step, stageTitle: active?.title ?? "",
+          upload, status: (upload?.status ?? "pending") as DocStatus,
+        });
+      }
+    }
+    setRows(list);
+    setStage(active ? { index: active.index, title: active.title } : null);
+    setLoading(false);
+  }, [profile.plan, profile.userId, profile.academic?.targetDegree]);
+  // Fetching from Supabase is the "subscribe to an external system" case; the
+  // state set here is the query result, not derived render state.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
+  // A new requirement or a verification shows up without a refresh.
+  useEffect(() => subscribeJourney(() => { void load(); }, "documents"), [load]);
+
+  /* The Journey module hands over the exact step it wants uploaded. */
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("af.journey.focus");
+      if (!raw) return;
+      sessionStorage.removeItem("af.journey.focus");
+      const focus = JSON.parse(raw) as { stepId?: string };
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (focus.stepId) setFocusStepId(focus.stepId);
+    } catch { /* storage blocked or malformed */ }
+  }, []);
+
+  /* The dialog validated the file; this only stores it and hands the student
+     back to the step they came from. */
+  const uploadFor = async (row: Row, file: File) => {
+    setBusy(row.requirement.key);
+    setError("");
+    try {
+      const up = await uploadUserFile(file, { folder: "documents" });
+      await saveDocument({
+        user_id: profile.userId, step_id: row.step.id, doc_key: row.requirement.key,
+        name: row.requirement.name, file_path: up.path, file_name: up.fileName,
+        mime_type: up.mimeType, size_bytes: up.size, status: "uploaded",
+      });
+      await logEvent({
+        user_id: profile.userId, step_id: row.step.id, stage_id: row.step.stage_id,
+        kind: "document_uploaded", actor: "student", message: `Uploaded ${row.requirement.name || row.requirement.key}.`,
+      });
+      await load();
+      setReplacing(null);
+      setBusy(null);
+
+      /* Back to the Journey with this step reopened, so the student sees the
+         new verification state in context instead of a bare document list. */
+      if (onNav) {
+        try {
+          sessionStorage.setItem("af.journey.open", JSON.stringify({ stepId: row.step.id, stageId: row.step.stage_id }));
+        } catch { /* storage blocked */ }
+        onNav("journey");
+      }
+    } catch (err) {
+      setBusy(null);
+      throw err instanceof Error ? err : new Error("Upload failed. Please try again.");
+    }
+  };
+
+  const open = async (path: string, name: string, download: boolean) => {
+    const url = await fileUrl(path, "documents", download ? name : undefined);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const scoped = focusStepId ? rows.filter((r) => r.step.id === focusStepId) : rows;
+  const visible = scoped.filter((r) => filter === "all" || r.status === filter);
+  const count = (s: DocStatus) => rows.filter((r) => r.status === s).length;
+
+  if (loading) return <Loader size={48} block label="Loading your documents" />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <header className="dm-head">
+        <div style={{ minWidth: 0 }}>
+          <h2 className="dm-title">Documents</h2>
+          <p className="dm-sub">Everything your current stage needs.</p>
+        </div>
+        {/* Slim current-stage card, the same height as the header beside it. */}
+        {stage && (
+          <aside className="dm-stage" aria-label="Current stage">
+            <span className="dm-stage-label">Current stage</span>
+            <span className="dm-stage-num">Stage {stage.index}</span>
+            <span className="dm-stage-title">{stage.title}</span>
+          </aside>
+        )}
+      </header>
+
+      {error && <p className="stp-hint"><TriangleAlert size={14} />{error}</p>}
+
+      <div className="dm-seg" role="tablist" aria-label="Filter documents">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id} type="button" role="tab" aria-selected={filter === f.id}
+            onClick={() => setFilter(f.id)}
+            className={`dm-segbtn${filter === f.id ? " active" : ""}`}
+          >
+            {f.label}
+            <span className="dm-segcount">{f.id === "all" ? rows.length : count(f.id as DocStatus)}</span>
+          </button>
+        ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="stp-hint stp-hint-grey">
+          <FileText size={14} />No documents are required in your current stage.
+        </p>
+      ) : visible.length === 0 ? (
+        <p className="stp-hint stp-hint-grey">
+          <FileText size={14} />Nothing matches this filter.
+        </p>
+      ) : (
+        <ul className="dm-cards">
+          {visible.map((row) => {
+            const { requirement: r, upload, status } = row;
+            return (
+              /* Same treatment as the subscription plan card: tinted surface in
+                 the platform colours with the file mark oversized behind it. */
+              <li key={`${row.step.id}:${r.key}`} className={`dm-card tone-${TONE[status]}`}>
+                <span aria-hidden className="dm-card-bg"><FileText size={150} /></span>
+                <span className="dm-card-ico">
+                  {status === "approved" ? <CircleCheckBig size={18} />
+                    : status === "needs_changes" ? <TriangleAlert size={18} />
+                    : status === "under_review" ? <Clock3 size={18} /> : <FileText size={18} />}
+                </span>
+                <div className="dm-card-body">
+                  <div className="jr-doc-name">
+                    {r.name || r.key}
+                    {!r.required && <span className="jr-doc-opt">Optional</span>}
+                  </div>
+                  <p className="stp-doc-sub">{row.stageTitle} · {row.step.title}</p>
+                  {r.description && <p className="jr-doc-desc">{r.description}</p>}
+                  {r.instructions && <p className="jr-doc-desc">{r.instructions}</p>}
+                  <div className="jr-doc-meta">
+                    <span className={`pill pill-${TONE[status]}`}>{LABEL[status]}</span>
+                    {r.acceptedTypes && <span>{r.acceptedTypes.toUpperCase()}</span>}
+                    {r.maxSizeMb > 0 && <span>max {r.maxSizeMb} MB</span>}
+                    {upload?.file_name && <span>{upload.file_name}</span>}
+                  </div>
+                  {upload?.review_comment && <p className="jr-doc-note">{upload.review_comment}</p>}
+                </div>
+                <div className="dm-card-acts">
+                  {r.templatePath && (
+                    <JrButton icon={<Download size={14} />} onClick={() => open(r.templatePath, r.templateName || "template", true)}>
+                      Template
+                    </JrButton>
+                  )}
+                  {upload?.file_path && (
+                    <>
+                      <JrButton icon={<ExternalLink size={14} />} onClick={() => open(upload.file_path, upload.file_name, false)}>View</JrButton>
+                      <JrButton icon={<Download size={14} />} onClick={() => open(upload.file_path, upload.file_name, true)}>Download</JrButton>
+                    </>
+                  )}
+                  <JrButton
+                    tone={upload?.file_path ? "outline" : "primary"} icon={<Upload size={14} />}
+                    disabled={busy === r.key} onClick={() => setReplacing(row)}
+                  >
+                    {busy === r.key ? "Uploading…" : upload?.file_path ? "Replace" : "Upload"}
+                  </JrButton>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {replacing && (
+        <ReplaceDialog
+          requirement={replacing.requirement}
+          status={replacing.status}
+          existingName={replacing.upload?.file_name}
+          onCancel={() => setReplacing(null)}
+          onConfirm={(file) => uploadFor(replacing, file)}
+        />
+      )}
+    </div>
+  );
+}
+
+export default Documents;

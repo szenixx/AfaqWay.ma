@@ -1,5 +1,9 @@
 "use client";
 
+import { usePresenceBroadcast } from "@/lib/presence";
+import { BrandLogo } from "@/components/ds";
+import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
+import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -11,12 +15,14 @@ import AdminManagement from "@/components/admin/AdminManagement";
 import PaymentMethodsAdmin from "@/components/admin/PaymentMethodsAdmin";
 import UserManagement from "@/components/admin/UserManagement";
 import AdminChat from "@/components/admin/AdminChat";
+import { JourneyManager } from "@/components/admin/journey/JourneyManager";
+import { JourneyApprovals } from "@/components/admin/journey/JourneyApprovals";
 import OverviewGrid from "@/components/admin/dashboard/OverviewGrid";
 import WalletGrid from "@/components/admin/dashboard/WalletGrid";
 import { Flag } from "@/components/ds";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
-import { LayoutDashboard, UserCog, Receipt, CreditCard, Users, Crown, Package, Bell, MessageCircle, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, UserCog, Receipt, CreditCard, Users, Crown, Package, Bell, MessageCircle, LogOut, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 type Page = { id: string; label: string; superOnly?: boolean };
 const PAGES: Page[] = [
@@ -104,7 +110,10 @@ function Placeholder({ title }: { title: string }) {
 type Report = { id: string; type: string; title: string; body: string | null; target_page: string | null; target_id: string | null; read: boolean; created_at: string };
 type BanUser = { id: string; full_name: string | null; email: string | null; user_number: number | null; city: string | null; banned: boolean };
 
-function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: string, targetId?: string | null) => void; onChanged: () => void }) {
+function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onGo: (p: string, targetId?: string | null) => void; onChanged: () => void; isSuper: boolean }) {
+  /* Publishing an announcement is a super-admin action; everyone else browses. */
+  const [addUpdate, setAddUpdate] = useState(false);
+  const [updates, setUpdates] = useState<PlatformUpdate[]>([]);
   const [rows, setRows] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [banPanel, setBanPanel] = useState<{ reportId: string; user: BanUser } | null>(null);
@@ -114,7 +123,10 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
     const { data } = await supabase.from("admin_reports").select("id, type, title, body, target_page, target_id, read, created_at").order("created_at", { ascending: false }).limit(100);
     setRows((data ?? []) as Report[]); setLoading(false);
   }, []);
+  const loadUpdates = useCallback(async () => { setUpdates(await fetchUpdates(10)); }, []);
   useEffect(() => { void load(); }, [load, version]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadUpdates(); }, [loadUpdates]);
   async function mark(id: string) { await supabase.from("admin_reports").update({ read: true }).eq("id", id); onChanged(); void load(); }
   async function markAll() { await supabase.from("admin_reports").update({ read: true }).eq("read", false); onChanged(); void load(); }
   async function check(r: Report) {
@@ -137,8 +149,37 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
     <div style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Reports</h1>
-        <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
+          {isSuper && (
+            <button type="button" className="jr-btn jr-btn-primary jr-btn-md" onClick={() => setAddUpdate(true)}>
+              <Plus size={15} />Add Update
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Announcements already sent, newest first, readable by every admin. */}
+      {updates.length > 0 && (
+        <section className="upd-list">
+          <h2 className="lrn-sub">Platform updates</h2>
+          {updates.map((u) => (
+            <article key={u.id} className="upd-item">
+              <BrandLogo size={26} />
+              <div style={{ minWidth: 0 }}>
+                <div className="upd-item-head">
+                  <b>{u.title}</b>
+                  <time>{new Date(u.created_at).toLocaleString()}</time>
+                </div>
+                {u.body && <p className="upd-item-body">{u.body}</p>}
+                {u.attachments?.length > 0 && (
+                  <span className="upd-item-files">{u.attachments.length} attachment(s)</span>
+                )}
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
       {loading ? <Loader block /> : rows.length === 0 ? (
         <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No reports yet.</div>
       ) : (
@@ -162,6 +203,10 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
             </div>
           ))}
         </div>
+      )}
+
+      {addUpdate && (
+        <AddUpdateDialog onClose={() => setAddUpdate(false)} onPublished={() => { void loadUpdates(); }} />
       )}
 
       {banPanel && (
@@ -203,6 +248,25 @@ function ReportBox({ version, onGo, onChanged }: { version: number; onGo: (p: st
 
 const rowSt = { display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--line-soft)" } as const;
 
+
+/* Users live on one page. The plan modules point at it instead of embedding a
+   second copy of the same table. */
+function ModuleLink({ onOpen, plan }: { onOpen: () => void; plan: string }) {
+  return (
+    <section className="jm">
+      <header className="jm-head">
+        <div style={{ minWidth: 0 }}>
+          <h2 className="jm-title">{plan} users</h2>
+          <p className="jm-sub">Every student is managed on the User Management page, filtered by country and plan.</p>
+        </div>
+        <button type="button" className="jr-btn jr-btn-primary jr-btn-md" onClick={onOpen}>
+          Open User Management
+        </button>
+      </header>
+    </section>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "gate" | "ready">("loading");
@@ -210,9 +274,39 @@ export default function AdminPage() {
   const [email, setEmail] = useState("");
   const [page, setPage] = useState("reviews");
   const [collapsed, setCollapsed] = useState(false);
+  /* Dragging the right edge sets the width; it is remembered per browser and
+     clamped so the sidebar can never be dragged unusably narrow or wide. */
+  const [sideWidth, setSideWidth] = useState(258);
+  const dragging = useRef(false);
+
+  useEffect(() => {
+    const saved = Number(window.localStorage.getItem("af.admin.sidebar") ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved >= 210 && saved <= 420) setSideWidth(saved);
+  }, []);
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const next = Math.min(420, Math.max(210, e.clientX - 22));
+      setSideWidth(next);
+    };
+    const stop = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      document.body.style.userSelect = "";
+      try { window.localStorage.setItem("af.admin.sidebar", String(sideWidth)); } catch { /* storage blocked */ }
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", stop);
+    return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", stop); };
+  }, [sideWidth]);
   const [unread, setUnread] = useState(0);
   const [reportVersion, setReportVersion] = useState(0);
   const [chatUser, setChatUser] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
+  /* Administrators appear online to everyone else as well. */
+  usePresenceBroadcast(meId, { name: email || null, role: "admin" });
   const [highlightPayment, setHighlightPayment] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ LT: true });
   const [chatUnread, setChatUnread] = useState(false);
@@ -260,7 +354,7 @@ export default function AdminPage() {
       const { role } = await fetchAdminRole(user.email);
       if (cancelled) return;
       if (!role) { router.replace("/dashboard"); return; }
-      setRole(role); setEmail(user.email ?? "");
+      setRole(role); setEmail(user.email ?? ""); setMeId(user.id);
       setPage(role === "superadmin" ? "reviews" : "users");
       if (role === "superadmin" && (typeof window === "undefined" || sessionStorage.getItem("af_admin_gate") !== "ok")) setStatus("gate");
       else setStatus("ready");
@@ -284,7 +378,14 @@ export default function AdminPage() {
     <div className="adm-root">
       <div className="adm-bg" aria-hidden><span><LogoMark size={800} /></span></div>
       <div className="adm-shell">
-        <aside className="adm-sidebar" style={{ width: collapsed ? 76 : 258 }}>
+        <aside className="adm-sidebar" style={{ width: collapsed ? 76 : sideWidth }}>
+          {/* Drag to resize; hidden while collapsed, where width is fixed. */}
+          {!collapsed && (
+            <span
+              className="adm-side-grip" role="separator" aria-orientation="vertical" aria-label="Resize sidebar"
+              onMouseDown={(e) => { e.preventDefault(); dragging.current = true; document.body.style.userSelect = "none"; }}
+            />
+          )}
           <span className="adm-sidebar-logo" aria-hidden><LogoMark size={150} /></span>
           {/* Workspace switcher */}
           <div className="adm-ws" style={{ justifyContent: collapsed ? "center" : "space-between" }}>
@@ -384,9 +485,23 @@ export default function AdminPage() {
             : page === "admins" ? <AdminManagement />
             : page === "methods" ? <PaymentMethodsAdmin />
             : page === "users" ? <UserManagement onOpenChat={openChat} />
-            : page === "full" ? <UserManagement initialPlan="full_service" initialCountry="LT" title="Full Service users — Lithuania" onOpenChat={openChat} />
-            : page === "self" ? <UserManagement initialPlan="self_service" initialCountry="LT" title="Self Service users — Lithuania" onOpenChat={openChat} />
-            : page === "reports" ? <ReportBox version={reportVersion} onGo={goFromReport} onChanged={refreshUnread} />
+            : page === "full" ? (
+              <>
+                {/* Journey Manager sits at the top of the plan module. */}
+                <JourneyApprovals plan="full_service" />
+                <JourneyManager plan="full_service" />
+                {/* Users are managed in one place only: the User Management page. */}
+                <ModuleLink onOpen={() => setPage("users")} plan="Full Service" />
+              </>
+            )
+            : page === "self" ? (
+              <>
+                <JourneyApprovals plan="self_service" />
+                <JourneyManager plan="self_service" />
+                <ModuleLink onOpen={() => setPage("users")} plan="Self Service" />
+              </>
+            )
+            : page === "reports" ? <ReportBox version={reportVersion} onGo={goFromReport} onChanged={refreshUnread} isSuper={role === "superadmin"} />
             : page === "chat" ? <AdminChat initialUserId={chatUser} onOpenPlanModule={openPlanModule} />
             : <Placeholder title={[...PAGES, ...ALL_SUB_PAGES].find((p) => p.id === page)?.label ?? page} />}
         </main>

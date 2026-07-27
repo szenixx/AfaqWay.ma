@@ -5,10 +5,15 @@ import {
   Bell, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, GraduationCap,
   NotebookPen, Pin, Plus, Zap,
 } from "lucide-react";
+import { useEffect } from "react";
 import {
-  KIND_META, iso, monthGrid, officialEvents, readEvents, writeEvents,
+  KIND_META, iso, monthGrid, officialEvents,
   type EventKind, type ScheduleEvent,
 } from "@/lib/schedule";
+import {
+  deleteEvent as dbDelete, fetchEvents as dbFetch, saveEvent as dbSave,
+  subscribeSchedule, type FullEvent,
+} from "@/lib/scheduleDb";
 import { JourneySnapshotCard } from "../RightPanel";
 import type { WsProfile } from "../Modules";
 import { EventDetailsModal, EventFormModal } from "./EventModal";
@@ -32,13 +37,35 @@ export default function Schedule({ profile, onNav, role = "student" }: {
   const today = useMemo(() => new Date(), []);
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selected, setSelected] = useState(iso(today));
-  const [events, setEvents] = useState<ScheduleEvent[]>(() => readEvents(profile.userId));
+  /* Events live in the database, so the same calendar appears on every device
+     and an advisor works on the one the student sees. */
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [form, setForm] = useState<{ kind: Exclude<EventKind, "official">; existing?: ScheduleEvent } | null>(null);
   const [details, setDetails] = useState<ScheduleEvent | null>(null);
   const [dayList, setDayList] = useState<string | null>(null);
 
   // Stored events are read once on mount; official dates are generated per year.
-  const persist = useCallback((next: ScheduleEvent[]) => { setEvents(next); writeEvents(profile.userId, next); }, [profile.userId]);
+  const reload = useCallback(async () => { setEvents(await dbFetch(profile.userId)); }, [profile.userId]);
+  // Fetching from Supabase is the "subscribe to an external system" case; the
+  // state set here is the query result, not derived render state.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => subscribeSchedule(profile.userId, () => { void reload(); }), [profile.userId, reload]);
+
+  /* Writes go straight to the database; the realtime subscription brings the
+     result back, so the screen and the store can never disagree. */
+  const persist = useCallback(async (next: ScheduleEvent[]) => {
+    setEvents(next);
+    const before = new Map(events.map((e) => [e.id, e]));
+    for (const e of next) {
+      const prev = before.get(e.id);
+      if (!prev || JSON.stringify(prev) !== JSON.stringify(e)) {
+        await dbSave({ ...(e as FullEvent), userId: profile.userId, date: e.date, createdBy: role === "advisor" ? "advisor" : "student" });
+      }
+    }
+    for (const e of events) if (!next.some((n) => n.id === e.id)) await dbDelete(e.id);
+    await reload();
+  }, [profile.userId, events, reload, role]);
 
   const all = useMemo(
     () => [...officialEvents(cursor.getFullYear()), ...officialEvents(cursor.getFullYear() + 1), ...events],

@@ -4,20 +4,21 @@
    switches on the user's plan (self_service vs full_service). Realistic demo
    data comes from ./data. Presentational pieces come from ./parts. */
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
-import { regenerateAvatar, removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
-import { squareCompress } from "@/lib/imagePrep";
+import { removeUploadedPhoto, setPresetAvatar, setUploadedPhoto } from "@/lib/avatarProfile";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, UserAvatar, fieldIcon, iconForLabel } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, AvatarPicker, Accordion, Loader, fieldIcon, iconForLabel, type AvatarChoice } from "@/components/ds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
+import { useJourneySummary } from "@/lib/useJourneySummary";
+import { useNotifications, markRead, markAllRead } from "@/lib/notifications";
 import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
   Bell, MessageCircle, ArrowRight, Plus, Check, Pencil, Mail, Phone, MapPin,
-  Calendar, CreditCard, UserRound, ChevronRight, Send, LifeBuoy, Compass,
-  TriangleAlert, X, Sparkles, GraduationCap, Info, Lock, Wallet,
+  Calendar, CreditCard, UserRound, Send, LifeBuoy, Compass,
+  X, Sparkles, GraduationCap, Lock, Wallet, Ticket,
 } from "lucide-react";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import { PAY_METHODS } from "@/lib/plans";
@@ -25,11 +26,12 @@ import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
 import {
   JOURNEY, REQUIRED_DOCS, DOC_LABEL, DOC_TONE, NOTIFICATIONS, RECENT_ACTIVITY,
-  UPCOMING_TASKS, FAQ, type DocStatus,
+  UPCOMING_TASKS, FAQ,
 } from "./data";
 import {
   Panel, CardTitle, StatTile, ProgressLine, Pill, EmptyState,
-  BtnPrimary, BtnGhost, StatusGlyph, InfoNotice, IconChip, CompactCard,
+  BtnPrimary, BtnGhost, StatusGlyph, IconChip, CompactCard,
+  SectionTitle, InlineNote,
 } from "./parts";
 
 /* The approved payment behind the user's subscription. Drives the verified
@@ -59,16 +61,16 @@ const activeStageIdx = Math.max(0, JOURNEY.findIndex((s) => s.status === "active
 /* ── Overview ─────────────────────────────────────────────────────────────── */
 export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
   const full = profile.plan === "full_service";
-  const approved = REQUIRED_DOCS.filter((d) => d.status === "approved").length;
-  const pending = REQUIRED_DOCS.filter((d) => d.status === "pending" || d.status === "under_review").length;
+  // Live counters, shared with the Journey and Documents modules.
+  const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree);
   const unread = NOTIFICATIONS.filter((n) => !n.read).length;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Stat row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }} className="sw-statrow">
-        <StatTile label="Journey progress" value={`${journeyPct}%`} accent="#3B5BDB" icon={<Route size={16} />} sub={`Stage ${activeStageIdx + 1} of ${JOURNEY.length}`} />
-        <StatTile label="Documents approved" value={`${approved}/${REQUIRED_DOCS.length}`} accent="#20C997" icon={<CircleCheckBig size={16} />} sub="Verified by our team" />
-        <StatTile label="Pending items" value={String(pending)} accent="#F76707" icon={<Clock3 size={16} />} sub="Awaiting you or review" />
+        <StatTile label="Journey progress" value={`${j.pct}%`} accent="#3B5BDB" icon={<Route size={16} />} sub={j.stageCount ? `Stage ${j.stageIndex} of ${j.stageCount}` : "Not started"} />
+        <StatTile label="Documents approved" value={`${j.docsApproved}/${j.docsTotal}`} accent="#20C997" icon={<CircleCheckBig size={16} />} sub="Verified by our team" />
+        <StatTile label="Pending items" value={String(j.docsPending)} accent="#F76707" icon={<Clock3 size={16} />} sub="Awaiting you or review" />
         <StatTile label="Notifications" value={String(unread)} accent="#845EF7" icon={<Bell size={16} />} sub="Unread updates" />
       </div>
 
@@ -175,140 +177,78 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
 }
 
 /* ── My Journey ───────────────────────────────────────────────────────────── */
-export function Journey({ profile }: { profile: WsProfile }) {
-  const full = profile.plan === "full_service";
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Panel>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <span style={{ font: "700 14px/18px var(--font-sans)", color: "var(--ink)" }}>Overall progress</span>
-          <span style={{ font: "700 14px/18px var(--font-sans)", color: "var(--indigo-600)" }}>{journeyPct}%</span>
-        </div>
-        <ProgressLine pct={journeyPct} height={10} />
-      </Panel>
-
-      <div style={{ position: "relative" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {JOURNEY.map((s, i) => {
-            const locked = s.status === "locked";
-            const tone = s.status === "done" ? "green" : s.status === "active" ? "amber" : "grey";
-            const label = s.status === "done" ? "Completed" : s.status === "active" ? (full ? "In progress" : "In progress") : locked ? "Locked" : "Not started";
-            return (
-              <Panel key={s.key} style={locked ? { opacity: 0.72 } : undefined}>
-                <div style={{ display: "flex", gap: 14 }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "none" }}>
-                    <span style={{ width: 40, height: 40, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", font: "700 15px/1 var(--font-sans)", background: s.status === "active" ? "var(--indigo-600)" : s.status === "done" ? "var(--green)" : "var(--subtle)", color: s.status === "active" || s.status === "done" ? "#fff" : "var(--ink-faint)" }}>{i + 1}</span>
-                    {i < JOURNEY.length - 1 && <span style={{ width: 2, flex: 1, minHeight: 18, background: "var(--line)", marginTop: 4 }} />}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, paddingBottom: 2 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <span style={{ font: "700 16px/22px var(--font-sans)", color: "var(--ink)" }}>{s.title}</span>
-                      <Pill tone={tone} text={label} />
-                      <span style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginLeft: "auto" }}>{s.eta}</span>
-                    </div>
-                    <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0" }}>{full ? s.desc.full : s.desc.self}</p>
-                    {!locked && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 12 }}>
-                        {s.tasks.map((t) => (
-                          <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <span style={{ width: 20, height: 20, borderRadius: 7, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", background: t.done ? "var(--green)" : "var(--subtle)", color: t.done ? "#fff" : "transparent", border: t.done ? "none" : "1px solid var(--line)" }}><Check size={13} /></span>
-                            <span style={{ font: "500 13px/18px var(--font-sans)", color: t.done ? "var(--ink-faint)" : "var(--ink)", textDecoration: t.done ? "line-through" : "none" }}>{t.label}</span>
-                            {full && !t.done && <span style={{ font: "400 11px/15px var(--font-sans)", color: "var(--indigo-600)", marginLeft: "auto" }}>Advisor handling</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {locked && <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, font: "600 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}><StatusGlyph status="locked" size={15} />Unlocks after your residence permit is approved</div>}
-                  </div>
-                </div>
-              </Panel>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+export { JourneyRoadmap as Journey } from "./journey/JourneyRoadmap";
 
 /* ── Documents ────────────────────────────────────────────────────────────── */
-export function Documents({ profile }: { profile: WsProfile }) {
-  const full = profile.plan === "full_service";
-  const [filter, setFilter] = useState<"all" | DocStatus>("all");
-  const filters: { id: "all" | DocStatus; label: string }[] = [
-    { id: "all", label: "All" }, { id: "approved", label: "Approved" },
-    { id: "under_review", label: "Under review" }, { id: "needs_changes", label: "Needs changes" }, { id: "pending", label: "Pending" },
-  ];
-  const rows = REQUIRED_DOCS.filter((d) => filter === "all" || d.status === filter);
-  const approved = REQUIRED_DOCS.filter((d) => d.status === "approved").length;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }} className="sw-statrow">
-        <StatTile label="Approved" value={String(approved)} accent="#20C997" icon={<CircleCheckBig size={16} />} />
-        <StatTile label="Under review" value={String(REQUIRED_DOCS.filter((d) => d.status === "under_review").length)} accent="#F76707" icon={<Clock3 size={16} />} />
-        <StatTile label="Needs changes" value={String(REQUIRED_DOCS.filter((d) => d.status === "needs_changes").length)} accent="#F03E3E" icon={<TriangleAlert size={16} />} />
-        <StatTile label="Pending" value={String(REQUIRED_DOCS.filter((d) => d.status === "pending").length)} accent="#868E96" icon={<FileText size={16} />} />
-      </div>
+/* The module is database-driven: requirements come from Journey steps and
+   uploads go to R2 through the platform gateway. It lives in its own file. */
+export { Documents } from "./documents/DocumentsModule";
 
-      <Panel>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {filters.map((f) => (
-              <button key={f.id} type="button" onClick={() => setFilter(f.id)} style={{ height: 34, padding: "0 14px", borderRadius: 12, border: "1px solid var(--line)", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", background: filter === f.id ? "var(--indigo-600)" : "rgba(255,255,255,.6)", color: filter === f.id ? "#fff" : "var(--ink-soft)" }}>{f.label}</button>
-            ))}
-          </div>
-          <BtnPrimary style={{ height: 38 }}><Upload size={16} />Upload document</BtnPrimary>
-        </div>
-      </Panel>
-
-      <Panel style={{ padding: 8 }}>
-        {rows.length === 0 ? <EmptyState icon={<FileText size={26} />} title="Nothing here" sub="No documents match this filter." /> : rows.map((d, i) => (
-          <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 12px", borderBottom: i < rows.length - 1 ? "1px solid var(--line-soft)" : "none" }}>
-            <span style={{ width: 42, height: 42, borderRadius: 13, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={19} /></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: "600 14px/19px var(--font-sans)", color: "var(--ink)" }}>{d.name}</div>
-              <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{d.desc} · Updated {d.updated}</div>
-            </div>
-            <Pill tone={DOC_TONE[d.status]} text={DOC_LABEL[d.status]} />
-            <div style={{ display: "flex", gap: 6, flex: "none" }}>
-              {(d.status === "pending" || d.status === "needs_changes") ? (
-                <button type="button" title="Upload" style={iconBtnSt}><Upload size={16} /></button>
-              ) : (
-                <button type="button" title="Download" style={iconBtnSt}><Download size={16} /></button>
-              )}
-            </div>
-          </div>
-        ))}
-      </Panel>
-    </div>
-  );
-}
-const iconBtnSt: React.CSSProperties = { width: 36, height: 36, borderRadius: 11, border: "1px solid var(--line)", background: "rgba(255,255,255,.7)", color: "var(--ink-soft)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" };
+/** Square icon-only button, used by the small inline actions below. */
+const iconBtnSt: React.CSSProperties = {
+  width: 34, height: 34, borderRadius: 11, border: "1px solid var(--line)",
+  background: "var(--card)", color: "var(--ink-soft)", cursor: "pointer",
+  display: "flex", alignItems: "center", justifyContent: "center",
+};
 
 /* ── Explore Lithuania ────────────────────────────────────────────────────── */
 export { default as Explore } from "./explore/ExploreLithuania";
 
 /* ── Notifications ────────────────────────────────────────────────────────── */
-const NOTIF_ICON = { doc: <FileText size={16} />, journey: <Route size={16} />, message: <MessageCircle size={16} />, deadline: <Calendar size={16} />, system: <Bell size={16} /> };
-export function Notifications() {
-  const [items, setItems] = useState(NOTIFICATIONS);
-  const unread = items.filter((n) => !n.read).length;
+const NOTIF_ICON: Record<string, React.ReactNode> = {
+  document: <FileText size={16} />, journey: <Route size={16} />, message: <MessageCircle size={16} />,
+  schedule: <Calendar size={16} />, payment: <CreditCard size={16} />, update: <Sparkles size={16} />,
+  system: <Bell size={16} />,
+};
+
+/* The real notification centre: journey decisions, document verifications,
+   schedule reminders and platform announcements, live. */
+export function Notifications({ profile, onNav }: { profile: WsProfile; onNav?: (id: string) => void }) {
+  const { items, unread, loading, reload } = useNotifications(profile.userId);
+
+  const open = async (n: { id: string; read: boolean; link: string }) => {
+    if (!n.read) { await markRead(n.id); await reload(); }
+    if (n.link && onNav) onNav(n.link);
+  };
+
+  if (loading) return <Loader size={40} block label="Loading your notifications" />;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {unread > 0 && (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <BtnGhost onClick={() => setItems((xs) => xs.map((n) => ({ ...n, read: true })))}><Check size={15} />Mark all read</BtnGhost>
+          <BtnGhost onClick={async () => { await markAllRead(profile.userId); await reload(); }}>
+            <Check size={15} />Mark all read
+          </BtnGhost>
         </div>
       )}
       <Panel style={{ padding: 8 }}>
-        {items.length === 0 ? <EmptyState icon={<Bell size={26} />} title="All caught up" /> : items.map((n, i) => (
-          <div key={n.id} style={{ display: "flex", gap: 13, padding: "14px 12px", borderBottom: i < items.length - 1 ? "1px solid var(--line-soft)" : "none", background: n.read ? "transparent" : "var(--indigo-tint)", borderRadius: 12 }}>
-            <span style={{ width: 38, height: 38, borderRadius: 12, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 10px rgba(23,35,58,.06)" }}>{NOTIF_ICON[n.kind]}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{n.title}</span>{!n.read && <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--red)" }} />}</div>
-              <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>{n.body}</div>
-              <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", marginTop: 3 }}>{n.time}</div>
-            </div>
-          </div>
+        {items.length === 0 ? (
+          <EmptyState icon={<Bell size={26} />} title="All caught up" sub="Updates about your journey, documents and schedule appear here." />
+        ) : items.map((n, i) => (
+          <button
+            key={n.id} type="button" onClick={() => open(n)}
+            style={{
+              display: "flex", gap: 13, padding: "14px 12px", width: "100%", textAlign: "left",
+              border: "none", cursor: n.link ? "pointer" : "default", font: "inherit",
+              borderBottom: i < items.length - 1 ? "1px solid var(--line-soft)" : "none",
+              background: n.read ? "transparent" : "var(--indigo-tint)", borderRadius: 12,
+            }}
+          >
+            <span style={{ width: 38, height: 38, borderRadius: 12, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 10px rgba(23,35,58,.06)" }}>
+              {NOTIF_ICON[n.kind] ?? <Bell size={16} />}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{n.title}</span>
+                {!n.read && <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--red)" }} />}
+              </span>
+              {n.body && <span style={{ display: "block", font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>{n.body}</span>}
+              <span style={{ display: "block", font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", marginTop: 3 }}>
+                {new Date(n.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </span>
+          </button>
         ))}
       </Panel>
     </div>
@@ -317,44 +257,30 @@ export function Notifications() {
 
 /* ── Support ──────────────────────────────────────────────────────────────── */
 export function Support({ onNav }: { onNav: (id: string) => void }) {
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="sw-explore">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Floating cards with the icon repeated large in the background. */}
+      <div className="sup-grid">
         {SUPPORT_CARDS.map((c) => {
           const inner = (
             <>
-              <span style={{ width: 46, height: 46, borderRadius: 14, background: "#fff", color: c.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, boxShadow: "0 3px 10px rgba(23,35,58,.06)" }}>{c.icon}</span>
-              <div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)" }}>{c.title}</div>
-              <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", margin: "4px 0 14px" }}>{c.desc}</div>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 7, font: "600 13px/1 var(--font-sans)", color: c.color }}>{c.cta}<ArrowRight size={15} /></span>
+              <span aria-hidden className="sup-bg" style={{ color: c.color }}>{c.icon}</span>
+              <span className="sup-ico" style={{ color: c.color, background: c.tint, borderColor: c.line }}>{c.icon}</span>
+              <span className="sup-title">{c.title}</span>
+              <span className="sup-desc">{c.desc}</span>
+              <span className="sup-cta" style={{ color: c.color }}>{c.cta}<ArrowRight size={15} /></span>
             </>
           );
-          const cardStyle: React.CSSProperties = { display: "block", textAlign: "left", padding: 18, borderRadius: 20, background: c.tint, border: `1px solid ${c.line}`, cursor: "pointer", textDecoration: "none" };
           return c.href
-            ? <a key={c.title} href={c.href} target={c.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" style={cardStyle}>{inner}</a>
-            : <button key={c.title} type="button" onClick={() => onNav(c.to!)} style={{ ...cardStyle, width: "100%", font: "inherit" }}>{inner}</button>;
+            ? <a key={c.title} className="sup-card" href={c.href} target={c.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer">{inner}</a>
+            : <button key={c.title} type="button" className="sup-card" onClick={() => onNav(c.to!)}>{inner}</button>;
         })}
       </div>
 
-      {/* FAQ — no card background, just a thin divider above it */}
-      <div style={{ borderTop: "1px solid var(--line)", paddingTop: 18, marginTop: 4 }}>
-        <div style={{ font: "700 15px/20px var(--font-sans)", color: "var(--ink)", marginBottom: 14 }}>Frequently asked questions</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {FAQ.map((f, i) => {
-            const isOpen = openFaq === i;
-            return (
-              <div key={i} style={{ borderRadius: 14, background: "var(--subtle)", overflow: "hidden" }}>
-                <button type="button" onClick={() => setOpenFaq(isOpen ? null : i)} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, width: "100%", boxSizing: "border-box", padding: "13px 15px" }}>
-                  <span style={{ flex: 1, font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{f.q}</span>
-                  <ChevronRight size={17} color="var(--ink-faint)" style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 160ms" }} />
-                </button>
-                {isOpen && <div style={{ padding: "0 15px 14px", font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)" }}>{f.a}</div>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <section>
+        <SectionTitle tone="indigo">Frequently asked questions</SectionTitle>
+        <Accordion items={FAQ.map((f) => ({ question: f.q, answer: f.a }))} />
+      </section>
     </div>
   );
 }
@@ -362,7 +288,7 @@ export function Support({ onNav }: { onNav: (id: string) => void }) {
 // NOTE: WhatsApp number is the real support line.
 const SUPPORT_CARDS: { icon: React.ReactNode; title: string; desc: string; cta: string; color: string; tint: string; line: string; to?: string; href?: string }[] = [
   { icon: <MessageCircle size={20} />, title: "Live chat", desc: "Chat with our team inside your workspace.", cta: "Open chat", color: "var(--indigo-600)", tint: "var(--indigo-tint)", line: "var(--indigo-line)", to: "messages" },
-  { icon: <Plus size={20} />, title: "Open a ticket", desc: "Send us your issue directly on WhatsApp.", cta: "WhatsApp us", color: "var(--green)", tint: "var(--green-tint)", line: "var(--green-line)", href: "https://wa.me/212632501155" },
+  { icon: <Ticket size={20} />, title: "Open a ticket", desc: "Send us your issue directly on WhatsApp.", cta: "WhatsApp us", color: "var(--green)", tint: "var(--green-tint)", line: "var(--green-line)", href: "https://wa.me/212632501155" },
   { icon: <Mail size={20} />, title: "Contact support", desc: "support@afaqway.com", cta: "Email us", color: "var(--amber)", tint: "var(--amber-tint)", line: "var(--amber-line)", href: "mailto:support@afaqway.com" },
 ];
 
@@ -386,25 +312,44 @@ export function Subscription({ profile }: { profile: WsProfile }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">
-        <Panel style={{ background: "linear-gradient(135deg, rgba(59,91,219,.14), rgba(132,94,247,.12))" }}>
-          <span className={full ? "pill pill-indigo" : "pill pill-green"}>Current plan</span>
-          <div style={{ font: "800 26px/32px var(--font-sans)", color: "var(--ink)", margin: "12px 0 2px", letterSpacing: "-.3px" }}>{p?.name ?? "—"}</div>
-          <div style={{ font: "600 15px/22px var(--font-sans)", color: "var(--indigo-600)" }}>{p ? `${p.price.toLocaleString("en-US")} ${p.currency}` : ""}</div>
-          <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 8 }}>{p?.tagline}</div>
-          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <BtnPrimary onClick={() => setShowDetails((v) => !v)}><CreditCard size={16} />{showDetails ? "Hide plan details" : "View plan details"}</BtnPrimary>
-            {pay && (
-              <BtnGhost tone="blue" onClick={getInvoice} disabled={invoiceBusy}><Download size={16} />{invoiceBusy ? "Preparing…" : "Download Invoice"}</BtnGhost>
-            )}
+        {/* Current plan, in the same language as the admin payment cards:
+            gradient surface, oversized plan glyph behind, badges on top. */}
+        <div className="plan-card">
+          <span aria-hidden className="plan-glyph"><Wallet size={190} /></span>
+          <div className="plan-body">
+            <div className="plan-badges">
+              <span className={full ? "pill pill-indigo" : "pill pill-green"}>{full ? "Full Service" : "Self Service"}</span>
+              <span className={profile.verified ? "pill pill-green" : "pill pill-amber"}>
+                {profile.verified ? "Active" : "Pending"}
+              </span>
+            </div>
+
+            <div className="plan-name">{p?.name ?? "—"}</div>
+            <div className="plan-price">{p ? `${p.price.toLocaleString("en-US")} ${p.currency}` : ""}</div>
+            <p className="plan-tagline">{p?.tagline}</p>
+
+            <dl className="plan-meta">
+              <div><dt>Billing</dt><dd>One-off payment</dd></div>
+              <div><dt>Paid on</dt><dd>{pay ? new Date(pay.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</dd></div>
+              <div><dt>Method</dt><dd>{pay ? (PAY_METHODS.find((m) => m.id === pay.method)?.name ?? pay.method) : "—"}</dd></div>
+              <div><dt>Expires</dt><dd>No expiry</dd></div>
+            </dl>
+
+            <div className="plan-acts">
+              <BtnPrimary onClick={() => setShowDetails((v) => !v)}><CreditCard size={16} />{showDetails ? "Hide plan details" : "View plan details"}</BtnPrimary>
+              {pay && (
+                <BtnGhost tone="blue" onClick={getInvoice} disabled={invoiceBusy}><Download size={16} />{invoiceBusy ? "Preparing…" : "Download Invoice"}</BtnGhost>
+              )}
+            </div>
+            {invoiceErr && <InlineNote tone="red">{invoiceErr}</InlineNote>}
           </div>
-          {invoiceErr && <div style={{ font: "500 12px/17px var(--font-sans)", color: "var(--red)", marginTop: 8 }}>{invoiceErr}</div>}
-        </Panel>
+        </div>
 
         {/* Service information — the decorative logo sits behind the content. */}
         <Panel style={{ position: "relative", overflow: "hidden" }}>
           <span aria-hidden style={{ position: "absolute", right: -26, bottom: -34, opacity: 0.06, pointerEvents: "none", lineHeight: 0 }}><LogoMark size={210} /></span>
           <div style={{ position: "relative" }}>
-            <CardTitle title="Service information" sub="Your subscription and how you paid for it" />
+            <SectionTitle tone="indigo" sub="Your subscription and how you paid for it">Service Information</SectionTitle>
             <div style={{ display: "flex", flexDirection: "column" }}>
               {[
                 ["Status", "Active"],
@@ -458,7 +403,7 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
     { label: "Destination", value: "Lithuania", icon: <Compass size={15} /> },
   ];
   const st = profile.study ?? { program: "—", tuition: "—", city: "—", country: "Lithuania", language: "English", university: "—" };
-  const ac = profile.academic ?? { lastDegree: "—", field: "—", year: "—", grade: "—", target: "—", englishLevel: "—", test: "—" };
+  const ac = profile.academic ?? { lastDegree: "—", field: "—", year: "—", grade: "—", target: "—", targetDegree: "", englishLevel: "—", test: "—" };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Panel>
@@ -478,12 +423,12 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
             </div>
           ))}
         </div>
-        <InfoNotice icon={<Info size={16} />} style={{ marginTop: 14 }}>These details come from your onboarding. To change them, use Settings.</InfoNotice>
+        <InlineNote>These details come from your onboarding. To change them, use Settings.</InlineNote>
       </Panel>
 
       {/* Personal Academic Information — sits above Study Application (always shown) */}
       <Panel>
-        <CardTitle title="Personal Academic Information" sub="Your previous diploma and English background, from onboarding" />
+        <SectionTitle tone="green" sub="Your previous diploma and English background, from onboarding">Personal Information</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
           <InfoRow label="Last diploma" value={ac.lastDegree} />
           <InfoRow label="Field of study" value={ac.field} />
@@ -497,16 +442,16 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
 
       {/* Study Application — locked; changes go to the admin as a request (always shown) */}
       <Panel>
-        <CardTitle title="Study Application" sub="Set from your application — locked" action={<BtnGhost tone="red" onClick={() => onNav("settings")}><Pencil size={15} />Request a change</BtnGhost>} />
+        <SectionTitle tone="purple" sub="Set from your application, locked">Study Application</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
-          <InfoRow label="Program Name" value={st.program} icon={<GraduationCap size={15} />} iconTone="amber" />
+          <InfoRow label="Program Name" value={st.program} icon={<GraduationCap size={15} />} iconTone="blue" />
           <InfoRow label="Tuition Fees" value={st.tuition} />
           <InfoRow label="City" value={st.city} />
           <InfoRow label="Country" value={st.country} />
           <InfoRow label="Program Language" value={st.language} />
           <InfoRow label="University Name" value={st.university} />
         </div>
-        <InfoNotice icon={<Lock size={16} />} style={{ marginTop: 12 }}>These fields are locked. To change any of them, submit a change request in Settings and our team will review it.</InfoNotice>
+        <InlineNote icon={<Lock size={14} />}>These fields are locked. To change any of them, submit a change request in Settings and our team will review it.</InlineNote>
       </Panel>
     </div>
   );
@@ -536,9 +481,9 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
   const [savedKey, setSavedKey] = useState("");
   const [busy, setBusy] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [picker, setPicker] = useState(false);
   const [progress, setProgress] = useState(0);
   const [seed, setSeed] = useState(profile.avatarSeed);
-  const fileRef = useRef<HTMLInputElement>(null);
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
   const flash = (k: string) => { setSavedKey(k); setTimeout(() => setSavedKey(""), 2200); };
@@ -562,54 +507,66 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
     await supabase.from("profiles").update({ country_flow_answers: cfa }).eq("id", profile.userId);
     setBusy(""); flash("academic"); await onReload();
   }
-  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true); setProgress(10);
-    try {
-      // Cropped square and compressed in the browser before it ever leaves the device.
-      const prepared = await squareCompress(file);
-      setProgress(45);
-      const { path } = await uploadUserFile(prepared, { folder: "avatars" });
-      setProgress(80);
-      await setUploadedPhoto(profile.userId, path);
-      // Publish the new photo platform-wide before the profile reload finishes,
-      // so the top bar and every other avatar update instantly.
-      setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
-      setProgress(100);
-      await onReload();
-    } catch (err) { console.warn("avatar upload failed", err); }
-    setUploading(false); setProgress(0);
-    if (fileRef.current) fileRef.current.value = "";
-  }
-  async function regenerate() {
-    const next = await regenerateAvatar(profile.userId);
-    setSeed(next);
-    setAvatarUrl(null); // back to the generated avatar, no reload needed
-    await onReload();
-  }
   async function removePhoto() {
     await removeUploadedPhoto(profile.userId);
     setAvatarUrl(null);
     await onReload();
   }
+
+  /* One save path for every avatar decision the picker can produce. */
+  async function saveAvatar(choice: AvatarChoice) {
+    setUploading(true); setProgress(15);
+    try {
+      if (choice.kind === "remove") {
+        await removePhoto();
+      } else if (choice.kind === "upload") {
+        setProgress(45);
+        const { path } = await uploadUserFile(choice.file, { folder: "avatars" });
+        setProgress(80);
+        await setUploadedPhoto(profile.userId, path);
+        // Publish platform-wide before the reload finishes, so every avatar
+        // on screen updates at once.
+        setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
+        await onReload();
+      } else {
+        await setPresetAvatar(profile.userId, choice.seed, choice.style);
+        setSeed(choice.seed);
+        setAvatarUrl(null);
+        await onReload();
+      }
+      setProgress(100);
+      setPicker(false);
+    } finally {
+      setUploading(false); setProgress(0);
+    }
+  }
   const SavedTag = ({ k }: { k: string }) => savedKey === k ? <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "600 12.5px/1 var(--font-sans)", color: "var(--green)" }}><Check size={15} />Saved</span> : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {picker && (
+        <AvatarPicker
+          user={{ id: profile.userId, name: profile.fullName }}
+          gender={profile.gender}
+          currentSeed={seed}
+          currentStyle={profile.avatarStyle}
+          currentUrl={avatarUrl}
+          onCancel={() => setPicker(false)}
+          onSave={saveAvatar}
+        />
+      )}
+
       {/* Profile picture: uploaded photo, or the generated avatar. */}
       <Panel>
-        <CardTitle title="Profile picture" sub="Your photo replaces the generated avatar everywhere on the platform" />
+        <SectionTitle tone="blue" sub="Your photo replaces the generated avatar everywhere on the platform">Profile Information</SectionTitle>
         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
           <UserAvatar size={96} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: seed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" style={{ display: "none" }} onChange={onPickAvatar} />
-              <BtnPrimary onClick={() => fileRef.current?.click()} disabled={uploading}>
-                <Upload size={16} />{uploading ? `Uploading ${progress}%` : "Upload photo"}
+              {/* One entry point; the picker holds presets, upload and removal. */}
+              <BtnPrimary onClick={() => setPicker(true)} disabled={uploading}>
+                <Sparkles size={16} />{uploading ? `Saving ${progress}%` : "Change Avatar"}
               </BtnPrimary>
-              <BtnGhost tone="blue" onClick={regenerate} disabled={uploading}><Sparkles size={15} />Generate new avatar</BtnGhost>
-              {avatarUrl && <BtnGhost tone="red" onClick={removePhoto} disabled={uploading}><X size={15} />Remove photo</BtnGhost>}
             </div>
             {uploading && (
               <span style={{ display: "block", height: 6, borderRadius: 999, background: "var(--subtle)", overflow: "hidden", maxWidth: 260 }}>
@@ -625,7 +582,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">
         <Panel>
-          <CardTitle title="Personal information" />
+          <SectionTitle tone="green">Personal Information</SectionTitle>
           <Field label="Full name" value={name} onChange={setName} />
           <Field label="City" value={city} onChange={setCity} />
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
@@ -634,7 +591,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
           </div>
         </Panel>
         <Panel>
-          <CardTitle title="Contact information" />
+          <SectionTitle tone="orange">Emergency Contact</SectionTitle>
           <Field label="Email (read-only)" value={profile.email ?? ""} onChange={() => {}} readOnly />
           <Field label="WhatsApp" value={whatsapp} onChange={setWhatsapp} />
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
@@ -646,7 +603,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
 
       {/* Academic info — the only academic fields the student may change (task 1) */}
       <Panel>
-        <CardTitle title="Academic information" sub="Update your previous field of study and your English level" />
+        <SectionTitle tone="indigo" sub="Update your previous field of study and your English level">Settings</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 26px" }} className="sw-2col">
           <Field label="Field of study (previous diploma)" value={diploma} onChange={setDiploma} placeholder="e.g. Economics" />
           <Select
@@ -662,10 +619,10 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
       </Panel>
 
       <Panel>
-        <CardTitle title="Your program" sub="Set by our team, based on your profile and requests" />
+        <SectionTitle tone="blue" sub="Set by our team, based on your profile and requests">Program</SectionTitle>
         {profile.program ? (
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 22, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)" }}>
-            <span style={{ width: 38, height: 38, borderRadius: 999, flex: "none", background: "var(--green-tint)", color: "var(--green)", border: "1px solid var(--green-line)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={19} /></span>
+            <span style={{ width: 38, height: 38, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", border: "1px solid var(--indigo-line)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={19} /></span>
             <div style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{profile.program}</div>
           </div>
         ) : (

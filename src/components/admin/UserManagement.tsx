@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Check, X, Users, UserCheck, UserX } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { UserDetails } from "./users/UserDetails";
 import { Loader } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
+import { plansForCountry, PLAN_LABEL } from "@/config/pricing";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
-import { Input, Select, MetricCard, trendBadge, fieldIcon } from "@/components/ds";
+import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar } from "@/components/ds";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
@@ -38,6 +40,10 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
   const [track, setTrack] = useState<U | null>(null);
   const [program, setProgram] = useState<U | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>(initialCountry ?? "all");
+  /* The plan filter only appears once a country is chosen, and offers exactly
+     the plans that country sells. */
+  const [planFilter, setPlanFilter] = useState<"all" | string>(initialPlan ?? "all");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "plan" | "country">("recent");
   const [confirm, setConfirm] = useState<{ title: string; body: string; tone: "orange" | "red"; onYes: () => void } | null>(null);
 
   const load = useCallback(async () => {
@@ -91,8 +97,21 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
     return rows.filter((r) =>
       (!planLock || r.plan === planLock)
       && (countryFilter === "all" || r.destination_country === countryFilter)
+      && (planFilter === "all" || r.plan === planFilter)
       && (!q || (r.full_name ?? "").toLowerCase().includes(q) || (r.email ?? "").toLowerCase().includes(q)));
-  }, [rows, query, countryFilter, planLock]);
+  }, [rows, query, countryFilter, planFilter, planLock]);
+
+  /* Plans are per country, so the second filter can only offer what that
+     destination actually sells. */
+  const availablePlans = useMemo(() => plansForCountry(countryFilter === "all" ? null : countryFilter), [countryFilter]);
+
+  const sorted = useMemo(() => {
+    const copy = list.slice();
+    if (sortBy === "name") copy.sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? ""));
+    else if (sortBy === "plan") copy.sort((a, b) => (a.plan ?? "").localeCompare(b.plan ?? ""));
+    else if (sortBy === "country") copy.sort((a, b) => (a.destination_country ?? "").localeCompare(b.destination_country ?? ""));
+    return copy;   // "recent" keeps the query order, newest activation first
+  }, [list, sortBy]);
 
   async function patch(id: string, p: Record<string, unknown>) { await supabase.from("profiles").update(p).eq("id", id); void load(); }
   async function saveEdit() {
@@ -161,35 +180,64 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 18 }}>
         {!countryLock && (
           <Select
-            value={countryFilter} onChange={setCountryFilter} icon={fieldIcon("country")} ariaLabel="Filter by country"
+            value={countryFilter}
+            onChange={(v) => { setCountryFilter(v); setPlanFilter("all"); }}
+            icon={fieldIcon("country")} ariaLabel="Filter by country"
             options={[{ value: "all", label: "All countries" }, ...COUNTRIES.filter((c) => c.available).map((c) => ({ value: c.code, label: c.name }))]}
-            style={{ maxWidth: 220 }} containerStyle={{ minWidth: 200 }}
+            style={{ maxWidth: 220 }} containerStyle={{ minWidth: 190 }}
           />
         )}
-        <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" aria-label="Search users" containerStyle={{ flex: "1 1 240px", maxWidth: 360 }} />
+        {/* Appears only when a country is selected, listing that country's plans. */}
+        {!planLock && countryFilter !== "all" && availablePlans.length > 0 && (
+          <Select
+            value={planFilter} onChange={setPlanFilter} icon={fieldIcon("plan")} ariaLabel="Filter by plan"
+            options={[{ value: "all", label: "All plans" }, ...availablePlans.map((p) => ({ value: p, label: PLAN_LABEL[p] }))]}
+            style={{ maxWidth: 200 }} containerStyle={{ minWidth: 180 }}
+          />
+        )}
+        <Select
+          value={sortBy} onChange={(v) => setSortBy(v as typeof sortBy)} ariaLabel="Sort users"
+          options={[
+            { value: "recent", label: "Most recent" }, { value: "name", label: "Name A–Z" },
+            { value: "plan", label: "Plan" }, { value: "country", label: "Country" },
+          ]}
+          style={{ maxWidth: 180 }} containerStyle={{ minWidth: 160 }}
+        />
+        <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" aria-label="Search users" containerStyle={{ flex: "1 1 220px", maxWidth: 340 }} />
       </div>
 
-      {loading ? <Loader block /> : list.length === 0 ? (
+      {loading ? <Loader block /> : sorted.length === 0 ? (
         <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No paid users yet. They appear here once a payment is approved.</div>
       ) : (
-        <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+        <div className="um-table-wrap">
+          <table className="um-table">
             <thead>
-              <tr style={{ textAlign: "left", font: "600 11px/15px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
-                {["ID", "Name", "Email", "Country", "Plan", "City", "Controls"].map((h) => <th key={h} style={{ padding: "9px 12px", borderBottom: "1px solid var(--line-soft)" }}>{h}</th>)}
+              <tr>
+                {["User", "Contact", "Country", "Plan", "City", "Controls"].map((h) => <th key={h}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
-              {list.map((u) => (
-                <tr key={u.id} style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink)", opacity: u.banned ? 0.55 : 1 }}>
-                  <td style={{ ...td, font: "600 12px/16px var(--font-sans)", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{awu(u.user_number)}</td>
+              {sorted.map((u) => (
+                <tr key={u.id} className={u.banned ? "um-row banned" : "um-row"}>
+                  {/* Identity: avatar, name and reference in one scannable cell. */}
                   <td style={td}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      {u.full_name || "—"}
-                      {u.banned && <span className="pill pill-red" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Ban size={11} />Banned</span>}
+                    <span className="um-user">
+                      <UserAvatar size={36} user={{ id: u.id, name: u.full_name }} />
+                      <span className="um-user-text">
+                        <b>{u.full_name || "Unnamed"}</b>
+                        <em>
+                          {awu(u.user_number)}
+                          {u.banned && <span className="um-susp"><Ban size={10} />Suspended</span>}
+                        </em>
+                      </span>
                     </span>
                   </td>
-                  <td style={td}>{u.email || "—"}</td>
+                  <td style={td}>
+                    <span className="um-contact">
+                      <span>{u.email || "—"}</span>
+                      {(u.whatsapp_number) && <em>{`${u.whatsapp_country_code ?? ""}${u.whatsapp_number}`}</em>}
+                    </span>
+                  </td>
                   <td style={{ ...td, whiteSpace: "nowrap" }}>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</td>
                   <td style={td}>
                     <Select
@@ -224,18 +272,18 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
           <Input label="WhatsApp number" icon={fieldIcon("phone")} value={edit.whatsapp_number ?? ""} onChange={(e) => setEdit({ ...edit, whatsapp_number: e.target.value })} />
         </Modal>
       )}
+      {/* One shared User Details module, identical in every table. */}
       {track && (
-        <Modal title={`${track.full_name || "User"} · steps`} onClose={() => setTrack(null)}>
-          <div style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink)" }}>
-            <Row k="Profile ID" v={awu(track.user_number)} />
-            <Row k="Email" v={track.email ?? "—"} />
-            <Row k="Plan" v={planLabel(track.plan)} />
-            <Row k="Destination" v={track.destination_country ?? "—"} />
-            <Row k="City" v={track.city ?? "—"} />
-            <Row k="WhatsApp" v={`${track.whatsapp_country_code ?? ""} ${track.whatsapp_number ?? ""}`.trim() || "—"} />
-          </div>
-          <div style={{ marginTop: 14, font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", background: "var(--subtle)", borderRadius: 14, padding: "10px 12px" }}>The full application roadmap tracker is coming next.</div>
-        </Modal>
+        <UserDetails
+          user={{
+            id: track.id, user_number: track.user_number, full_name: track.full_name, email: track.email,
+            plan: track.plan, city: track.city, destination_country: track.destination_country,
+            whatsapp_country_code: track.whatsapp_country_code, whatsapp_number: track.whatsapp_number,
+            banned: track.banned,
+          }}
+          onClose={() => setTrack(null)}
+          onOpenChat={onOpenChat}
+        />
       )}
       {program && <ProgramModal user={program} onClose={() => setProgram(null)} onSaved={() => { setProgram(null); }} />}
       {confirm && (
@@ -351,9 +399,6 @@ function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_nam
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px solid var(--line-soft)" }}><span style={{ color: "var(--ink-soft)" }}>{k}</span><span style={{ fontWeight: 600, textAlign: "right" }}>{v}</span></div>;
-}
 
 function Modal({ title, children, onClose, onSave }: { title: string; children: React.ReactNode; onClose: () => void; onSave?: () => void }) {
   return (

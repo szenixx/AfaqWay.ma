@@ -87,3 +87,130 @@
   active button) with a left accent bar, indigo ink and 600 weight. Never two active items.
 - Sidebar illustrations live at `public/document/{1,2,3}.png` (cache-busted with `?v=`).
   Bump the `?v=` in SidebarCarousel whenever they are replaced.
+
+## Supabase migrations (Journey engine, 26 Jul 2026)
+- Never reference `auth.users` from a public table. The SQL editor role often lacks
+  REFERENCES on that schema, and because the editor runs the script as one batch,
+  a single failed FK rolls back EVERY table. Store `user_id uuid` plus an index.
+- Never wrap `CREATE POLICY` in a `DO $$ … $$` block. One failure aborts the whole
+  block and the error gives no location. Use plain `drop policy if exists` +
+  `create policy` pairs so each statement is independent and re-runnable.
+- Avoid keyword-ish column names: `position`, `repeat`, `next`, `previous`, `comment`.
+  Use `sort_order`, `repeat_rule`, `prev_value`/`next_value`, `review_comment`.
+- Never put `\i` includes in a file meant for the Supabase SQL editor. `\i` is
+  psql-only and does nothing there. Concatenate for real.
+- Ship migrations split into numbered sections (01…08 + 99_verify) so a failure can
+  be isolated in one run instead of guessing.
+
+## RLS is row-level, not column-level (Journey review, 26 Jul 2026)
+Row Level Security answers "may this user touch this row", never "may they set
+this value". A student owns their own `journey_progress` row, so the policy that
+lets them submit a step also let them set `state = 'completed'` and approve
+themselves, defeating the entire review workflow. The same hole existed on
+document verification and on stage approvals (INSERT was theirs, so they could
+insert an already-approved stage and unlock the roadmap).
+- Whenever a row is owned by the person the workflow is meant to constrain, add a
+  BEFORE INSERT **and** BEFORE UPDATE trigger that pins the fields they must not
+  control. Policies alone are not enough.
+- Guard triggers must let privileged roles through (`service_role`, `postgres`),
+  or the SQL editor and any server-side task get silently reverted, and the
+  revert is invisible: the write "succeeds" and returns 204.
+- Test authorisation by ATTEMPTING the forbidden write and re-reading the row.
+  A 200/204 response proves nothing.
+
+## One shape, one source (Journey content blocks, 26 Jul 2026)
+Admin-authored content vanished for students because a generic editor form wrote
+a shape the renderer never read: an accordion saved as `data: {}` and rendered
+as nothing. The block "saved successfully" every time, so nothing looked broken.
+- When an editor and a renderer exchange free-form JSON, define the shape in ONE
+  module that both import (`src/lib/journeyBlocks.ts`), with a normalizer per
+  kind. Never let each side guess the field names.
+- Give every content type its own editor. A single form covering ten kinds is
+  how the mismatch happens in the first place.
+- Seed new blocks with starter data so a freshly added block always renders.
+- Keep normalizers backward compatible (accept the old string shape) so content
+  authored before the change keeps working.
+- Skip empty blocks at render time; a blank gap looks like a bug to the user.
+
+## Presence is about the person, not the panel (Chat, 26 Jul 2026)
+The green dot was wired to `online={u.id === sel}`, so a student looked "online"
+purely because an administrator had opened their conversation. Presence must
+come from a real signal (a Supabase presence channel every signed-in workspace
+joins), never from local UI state. If an indicator claims a fact about the
+outside world, it has to be fed by the outside world.
+
+## Never let two stores own the same data
+The Schedule module wrote to localStorage while the admin side expected to read
+it, which is unbuildable: an advisor could never see a student's calendar and
+nothing survived a new device. When a feature needs to be shared, it needs a
+table from the start, not a browser store that gets "upgraded later".
+
+## supabase-js returns ONE channel per topic (presence crash, 26 Jul 2026)
+`supabase.channel("same-topic")` hands back the *same* object to every caller.
+Two components each doing `.on(...).subscribe()` therefore throws
+"cannot add `presence` callbacks after subscribe()", and the second component
+crashes the page. Reproduced and fixed by making presence a module-level
+singleton: one channel, listeners attached once before subscribe, components
+only read from a roster. Any shared realtime topic needs the same treatment.
+
+## Ownership is a column, so RLS alone cannot express it (Schedule, 27 Jul 2026)
+A student's calendar holds events created by the advisor, the platform and the
+country as well as their own. RLS grants write access per ROW (user_id =
+auth.uid()), which would have let a student edit or delete an advisor's event
+sitting on their own calendar. The rule "you may only change what you created"
+is a column comparison, so it needs a BEFORE INSERT/UPDATE trigger plus a
+narrowed DELETE policy. Same shape as the journey guards: policy for the row,
+trigger for the field.
+
+## Build native, do not bolt on a second design system (27 Jul 2026)
+CLI components (shadcn, Magic UI, Animate UI) are Tailwind-first. Installing one
+into this repo would have initialised Tailwind and shadcn beside ds.css, leaving
+two styling systems in the same tree. When a prompt names a package, treat it as
+a reference for the EXPERIENCE and rebuild it natively:
+- Accordion: animate a measured height, then hand it back to `auto` so long
+  answers still reflow. `inert` on the collapsed panel keeps it out of tab order.
+- Marquee: two identical runs translated by exactly one run length loops with no
+  visible seam, in pure CSS, off the main thread. Axis switches by media query.
+- Video: show a poster and mount the iframe only when the dialog opens, so no
+  third-party frame or cookie loads on arrival.
+
+## The Excel is the source; the importer is the structure (27 Jul 2026)
+Journey content now comes from Bachelor-Journey-stages-lt.xlsx via
+`scripts/import-journey.mjs`, which emits an idempotent SQL migration.
+- Match stages/steps by TITLE and update in place. Never delete-and-reinsert:
+  `journey_progress.step_id` cascades, so a re-import would erase every
+  student's progress.
+- Content blocks are safe to replace wholesale (nothing references a block id);
+  they are tagged `data.source = 'xlsx'` so hand-added blocks survive.
+- Facts that already exist elsewhere (programme URL, fees, English tests) are
+  NOT copied into the Excel. A `program` block names the field and resolves it
+  from the programme catalogue at read time, so it cannot go stale.
+- Re-run after any Excel change: `node scripts/import-journey.mjs`.
+
+## RequestTimeTooSkewed is a clock problem, not a storage problem (27 Jul 2026)
+Uploads worked but every signed URL returned 403 RequestTimeTooSkewed. The host
+clock was 36 minutes fast; SigV4 rejects anything beyond 15 minutes.
+- Diagnose by comparing `date -u` with a `Date:` response header from the
+  service, not by reading storage code.
+- The AWS SDK self-corrects for skew only after a live request fails. Presigning
+  makes no request, so the bad time is baked into the URL and only fails when
+  the link is opened.
+- Setting `client.config.systemClockOffset` after construction does NOT reach
+  the presigner. Pass `signingDate` to `getSignedUrl` explicitly.
+- Verify by reading `X-Amz-Date` out of the generated URL and comparing it with
+  real time, not just by checking the response code.
+
+## SECURITY DEFINER makes current_user useless for authorisation (27 Jul 2026)
+`journey_privileged()` returned TRUE for an ordinary student, silently disabling
+every guard built on it. Cause: the function is SECURITY DEFINER, so
+`current_user` is the function's OWNER (postgres), never the caller — the
+`current_user in ('postgres', ...)` branch matched for everyone.
+- Never authorise on `current_user` inside a SECURITY DEFINER function.
+- To tell a web request from a migration or psql session, read
+  `current_setting('request.jwt.claims', true)`: PostgREST always sets it, the
+  SQL editor never does.
+- Test a privilege helper by CALLING IT as an unprivileged user
+  (`POST /rest/v1/rpc/<fn>`) and checking the value, not by reading the SQL.
+- Migration 11's guard depends on this function; it was applied before 09, so
+  its triggers were live but toothless. Note cross-migration dependencies in the
+  file header.

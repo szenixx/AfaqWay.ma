@@ -57,6 +57,13 @@ export async function removeUploadedPhoto(userId: string): Promise<void> {
 }
 
 /** After a successful upload. */
+/** Saves a chosen preset. Clears any uploaded photo, which always wins otherwise. */
+export async function setPresetAvatar(userId: string, seed: string, style: string): Promise<void> {
+  await supabase.from("profiles").update({
+    avatar_seed: seed, avatar_style: style, avatar_type: "generated", avatar_path: null,
+  }).eq("id", userId);
+}
+
 export async function setUploadedPhoto(userId: string, path: string): Promise<void> {
   await supabase.from("profiles").update({ avatar_path: path, avatar_type: "uploaded" }).eq("id", userId);
 }

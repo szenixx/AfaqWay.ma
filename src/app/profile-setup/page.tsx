@@ -1,5 +1,6 @@
 "use client";
 
+import { titleCase } from "@/lib/text";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon, Loader } from "@/components/ds";
@@ -134,9 +135,29 @@ function validateStep(step: CountryFlowStep, vals: Record<string, string> = {}):
   return true;
 }
 const numOrNull = (v: string | undefined) => { const n = parseFloat(v ?? ""); return Number.isNaN(n) ? null : n; };
+/* Roadmap background video.
+
+   Slower than real time so the motion reads as calm rather than busy, and looped
+   by hand: the browser's own loop cuts on the last frame, which is the jump you
+   see. Restarting a moment early, behind a short opacity dip, makes the seam
+   invisible. */
+const ROADMAP_VIDEO_RATE = 0.4;
+const LOOP_LEAD = 0.45; // seconds before the end to restart
+
+function onRoadmapVideoTime(e: React.SyntheticEvent<HTMLVideoElement>) {
+  const v = e.currentTarget;
+  if (!v.duration || Number.isNaN(v.duration)) return;
+  const nearEnd = v.currentTime >= v.duration - LOOP_LEAD;
+  if (nearEnd && !v.classList.contains("looping")) {
+    v.classList.add("looping");
+    window.setTimeout(() => { v.currentTime = 0; window.setTimeout(() => v.classList.remove("looping"), 60); }, 360);
+  }
+}
+
 function sanitize(f: FieldDef, raw: string): string {
   let v = raw;
   if (f.sanitize === "digits") v = v.replace(/[^\d]/g, "");
+  else if (f.sanitize === "titlecase") v = titleCase(v);
   else if (f.sanitize === "decimal") {
     v = v.replace(/,/g, ".").replace(/[^\d.]/g, ""); // phone keyboards often type "," for the decimal point
     const i = v.indexOf(".");
@@ -567,7 +588,11 @@ export default function ProfileSetup() {
               <div className={`af-frame ${isPricing && priceSub === 0 ? "af-frame-open" : "af-frame-card"}${isRoadmap ? " af-frame-video" : ""}`}>
                 {isRoadmap && (
                   <>
-                    <video autoPlay muted loop playsInline aria-hidden className="af-roadmap-video" onLoadedMetadata={(e) => { e.currentTarget.playbackRate = 0.5; }}>
+                    <video
+                      autoPlay muted loop playsInline preload="auto" aria-hidden className="af-roadmap-video"
+                      onLoadedMetadata={(e) => { e.currentTarget.playbackRate = ROADMAP_VIDEO_RATE; }}
+                      onTimeUpdate={onRoadmapVideoTime}
+                    >
                       <source src="/onboarding/step-2.mp4" type="video/mp4" />
                     </video>
                     <div aria-hidden className="af-roadmap-veil" />
@@ -593,7 +618,7 @@ export default function ProfileSetup() {
               <div style={sectionTitle}>Who you are</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div className="af-row-name">
-                  <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", e.target.value)} onBlur={flushSave} placeholder="Your full name" />
+                  <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", titleCase(e.target.value))} onBlur={flushSave} placeholder="Your full name" />
                   <Select
                     label="Gender" icon={fieldIcon("gender")} value={personal.gender}
                     onChange={(v) => { setP("gender", v); flushSave(); }}
@@ -604,7 +629,7 @@ export default function ProfileSetup() {
                 </div>
                 <div className="af-row-2">
                   <Field label="Date of birth" icon={fieldIcon("dob")} type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
-                  <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} onChange={(e) => setP("city", e.target.value)} onBlur={flushSave} placeholder="e.g. Casablanca" />
+                  <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} onChange={(e) => setP("city", titleCase(e.target.value))} onBlur={flushSave} placeholder="e.g. Casablanca" />
                 </div>
                 <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <span style={{ font: "500 13px/20px var(--font-sans)", color: "var(--ink)" }}>WhatsApp number</span>
@@ -659,7 +684,14 @@ export default function ProfileSetup() {
                   ))}
                 </>
               ) : (
-                <ProgramMatch profile={programProfile} selected={selectedPrograms} onSelect={(ids) => setFieldValue(bStep!, "selected_programs", ids.join("|"))} />
+                <>
+                  {/* Slim bilingual reminder, sits above the programme list. */}
+                  <div className="af-remind">
+                    <span className="af-remind-en">Take your time choosing your program.</span>
+                    <span className="af-remind-ar" dir="rtl" lang="ar">خذ وقتك في اختيار برنامجك الدراسي.</span>
+                  </div>
+                  <ProgramMatch profile={programProfile} selected={selectedPrograms} onSelect={(ids) => setFieldValue(bStep!, "selected_programs", ids.join("|"))} />
+                </>
               )}
             </>
           ) : bStep && bStep.sections.length > 0 ? (

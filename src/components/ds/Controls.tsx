@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, X } from "lucide-react";
 
 /* The platform's control set: Input, TextArea, Select, Toggle, Checkbox.
@@ -79,16 +80,43 @@ export type SelectProps = {
 export function Select({ value, onChange, options, icon, placeholder = "Chooseâ€¦", label, error, disabled, containerStyle, style, ariaLabel }: SelectProps) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  /* The menu is rendered in a portal on <body>, so a card, modal or table with
+     `overflow: hidden` can never clip it. That means its position has to be
+     measured from the trigger and kept in sync while the page moves. */
+  const [box, setBox] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const place = useCallback(() => {
+    const t = root.current?.getBoundingClientRect();
+    if (!t) return;
+    const height = menu.current?.offsetHeight ?? 264;
+    const below = window.innerHeight - t.bottom;
+    // Flip above the field when there is more room up there.
+    const top = below < height + 12 && t.top > below ? t.top - height - 6 : t.bottom + 6;
+    setBox({ top, left: t.left, width: t.width });
+  }, []);
+
+  useLayoutEffect(() => { if (open) place(); }, [open, place]);
 
   // Close on outside click or Escape â€” same behaviour for every dropdown.
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!root.current?.contains(target) && !menu.current?.contains(target)) setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onKey); };
-  }, [open]);
+    window.addEventListener("scroll", place, true);   // any scrolling ancestor
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, place]);
 
   const selected = options.find((o) => o.value === value);
   return (
@@ -104,8 +132,11 @@ export function Select({ value, onChange, options, icon, placeholder = "Chooseâ€
           <span className={`af-select-val${selected ? "" : " placeholder"}`}>{selected?.label ?? placeholder}</span>
           <span className="af-select-chev"><ChevronDown size={17} /></span>
         </button>
-        {open && (
-          <div className="af-menu" role="listbox">
+        {open && typeof document !== "undefined" && createPortal(
+          <div
+            ref={menu} className="af-menu af-menu-float" role="listbox"
+            style={{ top: box?.top ?? -9999, left: box?.left ?? 0, width: box?.width, visibility: box ? "visible" : "hidden" }}
+          >
             {options.map((o) => (
               <button
                 key={o.value} type="button" role="option" aria-selected={o.value === value}
@@ -117,7 +148,8 @@ export function Select({ value, onChange, options, icon, placeholder = "Chooseâ€
                 {o.value === value && <span className="af-opt-check"><Check size={15} /></span>}
               </button>
             ))}
-          </div>
+          </div>,
+          document.body,
         )}
       </div>
       {error && <span className="af-error">{error}</span>}

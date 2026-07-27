@@ -4,6 +4,7 @@
    avatar menu, matching the admin Overview/Wallet dashboards. Renders one module
    at a time. Same shell for every country/plan — only module content changes. */
 
+import { usePresenceBroadcast } from "@/lib/presence";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -11,7 +12,6 @@ import {
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
   ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
-import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import { MobileNavigationHeader } from "./MobileNavigationHeader";
 import RightPanel from "./RightPanel";
 import Schedule from "./schedule/Schedule";
@@ -19,7 +19,8 @@ import StudentChat from "@/components/student/StudentChat";
 import { planById } from "@/lib/plans";
 import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
-import { UserAvatar } from "@/components/ds";
+import { nextScheduleEvent } from "@/lib/schedule";
+import { UserAvatar, BrandLogo } from "@/components/ds";
 import SidebarCarousel from "./SidebarCarousel";
 import {
   Overview, Journey, Documents, Explore, Notifications, Support,
@@ -58,6 +59,8 @@ export default function WorkspaceShell({
 }) {
   const [menu, setMenu] = useState(false);
   const [sidebarMini, setSidebarMini] = useState(false);
+  /* Announce this student as online for as long as the workspace is open. */
+  usePresenceBroadcast(profile.userId, { name: profile.fullName, role: "student" });
   const full = profile.plan === "full_service";
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
@@ -104,12 +107,16 @@ export default function WorkspaceShell({
     </button>
   );
 
-  /* The panel's "upcoming event" is the student's latest conversation update —
-     the only dated item the platform actually has for them today. */
+  /* The mini calendar's upcoming event is the student's next Schedule entry —
+     the same events the Schedule module manages. It falls back to their latest
+     conversation update when nothing is scheduled. */
   const [lastEvent, setLastEvent] = useState<{ title: string; at: string } | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      // Prefer the next Schedule entry; fall back to the latest conversation.
+      const next = nextScheduleEvent(profile.userId);
+      if (next) { if (!cancelled) setLastEvent(next); return; }
       const { data } = await supabase.from("messages")
         .select("body, file_name, created_at").eq("user_id", profile.userId)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -122,7 +129,7 @@ export default function WorkspaceShell({
       });
     })();
     return () => { cancelled = true; };
-  }, [profile.userId]);
+  }, [profile.userId, nav]);
 
   const withPanel = (main: React.ReactNode, hide?: "journey" | "documents") => (
     <div className="sw-withpanel">
@@ -135,11 +142,11 @@ export default function WorkspaceShell({
     switch (nav) {
       case "overview": return <Overview profile={profile} onNav={(n) => navigate(n as Nav)} />;
       // Journey and Documents share the reusable right panel.
-      case "journey": return withPanel(<Journey profile={profile} />, "journey");
-      case "documents": return withPanel(<Documents profile={profile} />, "documents");
+      case "journey": return withPanel(<Journey profile={profile} onNav={(n) => navigate(n as Nav)} />, "journey");
+      case "documents": return withPanel(<Documents profile={profile} onNav={(id) => onNav(id as Nav)} />, "documents");
       case "schedule": return <Schedule profile={profile} onNav={(n) => navigate(n as Nav)} />;
       case "explore": return <Explore />;
-      case "notifications": return <Notifications />;
+      case "notifications": return <Notifications profile={profile} onNav={(id) => onNav(id as Nav)} />;
       case "support": return <Support onNav={(n) => navigate(n as Nav)} />;
       case "subscription": return <Subscription profile={profile} />;
       case "profile": return <Profile profile={profile} onNav={(n) => navigate(n as Nav)} />;
@@ -157,9 +164,10 @@ export default function WorkspaceShell({
           {/* Same workspace-switcher header as /admin: framed logo badge, name +
               subtitle, collapse control on the right. */}
           <div className="sw-brandrow" style={{ justifyContent: sidebarMini ? "center" : "space-between" }}>
+            {sidebarMini && <BrandLogo size={26} />}
             {!sidebarMini && (
               <Link href="/" className="sw-brand" aria-label="AfaqWay home">
-                <span className="sw-ws-badge"><LogoMark size={22} /></span>
+                <BrandLogo size={26} />
                 <div style={{ minWidth: 0 }}>
                   <div className="sw-brand-name">AfaqWay</div>
                   <div className="sw-brand-sub">Lithuania</div>
@@ -236,7 +244,7 @@ export default function WorkspaceShell({
       <MobileNavigationHeader>
         <div className="sw-brandrow" style={{ height: "auto", marginBottom: 6 }}>
           <Link href="/" className="sw-brand" aria-label="AfaqWay home">
-            <LogoMark size={24} />
+            <BrandLogo size={24} />
             <span className="sw-brand-name">AfaqWay</span>
           </Link>
         </div>

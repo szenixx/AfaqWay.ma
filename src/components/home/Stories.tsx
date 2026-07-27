@@ -1,3 +1,6 @@
+"use client";
+
+import { Marquee } from "@/components/ds";
 const STORIES = [
   { quote: "AfaqWay turned a mountain of paperwork into a simple checklist, I always knew the next step.", name: "Youssef A.", route: "Casablanca → TU Berlin", initials: "YA" },
   { quote: "Having a real person review my documents before submission gave me real confidence.", name: "Salma M.", route: "Rabat → Vilnius University", initials: "SM" },
@@ -26,8 +29,6 @@ const glass = {
 } as const;
 
 export default function Stories() {
-  // Four copies so one loop-unit is always wider than the viewport, seamless (no visible restart).
-  const items = [...STORIES, ...STORIES, ...STORIES, ...STORIES];
   return (
     <div style={{ position: "relative", overflow: "hidden", background: "var(--paper)", padding: "48px 0" }}>
       <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(90,107,133,.14) 1.1px, transparent 1.1px)", backgroundSize: "22px 22px", pointerEvents: "none" }} />
@@ -37,10 +38,11 @@ export default function Stories() {
         <h2 style={{ font: "700 var(--font-sans)", fontSize: "clamp(24px, 3vw, 32px)", lineHeight: 1.25, color: "var(--ink)", margin: "8px 0 0" }}>They made it. You can too.</h2>
       </div>
 
-      <div className="af-marquee" style={{ position: "relative", zIndex: 1, overflow: "hidden", width: "100%" }}>
-        <div className="af-marquee-track" style={{ display: "flex", alignItems: "stretch", gap: 20, width: "max-content", animation: "afMarquee 55s linear infinite" }}>
-          {items.map((s, i) => (
-            <div key={i} style={{ width: 380, ...glass, borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14, flex: "none", boxSizing: "border-box" }}>
+      {/* Horizontal on desktop, vertical on phones; both pause on hover and
+          stop entirely for anyone who asked for reduced motion. */}
+      <Marquee seconds={55} className="stories-mq" style={{ position: "relative", zIndex: 1 }}>
+          {STORIES.map((s, i) => (
+            <div key={i} className="story-card" style={{ ...glass, borderRadius: 16, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 14, boxSizing: "border-box" }}>
               <p style={{ font: "400 14px/22px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{s.quote}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "auto" }}>
                 <span style={{ width: 36, height: 36, borderRadius: 999, background: "var(--indigo-100)", color: "var(--indigo-600)", display: "inline-flex", alignItems: "center", justifyContent: "center", font: "600 13px/1 var(--font-sans)", flex: "none" }}>{s.initials}</span>
@@ -54,8 +56,7 @@ export default function Stories() {
               </div>
             </div>
           ))}
-        </div>
-      </div>
+      </Marquee>
     </div>
   );
 }

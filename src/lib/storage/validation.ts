@@ -41,13 +41,17 @@ export const ALLOWED_TYPES: TypeRule[] = [
   { ext: "ogg", mime: ["audio/ogg", "application/ogg"] },
 ];
 
-/** Per-folder size ceilings, in bytes. Anything not listed uses DEFAULT. */
+/** Per-folder size ceilings, in bytes. Anything not listed uses DEFAULT.
+    Student-facing uploads are capped at 4 MB: it keeps scans reasonable and
+    matches the limit shown in the upload dialogs. */
 const MB = 1024 * 1024;
-const DEFAULT_MAX_SIZE = 25 * MB;
+export const DEFAULT_MAX_SIZE_MB = 4;
+const DEFAULT_MAX_SIZE = DEFAULT_MAX_SIZE_MB * MB;
 const MAX_SIZE_BY_FOLDER: Partial<Record<StorageFolder, number>> = {
-  avatars: 5 * MB,
-  receipts: 10 * MB,
-  payments: 10 * MB,
+  avatars: 4 * MB,
+  receipts: 4 * MB,
+  payments: 4 * MB,
+  documents: 4 * MB,
   chat: 50 * MB,
   learning: 500 * MB,
   exports: 200 * MB,

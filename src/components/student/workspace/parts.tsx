@@ -72,7 +72,7 @@ export function EmptyState({ icon, title, sub }: { icon: ReactNode; title: strin
 
 export function BtnPrimary({ children, onClick, disabled, style }: { children: ReactNode; onClick?: () => void; disabled?: boolean; style?: React.CSSProperties }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 14, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1, font: "600 13.5px/1 var(--font-sans)", ...style }}>{children}</button>
+    <button type="button" onClick={onClick} disabled={disabled} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 16px", borderRadius: 12, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1, font: "600 13px/1 var(--font-sans)", ...style }}>{children}</button>
   );
 }
 
@@ -95,7 +95,7 @@ export function BtnGhost({ children, onClick, style, tone = "neutral", disabled,
     <button
       type="button" onClick={onClick} disabled={disabled} title={title}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 16px", borderRadius: 14,
+        display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 14px", borderRadius: 12,
         border: `1px solid ${t ? t.line : "var(--line)"}`,
         background: t ? t.tint : "rgba(255,255,255,.7)",
         color: t ? t.ink : "var(--ink)",
@@ -144,4 +144,39 @@ const EXPLORE_ICONS: Record<string, typeof GraduationCap> = {
 export function exploreIcon(name: string, size = 20) {
   const Ico = EXPLORE_ICONS[name] ?? Lightbulb;
   return <Ico size={size} />;
+}
+
+/* Section titles carry a colour so a long page reads as distinct sections
+   rather than one wall. The tones are the design system's own accents, used at
+   label weight so they stay subtle. */
+export type SectionTone = "blue" | "purple" | "orange" | "green" | "indigo" | "grey";
+
+export function SectionTitle({ tone = "blue", sub, children }: {
+  tone?: SectionTone;
+  sub?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`sect sect-${tone}`}>
+      <span className="sect-bar" aria-hidden />
+      <span className="sect-text">
+        <span className="sect-title">{children}</span>
+        {sub && <span className="sect-sub">{sub}</span>}
+      </span>
+    </div>
+  );
+}
+
+/* Warnings and notices are a small icon and coloured text, never a filled box. */
+export function InlineNote({ tone = "amber", icon, children }: {
+  tone?: "amber" | "red" | "green" | "blue" | "grey";
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <p className={`inote inote-${tone}`}>
+      {icon ?? <Info size={14} />}
+      <span>{children}</span>
+    </p>
+  );
 }

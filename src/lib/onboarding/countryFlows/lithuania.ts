@@ -1,3 +1,4 @@
+import { INTAKE_OPTIONS } from "@/config/intakes";
 import type { CountryFlow } from "./types";
 import { FIELD_OPTIONS, ENGLISH_LEVELS, ENGLISH_TESTS } from "@/lib/programs/catalog";
 
@@ -27,10 +28,7 @@ export const lithuaniaFlow: CountryFlow = {
               label: "When do you want to start?",
               required: true,
               placeholder: "Select an intake",
-              options: [
-                { value: "Autumn 2028 (September)", label: "Autumn 2028 (September)" },
-                { value: "Autumn 2029 (September)", label: "Autumn 2029 (September)" },
-              ],
+              options: INTAKE_OPTIONS,
             },
           ],
         },
@@ -49,7 +47,7 @@ export const lithuaniaFlow: CountryFlow = {
               ],
             },
             { kind: "select", key: "last_degree_year", label: "Year of last degree", required: true, placeholder: "Select year", options: GRAD_YEARS, row: 1 },
-            { kind: "text", key: "last_degree_field", label: "Field of study", required: true, placeholder: "e.g. Economics", row: 1 },
+            { kind: "text", key: "last_degree_field", label: "Field of study", required: true, sanitize: "titlecase", placeholder: "e.g. Economics", row: 1 },
             { kind: "text", key: "last_degree_grade", label: "Grade", hint: "min 10 / 20", required: true, sanitize: "decimal", inputMode: "decimal", numeric: true, min: 10, max: 20, placeholder: "14.5", row: 1 },
             {
               kind: "segmented",

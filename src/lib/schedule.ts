@@ -162,3 +162,21 @@ export function monthGrid(year: number, month: number): Date[] {
   start.setDate(1 - ((first.getDay() + 6) % 7));
   return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
 }
+
+/** The student's next scheduled event, formatted for the mini calendar in the
+    right panel. Reads the same store the Schedule module writes to, so the two
+    never disagree. */
+export function nextScheduleEvent(userId: string): { title: string; at: string } | null {
+  const now = Date.now();
+  const upcoming = readEvents(userId)
+    .filter((e) => e.kind !== "note" && !e.completed)
+    .map((e) => ({ e, at: new Date(`${e.date}T${e.time ?? "09:00"}:00`).getTime() }))
+    .filter((x) => x.at >= now - 3_600_000)
+    .sort((a, b) => a.at - b.at)[0];
+  if (!upcoming) return null;
+  const d = new Date(upcoming.at);
+  return {
+    title: upcoming.e.title.slice(0, 42),
+    at: `${d.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}${upcoming.e.time ? ` · ${upcoming.e.time}` : ""}`,
+  };
+}

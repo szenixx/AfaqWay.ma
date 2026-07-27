@@ -9,7 +9,8 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getR2Bucket, getR2Client } from "@/lib/r2";
+import { getR2Bucket, getSyncedR2Client } from "@/lib/r2";
+import { signingDate } from "@/lib/r2Clock";
 import { resolveContentType, validateFile, extensionOf } from "@/lib/storage/validation";
 import { StorageError, type ListedObject, type StorageFolder, type StoredFileMeta } from "@/types/storage";
 
@@ -67,7 +68,7 @@ export async function uploadFile(params: {
   // Resolve configuration FIRST. Doing this inside the request closure made a
   // missing environment variable surface as "upload failed" instead of naming
   // the variable that is not set.
-  const client = getR2Client();
+  const client = await getSyncedR2Client();
   const bucket = getR2Bucket();
 
   // Node streams the request body from this buffer; the SDK sets Content-Length
@@ -112,13 +113,16 @@ export async function generatePublicUrl(
       ? { ResponseContentDisposition: `attachment; filename="${opts.download.replace(/[^\w.\- ]/g, "_")}"` }
       : {}),
   });
-  return getSignedUrl(getR2Client(), command, { expiresIn: ttl });
+  /* signingDate is explicit: presigning never makes a request, so the SDK
+     cannot discover clock skew on its own and would sign with the local time. */
+  const client = await getSyncedR2Client();
+  return getSignedUrl(client, command, { expiresIn: ttl, signingDate: signingDate() });
 }
 
 /** Object metadata (size, type, last modified). Returns null when absent. */
 export async function getFile(key: string): Promise<{ key: string; size: number; mimeType: string; lastModified: string | null } | null> {
   try {
-    const head = await getR2Client().send(new HeadObjectCommand({ Bucket: getR2Bucket(), Key: key }));
+    const head = await (await getSyncedR2Client()).send(new HeadObjectCommand({ Bucket: getR2Bucket(), Key: key }));
     return {
       key,
       size: head.ContentLength ?? 0,
@@ -135,7 +139,7 @@ export async function getFile(key: string): Promise<{ key: string; size: number;
 /** List objects under a prefix (e.g. one user's folder). */
 export async function listFiles(prefix: string, limit = 100): Promise<ListedObject[]> {
   try {
-    const out = await getR2Client().send(
+    const out = await (await getSyncedR2Client()).send(
       new ListObjectsV2Command({ Bucket: getR2Bucket(), Prefix: prefix, MaxKeys: Math.min(Math.max(limit, 1), 1000) }),
     );
     return (out.Contents ?? []).map((o) => ({
@@ -151,7 +155,7 @@ export async function listFiles(prefix: string, limit = 100): Promise<ListedObje
 /** Delete one object. */
 export async function deleteFile(key: string): Promise<void> {
   try {
-    await getR2Client().send(new DeleteObjectCommand({ Bucket: getR2Bucket(), Key: key }));
+    await (await getSyncedR2Client()).send(new DeleteObjectCommand({ Bucket: getR2Bucket(), Key: key }));
   } catch (err) {
     fail("delete_failed", "delete", err);
   }
@@ -161,7 +165,7 @@ export async function deleteFile(key: string): Promise<void> {
 export async function deleteFiles(keys: string[]): Promise<void> {
   if (!keys.length) return;
   try {
-    await getR2Client().send(
+    await (await getSyncedR2Client()).send(
       new DeleteObjectsCommand({ Bucket: getR2Bucket(), Delete: { Objects: keys.map((Key) => ({ Key })) } }),
     );
   } catch (err) {

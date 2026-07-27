@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import FeaturesDoc from "@/components/pricing/FeaturesDoc";
 import { PLANS, planById, PAY_METHODS, type Plan, type PayMethod } from "@/lib/plans";
 import { uploadUserFile, deleteUserFile } from "@/lib/storage/client";
-import { Loader } from "@/components/ds";
+import { Loader, FileDrop } from "@/components/ds";
 
 /* Pricing & Checkout. Renders its own af-frame-body + af-frame-footer so the
    Back/primary buttons stay pinned to the bottom of the frame on every view.
@@ -132,7 +132,6 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
   const [showAll, setShowAll] = useState(false);
   type Extra = { title: string; value: string; copyable: boolean };
   const [pm, setPm] = useState<Record<string, { enabled: boolean; beneficiary?: string | null; rib?: string | null; note?: string | null; extra_details?: Extra[] }>>({});
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -185,13 +184,15 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
     return (
       <>
         <div className="af-frame-body">
-          <div style={{ background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>Please read what each plan includes before you choose.</span>
-              <button type="button" onClick={() => setShowAll(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/19px var(--font-sans)", color: "var(--indigo-600)", textDecoration: "underline", padding: 0 }}>Explore more</button>
-            </div>
-            <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-soft)", marginTop: 6 }}>Once you agree to the features and pay, the payment is non-refundable. (-)</div>
-            <div dir="rtl" style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>بمجرد موافقتك على مزايا الخطة والدفع، يصبح المبلغ غير قابل للاسترجاع.</div>
+          {/* Read-first line: outside the reminder frame, no background. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>Please read what each plan includes before you choose.</span>
+            <button type="button" onClick={() => setShowAll(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/19px var(--font-sans)", color: "var(--indigo-600)", textDecoration: "underline", padding: 0 }}>Explore more</button>
+          </div>
+          {/* Non-refundable reminder, each language on its own line. */}
+          <div className="af-remind af-remind-stack" style={{ marginBottom: 18 }}>
+            <span className="af-remind-en">Once you agree to the features and pay, the payment is non-refundable.</span>
+            <span className="af-remind-ar" dir="rtl" lang="ar">بمجرد موافقتك على مزايا الخطة والدفع، يصبح المبلغ غير قابل للاسترجاع.</span>
           </div>
           <div className="af-plan-grid">
             {PLANS.map((p) => <GlassPlanCard key={p.id} plan={p} onChoose={() => { setPricing("plan", p.id); if (!pricing.ref) setPricing("ref", genRef()); setPriceSub(1); }} onSeeAll={() => setShowAll(true)} />)}
@@ -371,11 +372,11 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
             {/* Invoice Receipt */}
             <div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)", marginBottom: 4 }}>Invoice Receipt</div>
             <div style={{ height: 1, background: "var(--line-soft)", marginBottom: 12 }} />
-            <button type="button" onClick={() => fileRef.current?.click()} className="af-upload-stripes" style={{ width: "100%", border: "1.5px dashed var(--indigo-line)", borderRadius: 14, padding: "26px 16px", backgroundColor: "var(--card)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-              <Upload size={26} />
-              <span style={{ font: "600 12.5px/18px var(--font-sans)", letterSpacing: ".03em", color: file ? "var(--ink)" : "var(--ink-soft)", textTransform: file ? "none" : "uppercase" }}>{file ? file.name : "Upload the receipt / reçu here"}</span>
-            </button>
-            <input ref={fileRef} type="file" accept="image/*,application/pdf" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0] ?? null; if (f && f.size > 4 * 1024 * 1024) { setError("File is larger than 4 MB. Please upload a smaller receipt."); return; } setError(""); setFile(f); }} />
+            {/* The platform's one upload control, shared with Replace Document. */}
+            <FileDrop
+              file={file} onFile={setFile} accept="image/*,application/pdf" maxSizeMb={4}
+              hint="Upload the receipt / reçu here" onError={setError}
+            />
             <div style={{ height: 1, background: "var(--line-soft)", marginTop: 12 }} />
             <ul style={{ margin: "12px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
               <li style={{ font: "400 11.5px/17px var(--font-sans)", color: "var(--ink-faint)" }}>Do not send fake or edited receipts, they will be rejected.</li>

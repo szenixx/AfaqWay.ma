@@ -18,7 +18,7 @@ export interface FieldDef {
   options?: FieldOption[]; // select | segmented | multiselect
   maxSelect?: number; // multiselect: max choices (value stored pipe-joined)
   inputMode?: "text" | "numeric" | "decimal";
-  sanitize?: "digits" | "decimal"; // strip disallowed chars as the user types
+  sanitize?: "digits" | "decimal" | "titlecase"; // reshape the value as the user types
   maxLength?: number;
   pattern?: string; // regex source; value must match to be valid
   numeric?: boolean; // persist as a JSON number (else string)

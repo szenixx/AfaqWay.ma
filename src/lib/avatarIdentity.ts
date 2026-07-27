@@ -78,3 +78,29 @@ export function identityFrom(row: {
     avatarUrl: row?.avatarUrl ?? null,
   };
 }
+
+/* ── Preset avatars ───────────────────────────────────────────────────────────
+   A curated set the user picks from, instead of only rerolling a random seed.
+   Presets are seeds, not image files: the same generator draws them, so they
+   match the platform's look and cost nothing to ship.
+
+   The set is chosen by gender, and never mixed: a male user is offered
+   masculine presets only, a female user feminine ones. Anyone who preferred
+   not to say gets the neutral set. */
+
+export type AvatarPreset = { id: string; seed: string; style: string };
+
+/* Two per gender, deliberately few: a short row of clear choices beats a grid
+   of near-identical faces. The style comes from the user's gender, so a male
+   user only ever sees the masculine pair. */
+const PRESET_SEEDS = ["afaq-100417", "afaq-539472"];
+
+/** The presets offered to a user, always matching their gender. */
+export function presetsFor(gender: Gender | string | null | undefined): AvatarPreset[] {
+  const style = styleForGender((gender as Gender) ?? "prefer_not_to_say");
+  return PRESET_SEEDS.map((seed) => ({ id: `${style}-${seed}`, seed, style }));
+}
+
+/** True when this seed is one of the offered presets rather than a random one. */
+export const isPresetSeed = (seed: string | null | undefined) =>
+  Boolean(seed && PRESET_SEEDS.includes(seed));

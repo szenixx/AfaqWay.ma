@@ -1,6 +1,7 @@
 import "server-only";
 import { S3Client } from "@aws-sdk/client-s3";
 import { StorageError } from "@/types/storage";
+import { syncClock } from "@/lib/r2Clock";
 
 /* Cloudflare R2 client (S3-compatible, AWS SDK v3).
    Server-only: these credentials must never reach the browser. Every upload,
@@ -61,6 +62,20 @@ export function getR2Client(): S3Client {
     });
   }
   return cachedClient;
+}
+
+/**
+ * The client with its signing clock corrected against the service.
+ *
+ * Use this for anything that signs: uploads, deletes and presigned URLs. A
+ * machine whose clock drifts more than 15 minutes otherwise produces
+ * signatures the service rejects with RequestTimeTooSkewed, and for presigned
+ * URLs the failure only appears when the link is opened.
+ */
+export async function getSyncedR2Client(): Promise<S3Client> {
+  const client = getR2Client();
+  await syncClock(client, getR2Config().endpoint);
+  return client;
 }
 
 export function getR2Bucket(): string {

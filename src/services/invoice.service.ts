@@ -1,6 +1,7 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { planById, methodById } from "@/lib/plans";
+import { CURRENCY_SHORT, formatPrice } from "@/config/pricing";
 import { countryByCode } from "@/components/profile-setup/countries";
 
 /* Official subscription invoice.
@@ -72,7 +73,9 @@ export function buildInvoiceData(profile: ProfileRow, payment: PaymentRow): Invo
     destination,
     plan: planById(payment.plan ?? profile.plan)?.name ?? payment.plan ?? "—",
     method: methodById(payment.method)?.name ?? payment.method,
-    amount: `${payment.amount.toLocaleString("en-US")} ${payment.currency}`,
+    // The amount actually charged, stored on the payment. New payments take
+    // their price from src/config/pricing.ts; issued invoices keep theirs.
+    amount: formatPrice(payment.amount, payment.currency === "MAD" ? CURRENCY_SHORT : payment.currency),
   };
 }
 

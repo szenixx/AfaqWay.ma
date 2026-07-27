@@ -10,13 +10,13 @@ export type Callout = { tone: "blue" | "amber" | "green" | "red"; title: string;
 
 /* The seven supplied photographs, each used exactly once. */
 export const PHOTOS = {
-  hero: "/lithuania/lithuania-7.jpg",
-  universities: "/lithuania/lithuania-1.jpg",
-  cities: "/lithuania/lithuania-2.jpg",
-  housing: "/lithuania/lithuania-3.jpg",
-  transport: "/lithuania/lithuania-4.jpg",
-  studentLife: "/lithuania/lithuania-5.jpg",
-  tips: "/lithuania/lithuania-6.jpg",
+  hero: "/lithuania/lithuania-7.webp",
+  universities: "/lithuania/lithuania-1.webp",
+  cities: "/lithuania/lithuania-2.webp",
+  housing: "/lithuania/lithuania-3.webp",
+  transport: "/lithuania/lithuania-4.webp",
+  studentLife: "/lithuania/lithuania-5.webp",
+  tips: "/lithuania/lithuania-6.webp",
 } as const;
 
 export const HERO_STATS: Stat[] = [

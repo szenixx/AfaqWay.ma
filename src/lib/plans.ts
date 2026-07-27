@@ -1,7 +1,12 @@
 /* Plan catalog + payment methods (Lithuania / MAD). Feature copy from
-   /Paid.Plan/plan.prompt.md. Reused across countries later. */
+   /Paid.Plan/plan.prompt.md. Reused across countries later.
 
-export type PlanId = "self_service" | "full_service";
+   Prices are NOT defined here. They come from src/config/pricing.ts, the single
+   source of truth for every amount on the platform. */
+
+import { CURRENCY_SHORT, priceOf, type PlanId } from "@/config/pricing";
+
+export type { PlanId };
 
 export interface Plan {
   id: PlanId;
@@ -19,8 +24,8 @@ export const PLANS: Plan[] = [
   {
     id: "self_service",
     name: "Self Service",
-    price: 2200,
-    currency: "DH",
+    price: priceOf("self_service"),
+    currency: CURRENCY_SHORT,
     popular: true,
     tagline: "For students who drive it themselves.",
     highlights: [
@@ -50,8 +55,8 @@ export const PLANS: Plan[] = [
   {
     id: "full_service",
     name: "Full Service",
-    price: 4400,
-    currency: "DH",
+    price: priceOf("full_service"),
+    currency: CURRENCY_SHORT,
     popular: false,
     tagline: "We handle it, you just track it.",
     highlights: [
