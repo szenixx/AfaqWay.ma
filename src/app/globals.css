@@ -1882,3 +1882,71 @@ body {
 /* The step and review modals pad their header and body to 22px; the shared
    footer was still at 20px, so the buttons sat 2px inside the content above. */
 .stp-body ~ .jr-modal-foot, .jr-modal:has(.stp-body) .jr-modal-foot { padding-left: 22px; padding-right: 22px; }
+
+/* ══ Floating card system ═════════════════════════════════════════════════
+   Cards only. Every layout, grid, navigation and typography rule above is
+   untouched: this restyles the surfaces themselves so each module reads as an
+   independent floating card. Brand colour and Poppins are unchanged; the tints
+   below are AfaqWay's own tokens, only softer. */
+
+/* Primary surfaces */
+.sw-tile,
+.rp-card,
+.um-table-wrap,
+.plan-card,
+.sup-card,
+.dm-card,
+.dm-stat,
+.upd-item {
+  border-radius: var(--radius-card);
+  border: var(--card-border);
+  box-shadow: var(--elev-2);
+  transition: box-shadow 250ms var(--ease), transform 250ms var(--ease);
+}
+.sw-tile:hover,
+.rp-card:hover,
+.sup-card:hover,
+.dm-card:hover,
+.upd-item:hover {
+  box-shadow: var(--elev-hover);
+  transform: translateY(-3px);
+}
+
+/* The glass tile keeps its gradient; only its geometry and elevation change. */
+.sw-tile { padding: 24px; }
+.rp-card { padding: 20px; }
+
+/* Nested surfaces sit one level down, so a card inside a card still reads. */
+.jm-block,
+.be-card,
+.dlg-card,
+.jr-doc,
+.acc-item,
+.scm-editor,
+.dv,
+.jr-info {
+  border-radius: 20px;
+  border: var(--card-border);
+  box-shadow: var(--elev-1);
+}
+.jm-block { padding: 16px; }
+.jr-doc { padding: 16px 18px; }
+.dlg-card { padding: 18px 20px; }
+
+/* Callouts keep their tone colour; only the geometry softens. */
+.jr-info { box-shadow: none; }
+
+/* Stage and navigator cards join the same family. */
+.jr-stage { border-radius: var(--radius-card); box-shadow: var(--elev-1); }
+.jr-navcard { border-radius: 20px; }
+
+/* Dialogs are the top elevation level, and slightly rounder than a card. */
+.am-panel { border-radius: 30px; border: var(--card-border); box-shadow: var(--elev-3); }
+
+/* Rows inside a table stay flat: separation comes from spacing, not lines. */
+.um-table thead th { background: transparent; border-bottom: 1px solid var(--divider); }
+.um-row > td { border-bottom: 1px solid var(--divider); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover, .sw-tile:hover, .rp-card:hover, .sup-card:hover, .dm-card:hover, .upd-item:hover { transform: none; }
+}
