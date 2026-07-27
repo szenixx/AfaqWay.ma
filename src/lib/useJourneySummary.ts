@@ -64,7 +64,7 @@ export function useJourneySummary(userId: string, plan: string | null, degree?: 
   // state set here is the query result, not derived render state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => subscribeJourney(() => { void load(); }, "summary"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   return summary;
 }

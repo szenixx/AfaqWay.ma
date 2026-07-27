@@ -72,7 +72,7 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
   // An advisor verifying a document must show up here without a refresh.
-  useEffect(() => subscribeJourney(() => { void load(); }, "step-modal"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   return (
     <AnimatedModal open={open} onClose={onClose} className="jr-modal" ariaLabel={step.title}>

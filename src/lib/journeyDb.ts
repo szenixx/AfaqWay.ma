@@ -267,17 +267,50 @@ const LIVE_TABLES = [
   "journey_progress", "journey_stage_approvals", "journey_documents", "journey_events",
 ] as const;
 
+/* One channel for the whole app, not one per component.
+   Each subscription costs 8 postgres_changes listeners, and the journey page
+   mounts several subscribers at once (roadmap, summary, step modal, blocks), so
+   per-component channels meant dozens of listeners and a reload storm on every
+   write. Subscribers now share a single channel and a single listener set. */
+let liveChannel: ReturnType<typeof supabase.channel> | null = null;
+const liveListeners = new Set<() => void>();
+let coalesce: ReturnType<typeof setTimeout> | null = null;
+
+function fanout() {
+  /* One action usually writes several tables (progress, then an event), which
+     would otherwise reload every subscriber several times over. */
+  if (coalesce) clearTimeout(coalesce);
+  coalesce = setTimeout(() => {
+    coalesce = null;
+    for (const listener of liveListeners) listener();
+  }, 120);
+}
+
 /**
  * Calls `onChange` whenever any journey row changes, so an administrator's edit
  * appears on a student's open page with no refresh. Returns an unsubscribe.
  */
-export function subscribeJourney(onChange: () => void, name = "journey"): () => void {
-  const channel = supabase.channel(`${name}-${Math.random().toString(36).slice(2, 8)}`);
-  for (const table of LIVE_TABLES) {
-    channel.on("postgres_changes", { event: "*", schema: "public", table }, onChange);
+export function subscribeJourney(onChange: () => void): () => void {
+  liveListeners.add(onChange);
+
+  if (!liveChannel) {
+    const channel = supabase.channel("journey-live");
+    for (const table of LIVE_TABLES) {
+      channel.on("postgres_changes", { event: "*", schema: "public", table }, fanout);
+    }
+    channel.subscribe();
+    liveChannel = channel;
   }
-  channel.subscribe();
-  return () => { void supabase.removeChannel(channel); };
+
+  return () => {
+    liveListeners.delete(onChange);
+    // The last subscriber closes the channel, so a signed-out tab goes quiet.
+    if (liveListeners.size === 0 && liveChannel) {
+      const channel = liveChannel;
+      liveChannel = null;
+      void supabase.removeChannel(channel);
+    }
+  };
 }
 
 /** Submits a finished stage for advisor approval. */

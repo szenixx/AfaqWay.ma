@@ -93,7 +93,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
   // A new requirement or a verification shows up without a refresh.
-  useEffect(() => subscribeJourney(() => { void load(); }, "documents"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   /* The Journey module hands over the exact step it wants uploaded. */
   useEffect(() => {

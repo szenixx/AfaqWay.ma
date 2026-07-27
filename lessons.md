@@ -214,3 +214,20 @@ every guard built on it. Cause: the function is SECURITY DEFINER, so
 - Migration 11's guard depends on this function; it was applied before 09, so
   its triggers were live but toothless. Note cross-migration dependencies in the
   file header.
+
+## RLS grants rows; it never grants columns (profiles, 27 Jul 2026)
+The production audit found any student could rewrite their own profile row:
+plan -> full_service, plan_status -> active (the paid plan, without paying),
+banned -> false (un-ban themselves), plus user_number and email. The UPDATE
+policy was right — you may edit your own row — but "which columns" is not
+something a policy can say. Migration 15 pins the commercial and identity
+fields in a BEFORE UPDATE/INSERT trigger.
+Rule of thumb: any table where the row owner is also the person the business
+rules constrain needs a column guard beside its policy. profiles, journey
+progress, stage approvals, documents and schedule events all needed one.
+
+## Prefix checks need a safe-key check beside them
+`key.startsWith(ownerPrefix(id))` passed for "users/<me>/../../secret.pdf".
+R2 keys are literal so it was not exploitable, but ownership by prefix is only
+meaningful once the key cannot climb out of its prefix. Reject "..", leading and
+double slashes, backslashes and control characters before comparing.

@@ -226,7 +226,7 @@ export function StepBlocks({ stepId, fallback, plan, study }: {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setLoading(true); void load(); }, [load]);
   /* An administrator editing this step updates the open page immediately. */
-  useEffect(() => subscribeJourney(() => { void load(); }, "blocks"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   if (loading) return <Loader block />;
 

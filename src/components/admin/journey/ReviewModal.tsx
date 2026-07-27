@@ -82,7 +82,7 @@ export function ReviewModal({ target, onClose }: {
   // state set here is the query result, not derived render state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => subscribeJourney(() => { void load(); }, "review"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   const uploadFor = (key: string) => docs.find((d) => d.doc_key === key) ?? null;
 

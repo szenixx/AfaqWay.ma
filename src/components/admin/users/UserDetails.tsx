@@ -113,7 +113,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
   // state set here is the query result, not derived render state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => subscribeJourney(() => { void load(); }, "user-details"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   const overall = roadmapProgress(stages);
   const currentStage = stages.find((s) => s.state === "current" || s.state === "waiting_approval");

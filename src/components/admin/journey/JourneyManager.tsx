@@ -56,7 +56,7 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
   // Another administrator editing the same plan is reflected here immediately.
-  useEffect(() => subscribeJourney(() => { void load(); }, "manager"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   const stepsOf = (stageId: string) => steps.filter((s) => s.stage_id === stageId).sort((a, b) => a.sort_order - b.sort_order);
 

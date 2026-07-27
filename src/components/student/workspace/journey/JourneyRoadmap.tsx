@@ -55,7 +55,7 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
   useEffect(() => { void load(); }, [load]);
   /* Live sync: any journey change an administrator makes, new content, a new
      document requirement, an approval, arrives here with no page refresh. */
-  useEffect(() => subscribeJourney(() => { void load(); }, "roadmap"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   /* Coming back from an upload reopens the step that sent the student away. */
   useEffect(() => {

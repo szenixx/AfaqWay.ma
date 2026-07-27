@@ -114,7 +114,7 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
   // New submissions appear in the queue without a refresh.
-  useEffect(() => subscribeJourney(() => { void load(); }, "queue"), [load]);
+  useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
   /* One place performs a step decision, whichever dialog asked for it. */
   const ACTION_STATE = { approve: "completed", reject: "rejected", changes: "pending" } as const;
