@@ -26,6 +26,7 @@ export function AddUpdateDialog({ onClose, onPublished }: {
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [sent, setSent] = useState("");
   const pick = useRef<HTMLInputElement>(null);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,7 +51,16 @@ export function AddUpdateDialog({ onClose, onPublished }: {
     const result = await publishUpdate({ title: title.trim(), body: body.trim(), attachments: files });
     setBusy(false);
     if (!result.ok) { setError(result.error ?? "The update could not be sent."); return; }
+
     onPublished();
+
+    /* The announcement is stored and everyone has it in the platform. Email is
+       separate, so its result is reported rather than hidden: closing on a
+       silent partial failure is how nobody notices the mail stopped working. */
+    if (result.emailFailed) {
+      setSent(`Published. Emailed ${result.emailed}, failed ${result.emailFailed}.`);
+      return;
+    }
     onClose();
   };
 
@@ -108,10 +118,15 @@ export function AddUpdateDialog({ onClose, onPublished }: {
         </DialogCard>
 
         {error && <p className="af-drop-error">{error}</p>}
+        {sent && (
+          <p className="stp-hint">
+            <Send size={14} />{sent} Everyone still received it in their notification centre.
+          </p>
+        )}
       </div>
 
       <DialogFoot>
-        <JrButton tone="quiet" size="md" disabled={busy} onClick={onClose}>Cancel</JrButton>
+        <JrButton tone="quiet" size="md" disabled={busy} onClick={onClose}>{sent ? "Close" : "Cancel"}</JrButton>
         <JrButton tone="primary" size="md" icon={<Send size={15} />} disabled={busy || !title.trim()} onClick={send}>
           {busy ? "Sending…" : "Send Update"}
         </JrButton>

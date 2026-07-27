@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { fileUrl } from "@/lib/storage/client";
 
 /* The notification centre.
 
@@ -85,15 +86,24 @@ export async function fetchUpdates(limit = 30): Promise<PlatformUpdate[]> {
 }
 
 /**
- * Publishes an announcement. A database trigger fans it out to a notification
- * for every active student, so this stays a single insert however many students
- * there are.
+ * Publishes an announcement.
+ *
+ * Three deliveries, in order of importance:
+ *   1. the platform_updates row, which a trigger fans out to a notification for
+ *      every active student, so this stays one insert at any scale;
+ *   2. email, one message per student through the same send-update function the
+ *      chat uses, with the same payload shape it expects;
+ *   3. nothing else — the notification centre is the record.
+ *
+ * Email never blocks publishing. The announcement is already stored and every
+ * student already has it in the platform, so a mail failure is reported, not
+ * thrown.
  */
 export async function publishUpdate(input: {
   title: string;
   body: string;
   attachments: PlatformUpdate["attachments"];
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; error?: string; emailed?: number; emailFailed?: number }> {
   const { data: auth } = await supabase.auth.getUser();
   const { error } = await supabase.from("platform_updates").insert({
     title: input.title, body: input.body, attachments: input.attachments,
@@ -101,16 +111,64 @@ export async function publishUpdate(input: {
   });
   if (error) return { ok: false, error: error.message };
 
-  /* Email is best-effort and must not block publishing: the announcement is
-     already stored and every student has been notified in the platform. */
-  try {
-    await supabase.functions.invoke("send-update", {
-      body: { broadcast: true, subject: input.title, message: input.body },
-    });
-  } catch (err) {
-    console.warn("announcement email not sent", err);
+  const mail = await emailUpdate(input);
+  return { ok: true, ...mail };
+}
+
+/** Recipients of an announcement: every student who is not banned. */
+async function recipients(): Promise<{ email: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from("profiles").select("email, full_name").eq("banned", false).not("email", "is", null);
+  if (error) return [];
+  return ((data ?? []) as { email: string | null; full_name: string | null }[])
+    .filter((p) => p.email)
+    .map((p) => ({ email: p.email as string, name: (p.full_name ?? "").split(" ")[0] }));
+}
+
+/**
+ * Sends the announcement by email, using exactly the contract the chat's
+ * "email this message" option uses, so both paths behave identically.
+ * Sent in small batches so a large audience does not open hundreds of
+ * simultaneous requests.
+ */
+async function emailUpdate(input: { title: string; body: string; attachments: PlatformUpdate["attachments"] }) {
+  const people = await recipients();
+  if (people.length === 0) return { emailed: 0, emailFailed: 0 };
+
+  // The chat signs attachments for a week so the link outlives the inbox visit.
+  const first = input.attachments[0];
+  let attachmentUrl: string | null = null;
+  if (first) attachmentUrl = await fileUrl(first.path, "update_files", undefined, 60 * 60 * 24 * 7);
+
+  const message = input.title ? `${input.title}\n\n${input.body}` : input.body;
+  let emailed = 0;
+  let emailFailed = 0;
+  const BATCH = 8;
+
+  for (let i = 0; i < people.length; i += BATCH) {
+    const slice = people.slice(i, i + BATCH);
+    const results = await Promise.all(slice.map(async (person) => {
+      try {
+        const { data, error } = await supabase.functions.invoke("send-update", {
+          body: {
+            to_email: person.email,
+            to_name: person.name,
+            message,
+            attachment_url: attachmentUrl,
+            attachment_name: first?.fileName ?? null,
+          },
+        });
+        const res = (data ?? {}) as { ok?: boolean; error?: string };
+        return !error && res.ok !== false;
+      } catch {
+        return false;
+      }
+    }));
+    for (const ok of results) {
+      if (ok) emailed += 1; else emailFailed += 1;
+    }
   }
-  return { ok: true };
+  return { emailed, emailFailed };
 }
 
 /* ── Live centre ──────────────────────────────────────────────────────────── */
