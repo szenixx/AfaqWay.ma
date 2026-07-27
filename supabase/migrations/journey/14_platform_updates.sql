@@ -107,6 +107,8 @@ security definer
 set search_path = public
 as $fn$
 begin
+  /* Every account, whether or not they have paid: an announcement is platform
+     news, not a subscriber benefit. Suspended accounts are the one exclusion. */
   insert into public.notifications (user_id, kind, title, body, link)
   select p.id, 'update', new.title, left(new.body, 400), 'notifications'
     from public.profiles p

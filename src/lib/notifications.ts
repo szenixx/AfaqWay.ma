@@ -115,14 +115,46 @@ export async function publishUpdate(input: {
   return { ok: true, ...mail };
 }
 
-/** Recipients of an announcement: every student who is not banned. */
+/**
+ * Recipients of an announcement: EVERY account with an email address.
+ *
+ * Deliberately no payment condition. An announcement is platform news, so it
+ * reaches people who have paid, people mid-onboarding and people who never
+ * subscribed. The only exclusion is a suspended account.
+ *
+ * Read in pages: PostgREST caps the rows one request returns, so a single
+ * select would silently stop at that cap and the update would reach only the
+ * first slice of the audience.
+ */
 async function recipients(): Promise<{ email: string; name: string }[]> {
-  const { data, error } = await supabase
-    .from("profiles").select("email, full_name").eq("banned", false).not("email", "is", null);
-  if (error) return [];
-  return ((data ?? []) as { email: string | null; full_name: string | null }[])
-    .filter((p) => p.email)
-    .map((p) => ({ email: p.email as string, name: (p.full_name ?? "").split(" ")[0] }));
+  const PAGE = 1000;
+  const out: { email: string; name: string }[] = [];
+
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("email, full_name")
+      .eq("banned", false)
+      .not("email", "is", null)
+      .order("id")                       // stable order, so pages cannot overlap
+      .range(from, from + PAGE - 1);
+    if (error) break;
+
+    const page = (data ?? []) as { email: string | null; full_name: string | null }[];
+    for (const person of page) {
+      if (person.email) out.push({ email: person.email, name: (person.full_name ?? "").split(" ")[0] });
+    }
+    if (page.length < PAGE) break;       // last page
+  }
+
+  // One address may appear twice if a profile was duplicated; send once.
+  const seen = new Set<string>();
+  return out.filter((p) => {
+    const key = p.email.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**
