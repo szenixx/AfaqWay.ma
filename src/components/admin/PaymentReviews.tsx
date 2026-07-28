@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Ban, Clock, CircleX, RotateCcw, ShieldCheck, Wallet } from "lucide-react";
+import { Clock, CircleX, RotateCcw, RotateCw, ShieldCheck, Wallet, X, ZoomIn, ZoomOut } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Loader, Pill, Status, type StatusState } from "@/components/ds";
+import { Loader, Pill, Status, ImageZoom, type StatusState } from "@/components/ds";
 import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { fileUrl, deleteUserFile } from "@/lib/storage/client";
@@ -30,6 +30,9 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
   const [countryFilter, setCountryFilter] = useState<"all" | string>("all");
   const [planFilter, setPlanFilter] = useState<"all" | "self_service" | "full_service">("all");
   const [viewer, setViewer] = useState<{ url: string; pdf: boolean } | null>(null);
+  /* Zoom and rotation for the receipt viewer, reset each time it opens. */
+  const [viewZoom, setViewZoom] = useState(1);
+  const [viewRot, setViewRot] = useState(0);
   const [askReset, setAskReset] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
   const loadedOnce = useRef(false);
@@ -104,7 +107,8 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
   async function viewReceipt(path: string | null) {
     if (!path) return;
     const url = await fileUrl(path, "receipts");
-    if (url) setViewer({ url, pdf: /\.pdf$/i.test(path) });
+    // Each receipt opens at fit size, never at the previous one's zoom.
+    if (url) { setViewZoom(1); setViewRot(0); setViewer({ url, pdf: /\.pdf$/i.test(path) }); }
   }
   async function decide(r: Payment, status: "approved" | "rejected") {
     setBusy(r.id);
@@ -241,15 +245,23 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
           <div style={{ position: "relative", width: "100%", maxWidth: 860, height: "88vh", background: "var(--card)", borderRadius: 18, boxShadow: "0 24px 70px rgba(23,35,58,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--line-soft)" }}>
               <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>Receipt</span>
-              <button type="button" onClick={() => setViewer(null)} aria-label="Close" style={{ width: 34, height: 34, borderRadius: 999, border: "none", cursor: "pointer", background: "var(--subtle)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Ban size={18} />
-              </button>
+              {/* Same zoom controls as the document viewer, so a receipt and a
+                  passport are inspected the same way. */}
+              <span className="dv-tools">
+                <button type="button" className="dv-tool" title="Zoom out" onClick={() => setViewZoom((z) => Math.max(0.4, Number((z - 0.25).toFixed(2))))} disabled={viewZoom <= 0.4}><ZoomOut size={15} /></button>
+                <span className="dv-zoom">{Math.round(viewZoom * 100)}%</span>
+                <button type="button" className="dv-tool" title="Zoom in" onClick={() => setViewZoom((z) => Math.min(5, Number((z + 0.25).toFixed(2))))} disabled={viewZoom >= 5}><ZoomIn size={15} /></button>
+                <button type="button" className="dv-tool" title="Rotate" onClick={() => setViewRot((r) => (r + 90) % 360)}><RotateCw size={15} /></button>
+                <button type="button" className="dv-tool" title="Close" onClick={() => setViewer(null)} aria-label="Close"><X size={15} /></button>
+              </span>
             </div>
-            <div style={{ flex: 1, minHeight: 0, background: "var(--subtle)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto" }}>
-              {viewer.pdf
-                ? <iframe src={viewer.url} title="Receipt" style={{ width: "100%", height: "100%", border: "none" }} />
-                /* eslint-disable-next-line @next/next/no-img-element */
-                : <img src={viewer.url} alt="Receipt" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />}
+            <div style={{ flex: 1, minHeight: 0, background: "var(--subtle)", display: "flex" }}>
+              <ImageZoom zoom={viewZoom} onZoomChange={setViewZoom} rotation={viewRot} label="Payment receipt">
+                {viewer.pdf
+                  ? <iframe src={viewer.url} title="Receipt" style={{ width: "80vw", maxWidth: 820, height: "78vh", border: "none" }} />
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  : <img src={viewer.url} alt="Receipt" style={{ maxWidth: "100%", maxHeight: "78vh", objectFit: "contain" }} />}
+              </ImageZoom>
             </div>
           </div>
         </div>

@@ -2114,3 +2114,7 @@ body {
   position: absolute; top: 4px; right: 4px; min-width: 16px; height: 16px;
   padding: 0 4px; font-size: 9.5px; line-height: 16px;
 }
+
+/* The student's document preview: the shared viewer, centred in an overlay. */
+.dm-preview { width: min(920px, 94vw); height: min(86vh, 780px); display: flex; }
+.dm-preview .dv { flex: 1; min-width: 0; border-radius: 20px; overflow: hidden; }

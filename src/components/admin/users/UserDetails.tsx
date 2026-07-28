@@ -5,7 +5,7 @@ import {
   CalendarDays, CircleCheck, Clock3, Download, ExternalLink, Eye, FileText, GraduationCap,
   History, Mail, MapPin, Phone, Route, TriangleAlert, X,
 } from "lucide-react";
-import { AnimatedModal, Input, Loader, Select, UserAvatar, Pill, type PillTone } from "@/components/ds";
+import { AnimatedModal, Input, Loader, Select, UserAvatar, Pill, type PillTone, ImageZoom } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
 import { assembleRoadmap, roadmapProgress, type JourneyStage } from "@/lib/journey";
@@ -340,6 +340,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
 /** Signed inline preview of one stored file. */
 function DocFrame({ doc }: { doc: DbDocument }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
   const load = useCallback(async () => { setUrl(await fileUrl(doc.file_path, "documents")); }, [doc.file_path]);
   // Fetching the signed URL is the "subscribe to an external system" case.
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -349,10 +350,14 @@ function DocFrame({ doc }: { doc: DbDocument }) {
   const isImage = /\.(png|jpe?g|gif|webp|avif)$/i.test(doc.file_name);
   return (
     <div className="dv-stage">
-      {isImage
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img className="dv-img" src={url} alt={doc.file_name} />
-        : <iframe className="dv-pdf" src={`${url}#toolbar=0`} title={doc.file_name} />}
+      {/* Read-only, but still zoomable: an administrator reading a passport
+          here needs the same gestures as one reviewing it. */}
+      <ImageZoom zoom={zoom} onZoomChange={setZoom} label={doc.file_name}>
+        {isImage
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img className="dv-img" src={url} alt={doc.file_name} />
+          : <iframe className="dv-pdf" src={`${url}#toolbar=0`} title={doc.file_name} />}
+      </ImageZoom>
     </div>
   );
 }

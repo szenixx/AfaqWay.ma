@@ -5,7 +5,7 @@ import {
   CircleCheck, Download, Maximize2, Minimize2, RotateCw, X, XCircle, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { fileUrl } from "@/lib/storage/client";
-import { Loader } from "@/components/ds";
+import { Loader, ImageZoom } from "@/components/ds";
 import { JrButton } from "@/components/student/workspace/journey/parts";
 import type { DbDocument } from "@/lib/journeyDb";
 
@@ -79,16 +79,17 @@ export function DocumentViewer({ doc, onClose, onDecide, busy }: {
       <div className="dv-stage">
         {loading ? <Loader block /> : !url ? (
           <p className="stp-hint">This file could not be opened. Try downloading it instead.</p>
-        ) : isImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url} alt={name} className="dv-img"
-            style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}
-          />
-        ) : isPdf ? (
-          <div className="dv-pdfwrap" style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }}>
-            <iframe src={`${url}#toolbar=0`} title={name} className="dv-pdf" />
-          </div>
+        ) : isImage || isPdf ? (
+          /* Both file types are looked at the same way, so both go through the
+             shared viewport: wheel and pinch to zoom, drag to pan, double-click
+             to fit. The toolbar above shares its `zoom`, so the percentage it
+             shows and the gesture always agree. */
+          <ImageZoom zoom={zoom} onZoomChange={setZoom} rotation={rotation} label={name}>
+            {isImage
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={url} alt={name} className="dv-img" />
+              : <div className="dv-pdfwrap"><iframe src={`${url}#toolbar=0`} title={name} className="dv-pdf" /></div>}
+          </ImageZoom>
         ) : (
           <p className="stp-hint">
             No inline preview for this file type. Use Download to open it.
