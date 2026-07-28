@@ -71,3 +71,21 @@ export function useChatUnread(userId: string | null | undefined, active: boolean
 
   return unread;
 }
+
+/**
+ * The first advisor message the student has not opened yet.
+ *
+ * Uses the same marker as the unread badge, so the number in the sidebar and
+ * the message the conversation scrolls to always refer to the same thing.
+ * Returns null when everything has been read.
+ */
+export function firstUnreadId(
+  userId: string | null | undefined,
+  messages: { id: string; sender: string; created_at: string }[],
+): string | null {
+  if (!userId || typeof window === "undefined") return null;
+  const seen = window.localStorage.getItem(key(userId));
+  if (!seen) return null;
+  const found = messages.find((m) => m.sender === "admin" && m.created_at > seen);
+  return found?.id ?? null;
+}

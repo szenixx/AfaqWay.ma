@@ -20,7 +20,7 @@ import { planById } from "@/lib/plans";
 import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
 import { nextScheduleEvent } from "@/lib/schedule";
-import { UserAvatar, BrandLogo } from "@/components/ds";
+import { UserAvatar, BrandLogo, Toaster } from "@/components/ds";
 import SidebarCarousel from "./SidebarCarousel";
 import {
   Overview, Journey, Documents, Explore, Notifications, Support,
@@ -159,6 +159,8 @@ export default function WorkspaceShell({
 
   return (
     <div className="sw-root">
+      {/* One stack for the whole workspace; every module raises toasts into it. */}
+      <Toaster />
       <div className="sw-shell">
         {/* Sidebar */}
         <aside className={`sw-sidebar${sidebarMini ? " mini" : ""}`}>

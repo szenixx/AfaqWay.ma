@@ -51,3 +51,34 @@ export function notify(title: string, body?: string) {
     if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification(title, { body: body ?? "" });
   } catch { /* ignore */ }
 }
+
+/**
+ * The soft chime, used by the floating toast notifications.
+ *
+ * Two short sine tones instead of the loud ascending triad above: a toast
+ * appears while the person is already working, so it should be noticed without
+ * interrupting. The loud chime stays for the cases that must not be missed —
+ * an admin report, a new chat message with the tab in the background.
+ *
+ * Never throws. Browsers refuse audio before the first interaction, and a
+ * refusal must not surface as an error on a notification.
+ */
+export function playSoftChime() {
+  const c = ctx();
+  if (!c || c.state !== "running") return;
+  const now = c.currentTime;
+  for (const [i, freq] of [660, 880].entries()) {
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    // A short swell to a low peak, then out. Never a beep.
+    const s = now + i * 0.09;
+    gain.gain.setValueAtTime(0.0001, s);
+    gain.gain.exponentialRampToValueAtTime(0.05, s + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, s + 0.22);
+    osc.connect(gain).connect(c.destination);
+    osc.start(s);
+    osc.stop(s + 0.24);
+  }
+}

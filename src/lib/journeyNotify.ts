@@ -82,13 +82,20 @@ export async function notifyReview(input: NotifyInput, options: { whatsapp?: str
   });
   if (error) console.warn("review notification not delivered to chat", error.message);
 
-  /* The notification centre is the student's own record of what happened; the
-     chat message is the conversation. Both, always. */
+  /* The decision itself lives in the conversation and nowhere else.
+   *
+   * The notification centre gets a summary only — no outcome, no advisor
+   * wording, no step name — because a decision is something to read in context,
+   * next to the step it concerns and with a reply box under it. Duplicating the
+   * verdict into the centre gave the student two copies of the same news and a
+   * place to read it where they could not respond.
+   *
+   * The summary links to the conversation, so opening it lands on the message. */
   await notify(input.userId, {
     kind: "journey",
-    title: `${HEADLINE[input.outcome]}: ${input.stepTitle}`,
-    body: input.message.trim() || input.stageTitle,
-    link: "journey",
+    title: "You have a new journey update",
+    body: "Open your conversation to read it.",
+    link: "messages",
   });
 
   const viaWhatsApp = Boolean(options.whatsapp) && whatsappAllowed(input.outcome);

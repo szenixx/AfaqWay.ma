@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { emailAnnouncement } from "@/lib/email/client";
+import { toast, type ToastKind } from "@/components/ds";
 
 /* The notification centre.
 
@@ -195,10 +196,13 @@ async function emailUpdate(input: { title: string; body: string }) {
  * workspace legitimately reads notifications from more than one place at once —
  * the sidebar badge and the Overview card — so the subscription is shared and
  * reference-counted here instead of being created per component. */
-const listeners = new Map<string, Set<() => void>>();
+/* Listeners receive the inserted row when there is one, so a subscriber that
+   only cares about arrivals (the floating toast) does not have to re-query. */
+type NotifListener = (inserted: Notification | null) => void;
+const listeners = new Map<string, Set<NotifListener>>();
 const channels = new Map<string, ReturnType<typeof supabase.channel>>();
 
-function subscribeNotifications(userId: string, onChange: () => void): () => void {
+function subscribeNotifications(userId: string, onChange: NotifListener): () => void {
   let set = listeners.get(userId);
   if (!set) {
     set = new Set();
@@ -206,7 +210,10 @@ function subscribeNotifications(userId: string, onChange: () => void): () => voi
     const channel = supabase
       .channel(`notifs-${userId.slice(0, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        () => { for (const fn of listeners.get(userId) ?? []) fn(); });
+        (payload) => {
+          const inserted = payload.eventType === "INSERT" ? (payload.new as Notification) : null;
+          for (const fn of listeners.get(userId) ?? []) fn(inserted);
+        });
     channel.subscribe();
     channels.set(userId, channel);
   }
@@ -247,4 +254,50 @@ export function useNotifications(userId: string | null | undefined) {
 
   const unread = items.filter((n) => !n.read).length;
   return { items, unread, loading, reload: load };
+}
+
+/* ── Floating notifications ───────────────────────────────────────────────── */
+
+/** The notification kinds that map onto a toast's own vocabulary. */
+const TOAST_KIND: Record<NotifKind, ToastKind> = {
+  update: "update", journey: "journey", document: "document",
+  schedule: "system", message: "message", payment: "payment", system: "system",
+};
+
+/**
+ * Raises a floating toast for every notification that arrives while the person
+ * is looking at the platform.
+ *
+ * The database row is the single source: whatever inserted it — a journey
+ * decision, a document verification, a payment update, an announcement — gets a
+ * toast without knowing this exists. That is the whole point of routing every
+ * notification through one table.
+ *
+ * `onOpen` receives the row's `link`, which is the workspace page to show. It is
+ * what the toast's action button calls, so a notification is never a dead end.
+ */
+export function useNotificationToasts(
+  userId: string | null | undefined,
+  onOpen: (link: string, notification: Notification) => void,
+) {
+  /* The callback is held in a ref so a parent re-render cannot tear down the
+     subscription and miss an arrival in the gap. */
+  const open = useRef(onOpen);
+  useEffect(() => { open.current = onOpen; }, [onOpen]);
+
+  useEffect(() => {
+    if (!userId) return;
+    return subscribeNotifications(userId, (inserted) => {
+      // Only arrivals raise a toast; a row being marked read must not.
+      if (!inserted || inserted.read) return;
+      toast({
+        kind: TOAST_KIND[inserted.kind] ?? "system",
+        title: inserted.title,
+        message: inserted.body || undefined,
+        at: inserted.created_at,
+        actionLabel: "Click Here",
+        onAction: inserted.link ? () => open.current(inserted.link, inserted) : undefined,
+      });
+    });
+  }, [userId]);
 }

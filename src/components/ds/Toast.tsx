@@ -7,6 +7,9 @@ import {
   Route, TriangleAlert, X,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
+/* Audio lives in one module for the whole platform; the toast does not own
+   a second copy of it. */
+import { playSoftChime } from "@/lib/notify";
 
 /* Toast — the platform's floating notification.
  *
@@ -65,7 +68,7 @@ export function toast(input: ToastInput): string {
   const next: Toast = { at: new Date().toISOString(), duration: 7000, ...input, id };
   items = [...items, next].slice(-MAX);
   emit();
-  if (!next.silent) void chime();
+  if (!next.silent) playSoftChime();
   return id;
 }
 
@@ -78,43 +81,6 @@ function subscribe(fn: (list: Toast[]) => void) {
   subscribers.add(fn);
   fn(items);
   return () => { subscribers.delete(fn); };
-}
-
-/* ── Sound ─────────────────────────────────────────────────────────────────
-   Synthesised rather than downloaded: two short sine tones, no asset to fetch
-   and nothing to cache. */
-
-let audioCtx: AudioContext | null = null;
-
-async function chime() {
-  if (typeof window === "undefined") return;
-  try {
-    type WithWebkit = Window & { webkitAudioContext?: typeof AudioContext };
-    const Ctor = window.AudioContext ?? (window as WithWebkit).webkitAudioContext;
-    if (!Ctor) return;
-    audioCtx ??= new Ctor();
-    /* Browsers start the context suspended until a gesture. If resuming is
-       refused, the person simply gets a silent notification. */
-    if (audioCtx.state === "suspended") await audioCtx.resume().catch(() => {});
-    if (audioCtx.state !== "running") return;
-
-    const now = audioCtx.currentTime;
-    for (const [i, freq] of [660, 880].entries()) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      // Soft: a short swell to a low peak, then out. Never a beep.
-      gain.gain.setValueAtTime(0.0001, now + i * 0.09);
-      gain.gain.exponentialRampToValueAtTime(0.05, now + i * 0.09 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.09 + 0.22);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(now + i * 0.09);
-      osc.stop(now + i * 0.09 + 0.24);
-    }
-  } catch {
-    // Audio is a courtesy; never let it break the notification itself.
-  }
 }
 
 /* ── Rendering ─────────────────────────────────────────────────────────────── */

@@ -605,3 +605,15 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .ds-zoom-inner>img{display:block;max-width:100%;max-height:100%;object-fit:contain;
   /* The image is dragged as a whole; the browser's own drag would fight it. */
   -webkit-user-drag:none;user-select:none;}
+
+/* The advisor's identity in a student's conversation: the platform mark in
+   place of a person's photo, and a typing indicator in place of the address. */
+.chat-brand-avatar{flex:none;width:40px;height:40px;border-radius:var(--radius-pill);background:var(--indigo-tint);
+  display:flex;align-items:center;justify-content:center;}
+.chat-typing{display:inline-flex;align-items:center;gap:3px;color:var(--indigo-600);font-weight:600;}
+.chat-typing i{width:4px;height:4px;border-radius:var(--radius-pill);background:currentColor;
+  animation:dsTyping 1.2s var(--ease) infinite;}
+.chat-typing i:nth-child(2){animation-delay:.15s;}
+.chat-typing i:nth-child(3){animation-delay:.3s;margin-right:4px;}
+@keyframes dsTyping{0%,60%,100%{opacity:.3;transform:translateY(0);}30%{opacity:1;transform:translateY(-3px);}}
+@media (prefers-reduced-motion:reduce){.chat-typing i{animation:none;opacity:.7;}}

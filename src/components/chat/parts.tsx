@@ -110,7 +110,9 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
   const ask = parseAsk(msg.body);
   const decision = decisionOf(msg);
   return (
-    <div className={`chat-row${mine ? " mine" : ""}`} onContextMenu={onContextMenu}>
+    /* The id is on the row so the conversation can scroll straight to one
+       message, e.g. the first unread when arriving from a notification. */
+    <div className={`chat-row${mine ? " mine" : ""}`} data-msg={msg.id} onContextMenu={onContextMenu}>
       <div className={`chat-bubble${msg.pinned ? " pinned" : ""}${decision ? ` decision tone-${DECISION_TONE[decision.outcome as string]}` : ""}`}>
         {/* A thin bar across the top, and nothing else about the card changes. */}
         {decision && <span className="chat-decision-bar" aria-hidden />}

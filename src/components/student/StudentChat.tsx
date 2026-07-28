@@ -6,16 +6,18 @@ import { notify, requestNotify } from "@/lib/notify";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { parseAsk } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
-import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
-import { Loader, Pill } from "@/components/ds";
+import { ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import { Loader, Pill, Status, BrandLogo } from "@/components/ds";
+import { useAdvisorIdentity, lastSeenLabel } from "@/lib/advisor";
+import { firstUnreadId } from "@/lib/chatUnread";
 
 type Msg = { id: string; sender: string; body: string; file_path: string | null; file_name: string | null; created_at: string; reply_to: string | null; pinned: boolean; emailed: boolean };
 
 const menuItem: CSSProperties = { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 11px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)", textAlign: "left" };
 
-/* Support identity shown to every student — the advisor is the AfaqWay team. */
+/* Support identity shown to every student — the advisor is the AfaqWay team.
+   The advisor's own number is live and comes from lib/advisor. */
 const SUPPORT_EMAIL = "support@afaqway.com";
-const advisorId = "ADV-001";
 
 export default function StudentChat({ userId, full, onNav }: {
   userId: string;
@@ -33,6 +35,8 @@ export default function StudentChat({ userId, full, onNav }: {
     } catch { /* storage blocked */ }
     onNav("journey");
   };
+  /* Who is answering right now: number, presence, last seen, typing. */
+  const advisor = useAdvisorIdentity(userId);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -61,7 +65,18 @@ export default function StudentChat({ userId, full, onNav }: {
     return () => { supabase.removeChannel(ch); };
   }, [userId, load]);
 
-  useEffect(() => { if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight; }, [msgs]);
+  /* Opening the conversation lands on the first message the student has not
+     read, not on the bottom of the thread. Arriving from a notification, that
+     is the message the notification was about; with nothing unread it is the
+     newest message, which is the bottom anyway. */
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (!thread || msgs.length === 0) return;
+    const target = firstUnreadId(userId, msgs);
+    const el = target ? thread.querySelector<HTMLElement>(`[data-msg="${target}"]`) : null;
+    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    else thread.scrollTop = thread.scrollHeight;
+  }, [msgs, userId]);
 
   useEffect(() => {
     if (!menu) return;
@@ -110,15 +125,27 @@ export default function StudentChat({ userId, full, onNav }: {
       <div className="chat-shell" style={{ gridTemplateColumns: "minmax(0,1fr) 272px", flex: 1, minHeight: 0 }}>
         {/* ── Conversation ── */}
         <div className="chat-col">
+          {/* The platform answers, never a named person: the mark, the constant
+              name, and the number of whoever is currently on the conversation.
+              When a different advisor replies, only this header changes —
+              every earlier message stays as it was sent. */}
           <header className="chat-header">
-            <ChatAvatar size={40} src="/icon.svg" online />
+            <span className="chat-brand-avatar"><BrandLogo size={26} /></span>
             <span style={{ minWidth: 0, flex: 1 }}>
               <span className="chat-header-name">
-                AfaqWay Advisor <span style={{ font: "500 11px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{advisorId}</span>
+                AfaqWay Advisor
+                <span style={{ font: "500 11px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{advisor.label}</span>
               </span>
-              <span className="chat-header-sub"><Mail size={12} />{SUPPORT_EMAIL}</span>
+              <span className="chat-header-sub">
+                {advisor.typing
+                  ? <span className="chat-typing"><i /><i /><i />typing…</span>
+                  : <><Mail size={12} />{SUPPORT_EMAIL}</>}
+              </span>
             </span>
-            <Pill tone="green">Online</Pill>
+            <Status
+              state={advisor.online ? "online" : "offline"}
+              label={lastSeenLabel(advisor.lastSeen, advisor.online)}
+            />
           </header>
 
           <div ref={threadRef} className="chat-thread stu-chat-texture">

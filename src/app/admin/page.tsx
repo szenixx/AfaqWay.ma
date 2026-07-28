@@ -2,7 +2,7 @@
 
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useReviewAlerts } from "@/lib/reviewAlerts";
-import { BrandLogo, Pill } from "@/components/ds";
+import { BrandLogo, Pill, Toaster } from "@/components/ds";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
@@ -383,6 +383,8 @@ export default function AdminPage() {
 
   return (
     <div className="adm-root">
+      {/* The same notification stack the student workspace uses. */}
+      <Toaster />
       <div className="adm-bg" aria-hidden><span><LogoMark size={800} /></span></div>
       <div className="adm-shell">
         <aside className="adm-sidebar" style={{ width: collapsed ? 76 : sideWidth }}>

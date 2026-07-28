@@ -12,6 +12,8 @@ import { emailAdvisorMessage } from "@/lib/email/client";
 import { parseAsk } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+/* Tells the student's conversation that someone is composing a reply. */
+import { broadcastAdvisorTyping } from "@/lib/advisor";
 import { UserDetails } from "@/components/admin/users/UserDetails";
 
 type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null; gender?: string | null; avatar_seed?: string | null; avatar_style?: string | null };
@@ -306,7 +308,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
                     <Paperclip size={18} />
                   </button>
                   <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                  <input placeholder="Write a message…" value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} className="af-composer-input" />
+                  <input placeholder="Write a message…" value={body} onChange={(e) => { setBody(e.target.value); if (sel) broadcastAdvisorTyping(sel); }} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} className="af-composer-input" />
                   <button type="button" className="chat-send" disabled={sending} onClick={send}>
                     {sending ? <><Loader size={16} onDark />Sending</> : <><Send size={15} />{emailOn ? "Send & email" : "Send"}</>}
                   </button>
