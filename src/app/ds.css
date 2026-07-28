@@ -11,9 +11,11 @@
 --ink:#17233A; --ink-soft:#5A6B85; --ink-faint:#8695AB;
 --line:#DCE2EA; --line-soft:#E7ECF1;
 --shadow-card:0 2px 10px rgba(23,35,58,.04);
---indigo-700:#22407F; --indigo-600:#2B4C9B; --indigo-500:#3D63B4; --indigo-100:#EAEFFA;
+--indigo-700:#183BA8; --indigo-600:#2755DF; --indigo-500:#1E49CC; --indigo-100:#EAF0FF;
 --grey:#8695AB; --grey-tint:#F1F4F7; --grey-line:#DCE2EA;
---indigo-text:#2B4C9B; --indigo-tint:#EAEFFA; --indigo-line:#BFCDEB;
+--indigo-text:#2755DF; --indigo-tint:#EAF0FF; --indigo-line:#C2D2FA;
+/* Brand extras from the palette: the palest surface and the focus ring. */
+--indigo-50:#F5F8FF; --focus-ring:rgba(39,85,223,.25);
 --amber:#8A5A0C; --amber-tint:#FBF0DA; --amber-line:#E7C583;
 --red:#B23B27; --red-tint:#FBE7E2; --red-line:#EDB3A6;
 --green:#256B49; --green-tint:#E3F0E9; --green-line:#9CCBB2;
@@ -166,7 +168,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 
 /* Card roles share one hover so every list, grid and dashboard reacts alike. */
 .af-card{transition:box-shadow 180ms var(--ease),transform 180ms var(--ease),border-color 180ms var(--ease);}
-.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(43,76,155,.5);transform:translateY(-1px);}
+.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(39,85,223,.5);transform:translateY(-1px);}
 
 /* ══ Chat workspace ════════════════════════════════════════════════════════
    One visual language for both chats: the admin console (3 columns) and the
@@ -241,7 +243,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 /* ── Composer + send ── */
 .chat-composer{flex:none;padding:14px 16px;border-top:1px solid var(--line-soft);background:var(--card);}
 .chat-send{display:inline-flex;align-items:center;gap:7px;height:40px;flex:none;padding:0 20px;border-radius:var(--radius-pill);border:none;background:var(--indigo-600);color:#fff;font:600 13.5px/1 var(--font-sans);cursor:pointer;transition:background 140ms var(--ease),transform 120ms var(--ease),box-shadow 140ms var(--ease);}
-.chat-send:hover:not(:disabled){background:var(--indigo-500);box-shadow:0 8px 20px -10px rgba(43,76,155,.8);}
+.chat-send:hover:not(:disabled){background:var(--indigo-500);box-shadow:0 8px 20px -10px rgba(39,85,223,.8);}
 .chat-send:active:not(:disabled){transform:scale(.97);background:var(--indigo-700);}
 .chat-send:disabled{opacity:.5;cursor:not-allowed;}
 
@@ -252,7 +254,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-panel-title{flex:1;min-width:0;font:700 12.5px/17px var(--font-sans);color:var(--ink);}
 .chat-panel-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
 .chat-panel-item{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card);transition:border-color 160ms var(--ease),box-shadow 160ms var(--ease);}
-.chat-panel-item:hover{border-color:var(--indigo-line);box-shadow:0 6px 16px -12px rgba(43,76,155,.7);}
+.chat-panel-item:hover{border-color:var(--indigo-line);box-shadow:0 6px 16px -12px rgba(39,85,223,.7);}
 .chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:12px;animation:afFadeUp 320ms var(--ease) both;}
 .chat-empty img{width:100%;max-width:150px;height:auto;opacity:.92;}
 @keyframes afFadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
@@ -347,7 +349,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 /* ══ User avatar ═══════════════════════════════════════════════════════════
    Uploaded photo → generated avatar, always circular, skeleton before load. */
 .ua{position:relative;display:inline-flex;flex:none;border-radius:999px;overflow:visible;}
-.ua-img,.ua-gen{display:block;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,#EEF2F9,#E1E8F3);border:1px solid rgba(43,76,155,.10);object-fit:cover;opacity:0;transform:scale(.96);transition:opacity 200ms var(--ease),transform 200ms var(--ease);}
+.ua-img,.ua-gen{display:block;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,#EEF2F9,#E1E8F3);border:1px solid rgba(39,85,223,.10);object-fit:cover;opacity:0;transform:scale(.96);transition:opacity 200ms var(--ease),transform 200ms var(--ease);}
 .ua-img.in,.ua-gen.in{opacity:1;transform:none;}
 .ua-gen > svg{display:block;width:100%;height:100%;}
 .ua-skeleton{display:block;width:100%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--subtle) 25%,#E9EDF5 37%,var(--subtle) 63%);background-size:400% 100%;animation:afShimmer 1.4s ease infinite;}
@@ -408,11 +410,11 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 
 /* ══ Animated grid pattern (hero background) ═══════════════════════════════ */
 .af-grid{position:absolute;inset:0;pointer-events:none;overflow:hidden;
-  background-image:linear-gradient(to right,rgba(43,76,155,.08) 1px,transparent 1px),linear-gradient(to bottom,rgba(43,76,155,.08) 1px,transparent 1px);
+  background-image:linear-gradient(to right,rgba(39,85,223,.08) 1px,transparent 1px),linear-gradient(to bottom,rgba(39,85,223,.08) 1px,transparent 1px);
   background-size:44px 44px;
   -webkit-mask-image:radial-gradient(ellipse at center,#000 45%,transparent 78%);
   mask-image:radial-gradient(ellipse at center,#000 45%,transparent 78%);}
-.af-grid-cell{position:absolute;width:44px;height:44px;background:rgba(43,76,155,.14);animation:afGridCell 4s ease-in-out infinite;}
+.af-grid-cell{position:absolute;width:44px;height:44px;background:rgba(39,85,223,.14);animation:afGridCell 4s ease-in-out infinite;}
 @keyframes afGridCell{0%,100%{opacity:0;}45%,55%{opacity:1;}}
 
 /* ══ Confetti ══════════════════════════════════════════════════════════════ */

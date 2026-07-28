@@ -16,7 +16,6 @@ export { BrandLogo } from "./BrandLogo";
 export { Accordion, type AccordionItem } from "./Accordion";
 export { Marquee } from "./Marquee";
 export { HeroVideoDialog } from "./HeroVideoDialog";
-export { AvatarPicker, type AvatarChoice } from "./AvatarPicker";
 export { DialogCard, DialogHead, DialogFoot } from "./DialogCard";
 export { Icon, ICON_NAMES, type IconName } from "./Icon";
 export { GoogleIcon } from "./GoogleIcon";

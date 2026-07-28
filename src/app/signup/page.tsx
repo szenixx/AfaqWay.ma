@@ -226,7 +226,7 @@ export default function AuthPage() {
       {/* ── Left panel ── */}
       <div className="af-auth-left" onMouseMove={onPanelMove} style={{ position: "relative", borderRadius: 16, overflow: "hidden", background: "var(--indigo-100)", backgroundImage: "url(/roadmap-panel.webp)", backgroundSize: "cover", backgroundPosition: "center" }}>
         {/* mouse-reactive texture */}
-        <div ref={textureRef} aria-hidden style={{ position: "absolute", inset: -30, backgroundImage: "radial-gradient(rgba(43,76,155,.10) 1.2px, transparent 1.2px)", backgroundSize: "20px 20px", transition: "transform 140ms cubic-bezier(.4,0,.2,1)", pointerEvents: "none" }} />
+        <div ref={textureRef} aria-hidden style={{ position: "absolute", inset: -30, backgroundImage: "radial-gradient(rgba(39,85,223,.10) 1.2px, transparent 1.2px)", backgroundSize: "20px 20px", transition: "transform 140ms cubic-bezier(.4,0,.2,1)", pointerEvents: "none" }} />
 
         {/* logo + tagline, top-left, static (no motion), bigger */}
         <div style={{ position: "absolute", top: 24, left: 24, textAlign: "left", zIndex: 3 }}>
@@ -300,7 +300,7 @@ export default function AuthPage() {
                   justifyContent: "center",
                   font: "700 15px/1 var(--font-sans)",
                   border: "3px solid #fff",
-                  boxShadow: "0 6px 16px rgba(43,76,155,.35)",
+                  boxShadow: "0 6px 16px rgba(39,85,223,.35)",
                   zIndex: 2,
                   animation: `afNodePop .5s cubic-bezier(.4,0,.2,1) ${d}s both`,
                 }}

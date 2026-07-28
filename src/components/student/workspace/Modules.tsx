@@ -4,13 +4,14 @@
    switches on the user's plan (self_service vs full_service). Realistic demo
    data comes from ./data. Presentational pieces come from ./parts. */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
-import { removeUploadedPhoto, setPresetAvatar, setUploadedPhoto } from "@/lib/avatarProfile";
+import { removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
+import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, UserAvatar, AvatarPicker, Accordion, Loader, fieldIcon, iconForLabel, type AvatarChoice } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel } from "@/components/ds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import { useJourneySummary } from "@/lib/useJourneySummary";
 import { useNotifications, markRead, markAllRead } from "@/lib/notifications";
@@ -481,9 +482,9 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
   const [savedKey, setSavedKey] = useState("");
   const [busy, setBusy] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [picker, setPicker] = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState(0);
-  const [seed, setSeed] = useState(profile.avatarSeed);
+  const seed = profile.avatarSeed;
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
   const flash = (k: string) => { setSavedKey(k); setTimeout(() => setSavedKey(""), 2200); };
@@ -513,29 +514,22 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
     await onReload();
   }
 
-  /* One save path for every avatar decision the picker can produce. */
-  async function saveAvatar(choice: AvatarChoice) {
+  /* Upload a picture from the device: crop to a square, compress, store, then
+     publish it platform-wide before the profile reload finishes so every
+     avatar on screen changes at once. */
+  async function uploadPhoto(file: File) {
     setUploading(true); setProgress(15);
     try {
-      if (choice.kind === "remove") {
-        await removePhoto();
-      } else if (choice.kind === "upload") {
-        setProgress(45);
-        const { path } = await uploadUserFile(choice.file, { folder: "avatars" });
-        setProgress(80);
-        await setUploadedPhoto(profile.userId, path);
-        // Publish platform-wide before the reload finishes, so every avatar
-        // on screen updates at once.
-        setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
-        await onReload();
-      } else {
-        await setPresetAvatar(profile.userId, choice.seed, choice.style);
-        setSeed(choice.seed);
-        setAvatarUrl(null);
-        await onReload();
-      }
+      const prepared = await squareCompress(file);
+      setProgress(45);
+      const { path } = await uploadUserFile(prepared, { folder: "avatars" });
+      setProgress(80);
+      await setUploadedPhoto(profile.userId, path);
+      setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
+      await onReload();
       setProgress(100);
-      setPicker(false);
+    } catch (err) {
+      console.warn("profile picture not saved", err);
     } finally {
       setUploading(false); setProgress(0);
     }
@@ -544,18 +538,6 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {picker && (
-        <AvatarPicker
-          user={{ id: profile.userId, name: profile.fullName }}
-          gender={profile.gender}
-          currentSeed={seed}
-          currentStyle={profile.avatarStyle}
-          currentUrl={avatarUrl}
-          onCancel={() => setPicker(false)}
-          onSave={saveAvatar}
-        />
-      )}
-
       {/* Profile picture: uploaded photo, or the generated avatar. */}
       <Panel>
         <SectionTitle tone="blue" sub="Your photo replaces the generated avatar everywhere on the platform">Profile Information</SectionTitle>
@@ -563,10 +545,19 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
           <UserAvatar size={96} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: seed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {/* One entry point; the picker holds presets, upload and removal. */}
-              <BtnPrimary onClick={() => setPicker(true)} disabled={uploading}>
-                <Sparkles size={16} />{uploading ? `Saving ${progress}%` : "Change Avatar"}
+              {/* Upload only: a photo from the device, or remove the one there. */}
+              <input
+                ref={photoRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadPhoto(f); }}
+              />
+              <BtnPrimary onClick={() => photoRef.current?.click()} disabled={uploading}>
+                <Upload size={16} />{uploading ? `Uploading ${progress}%` : "Change Profile Picture"}
               </BtnPrimary>
+              {avatarUrl && (
+                <BtnGhost tone="red" onClick={removePhoto} disabled={uploading}>
+                  <X size={15} />Remove photo
+                </BtnGhost>
+              )}
             </div>
             {uploading && (
               <span style={{ display: "block", height: 6, borderRadius: 999, background: "var(--subtle)", overflow: "hidden", maxWidth: 260 }}>

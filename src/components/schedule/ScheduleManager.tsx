@@ -23,12 +23,12 @@ type Role = "student" | "advisor";
 
 const KINDS: { value: string; label: string; colour: string }[] = [
   { value: "deadline",    label: "Deadline",            colour: "#B23B27" },
-  { value: "interview",   label: "University interview", colour: "#2B4C9B" },
+  { value: "interview",   label: "University interview", colour: "#2755DF" },
   { value: "embassy",     label: "Embassy appointment", colour: "#8A5A0C" },
   { value: "visa",        label: "Visa appointment",    colour: "#7048E8" },
   { value: "travel",      label: "Travel",              colour: "#0B7285" },
   { value: "meeting",     label: "Meeting",             colour: "#256B49" },
-  { value: "appointment", label: "Appointment",         colour: "#3D63B4" },
+  { value: "appointment", label: "Appointment",         colour: "#2755DF" },
   { value: "reminder",    label: "Reminder",            colour: "#A2570B" },
   { value: "personal",    label: "Personal note",       colour: "#5A6B85" },
   { value: "note",        label: "Note",                colour: "#8695AB" },

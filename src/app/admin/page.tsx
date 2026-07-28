@@ -1,6 +1,7 @@
 "use client";
 
 import { usePresenceBroadcast } from "@/lib/presence";
+import { useReviewAlerts } from "@/lib/reviewAlerts";
 import { BrandLogo } from "@/components/ds";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
@@ -308,6 +309,9 @@ export default function AdminPage() {
   const [reportVersion, setReportVersion] = useState(0);
   const [chatUser, setChatUser] = useState<string | null>(null);
   const [meId, setMeId] = useState<string | null>(null);
+  /* Pending review requests per plan: the sidebar badges, and the chime that
+     plays the moment a new request arrives. */
+  const reviewCounts = useReviewAlerts(status === "ready");
   /* Administrators appear online to everyone else as well. */
   usePresenceBroadcast(meId, { name: email || null, role: "admin" });
   const [highlightPayment, setHighlightPayment] = useState<string | null>(null);
@@ -445,6 +449,12 @@ export default function AdminPage() {
                   {open && !collapsed && g.pages.map((p) => (
                     <button key={p.id} type="button" onClick={() => setPage(p.id)} className={cls(p.id === page, "sub")}>
                       <span className="adm-item-ico">{PAGE_ICONS[p.id]}</span>{p.label}
+                      {/* Pending review requests, live. Hidden at zero. */}
+                      {reviewCounts[p.id === "full" ? "full_service" : "self_service"] > 0 && (
+                        <span className="adm-badge" title="Pending review requests">
+                          {reviewCounts[p.id === "full" ? "full_service" : "self_service"]}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
