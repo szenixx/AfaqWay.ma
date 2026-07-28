@@ -5,7 +5,7 @@ import {
   CalendarDays, CircleCheck, Clock3, Download, ExternalLink, Eye, FileText, GraduationCap,
   History, Mail, MapPin, Phone, Route, TriangleAlert, X,
 } from "lucide-react";
-import { AnimatedModal, Input, Loader, Select, UserAvatar, Pill, type PillTone, ImageZoom } from "@/components/ds";
+import { AnimatedModal, Input, Loader, Select, UserAvatar, Pill, type PillTone, ImageZoom, Status } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
 import { assembleRoadmap, roadmapProgress, type JourneyStage } from "@/lib/journey";
@@ -150,7 +150,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
         <div className="usr-id">
           <div className="usr-name">
             {user.full_name || "Unnamed student"}
-            <span className={`usr-presence${online ? " on" : ""}`}>{online ? "Online" : "Offline"}</span>
+            <Status state={online ? "online" : "offline"} />
           </div>
           <div className="usr-contact">
             {user.email && <span><Mail size={13} />{user.email}</span>}

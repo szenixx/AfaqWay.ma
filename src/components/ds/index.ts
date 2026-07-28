@@ -19,7 +19,6 @@ export { HeroVideoDialog } from "./HeroVideoDialog";
 export { DialogCard, DialogHead, DialogFoot } from "./DialogCard";
 export { Icon, ICON_NAMES, type IconName } from "./Icon";
 export { GoogleIcon } from "./GoogleIcon";
-export { StatusBadge, STATUS, type StatusName } from "./StatusBadge";
 export { Flag } from "./Flag";
 /* The shared UI vocabulary: one label, one status indicator, one table, one
    notification and one preview viewport for the whole platform. */

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
-  CircleCheck, CircleDashed, Clock3, Hourglass, Info, Lock, SkipForward, TriangleAlert,
+  CircleCheck, Clock3, Hourglass, Info, Lock, SkipForward, TriangleAlert,
 } from "lucide-react";
 import type { StepState } from "@/lib/journey";
 
@@ -29,15 +29,6 @@ export function StepStatusIcon({ state, size = 18 }: { state: StepState; size?: 
   return (
     <span className={`jr-status jr-status-${tone}`} title={label} role="img" aria-label={label}>
       <Icon size={size} />
-    </span>
-  );
-}
-
-/** In-progress marker used where a step is actively being worked on. */
-export function InProgressIcon({ size = 18 }: { size?: number }) {
-  return (
-    <span className="jr-status jr-status-blue" title="In progress" role="img" aria-label="In progress">
-      <CircleDashed size={size} />
     </span>
   );
 }

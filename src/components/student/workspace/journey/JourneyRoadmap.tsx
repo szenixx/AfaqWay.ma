@@ -10,7 +10,7 @@ import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
   requestStageApproval, setStepState, subscribeJourney, type DbDocument, type Plan,
 } from "@/lib/journeyDb";
-import { Loader } from "@/components/ds";
+import { Loader, Pill } from "@/components/ds";
 import type { WsProfile } from "../Modules";
 import { JourneyStepModal } from "./JourneyStepModal";
 import { MarkDoneDialog } from "./MarkDoneDialog";
@@ -185,7 +185,7 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
               </span>
               <span className="jr-navtitle">{s.title}</span>
               <span className="jr-navfoot">
-                <span className={`${STATE_BADGE[s.state].cls} jr-navbadge`}>{STATE_BADGE[s.state].label}</span>
+                <Pill tone={STATE_BADGE[s.state].tone} size="sm" className="jr-navbadge">{STATE_BADGE[s.state].label}</Pill>
                 <span className="jr-navbar"><span style={{ width: `${s.pct}%` }} /></span>
                 <span className="jr-navpct">{s.done}/{s.total}</span>
               </span>
@@ -214,7 +214,7 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
                   <span className="jr-stage-num">Stage {stage.index}</span>
                   <span className="jr-stage-title">{stage.title}</span>
                 </span>
-                <span className={badge.cls}>{locked ? "Locked" : badge.label}</span>
+                <Pill tone={locked ? "grey" : badge.tone}>{locked ? "Locked" : badge.label}</Pill>
                 {!locked && <span className="jr-stage-count">{stage.done}/{stage.total}</span>}
                 {locked ? <Lock size={16} className="jr-stage-lock" /> : <ChevronDown size={17} className="jr-stage-chev" />}
               </button>

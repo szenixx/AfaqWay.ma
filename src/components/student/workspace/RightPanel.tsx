@@ -5,7 +5,7 @@ import {
   ArrowRight, Calendar, ChevronLeft, ChevronRight, CircleCheck, Clock3,
   Coins, FileText, Landmark, Languages, Route, TriangleAlert,
 } from "lucide-react";
-import { UniversityBrand } from "@/components/ds";
+import { UniversityBrand, Status } from "@/components/ds";
 import { JOURNEY, JOURNEY_PCT, REQUIRED_DOCS } from "./data";
 import type { WsProfile } from "./Modules";
 
@@ -167,7 +167,9 @@ export function JourneySnapshotCard({ onNav }: { onNav: (id: string) => void }) 
       action={<TextButton onClick={() => onNav("journey")}>View journey</TextButton>}
     >
       <div className="rp-label">Current stage</div>
-      <div className="rp-stage"><span className="rp-dot green" aria-hidden />{stage.title}</div>
+      {/* The dot is the status and comes from the shared component; the stage
+          title beside it is content, so it keeps the card's own type. */}
+      <div className="rp-stage"><Status state="success" label="Current stage" dotOnly />{stage.title}</div>
 
       <div className="rp-progress-row">
         <span className="rp-label">Progress</span>

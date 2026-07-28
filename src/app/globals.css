@@ -671,7 +671,6 @@ body {
 .rp-event-title { font: 600 12.5px/17px var(--font-sans); color: var(--ink); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp-event-time { font: 400 11px/15px var(--font-sans); color: var(--ink-soft); }
 .rp-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--amber-soft); flex: none; }
-.rp-dot.green { background: var(--green-soft); }
 
 /* Card 3 */
 .rp-stage { display: flex; align-items: center; gap: 8px; font: 600 13.5px/19px var(--font-sans); color: var(--ink); margin: 4px 0 11px; }
@@ -1170,7 +1169,6 @@ body {
 /* Status is the icon. There is no separate badge on a step row. */
 .jr-status { width: 34px; height: 34px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center; }
 .jr-status-green  { background: var(--green-tint); color: var(--green); }
-.jr-status-blue   { background: var(--indigo-tint); color: var(--indigo-600); }
 .jr-status-amber  { background: var(--amber-tint); color: var(--amber); }
 .jr-status-orange { background: #FCEDDF; color: #A2570B; }
 .jr-status-red    { background: var(--red-tint); color: var(--red); }
@@ -1458,11 +1456,6 @@ body {
 .usr-head { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: start; padding: 20px 22px 0; }
 .usr-id { min-width: 0; }
 .usr-name { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font: 700 19px/26px var(--font-sans); color: var(--ink); }
-.usr-presence { display: inline-flex; align-items: center; gap: 6px; font: 600 10.5px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase;
-  padding: 5px 10px; border-radius: 999px; background: var(--grey-tint); color: var(--ink-faint); border: 1px solid var(--grey-line); }
-.usr-presence::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: var(--grey); }
-.usr-presence.on { background: var(--green-tint); color: var(--green); border-color: var(--green-line); }
-.usr-presence.on::before { background: var(--green); }
 .usr-contact { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 5px; }
 .usr-contact span { display: inline-flex; align-items: center; gap: 6px; font: 400 12px/18px var(--font-sans); color: var(--ink-soft); }
 .usr-contact svg { color: var(--ink-faint); flex: none; }

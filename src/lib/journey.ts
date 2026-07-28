@@ -98,15 +98,23 @@ export function stepDocuments(step: JourneyStep, uploads: DbDocument[] = []) {
   };
 }
 
-export const STATE_BADGE: Record<StepState | StageState, { label: string; cls: string }> = {
-  completed: { label: "Completed", cls: "pill pill-green" },
-  submitted: { label: "Waiting review", cls: "pill pill-amber" },
-  rejected: { label: "Changes requested", cls: "pill pill-red" },
-  skipped: { label: "Skipped", cls: "pill pill-grey" },
-  current: { label: "In progress", cls: "pill pill-indigo" },
-  pending: { label: "Pending", cls: "pill pill-amber" },
-  waiting_approval: { label: "Waiting approval", cls: "pill pill-amber" },
-  locked: { label: "Locked", cls: "pill pill-grey" },
+/**
+ * How each journey state is labelled and coloured.
+ *
+ * A tone, not a class name: the caller hands it to the shared Pill, so this
+ * table describes the state and owns no markup. Holding CSS class strings here
+ * is what let these badges quietly keep their own styling while every visible
+ * pill in the platform moved to the shared component.
+ */
+export const STATE_BADGE: Record<StepState | StageState, { label: string; tone: PillTone }> = {
+  completed: { label: "Completed", tone: "green" },
+  submitted: { label: "Waiting review", tone: "amber" },
+  rejected: { label: "Changes requested", tone: "red" },
+  skipped: { label: "Skipped", tone: "grey" },
+  current: { label: "In progress", tone: "indigo" },
+  pending: { label: "Pending", tone: "amber" },
+  waiting_approval: { label: "Waiting approval", tone: "amber" },
+  locked: { label: "Locked", tone: "grey" },
 };
 
 /* ── Database-backed roadmap ──────────────────────────────────────────────────
@@ -114,6 +122,7 @@ export const STATE_BADGE: Record<StepState | StageState, { label: string; cls: s
    progress and the advisor's stage approvals. Replaces every demo object. */
 
 import { stepAllowsSkip, stepRequirements, type DbApproval, type DbDocument, type DocRequirement, type DocStatus, type DbProgress, type DbStage, type DbStep } from "@/lib/journeyDb";
+import type { PillTone } from "@/components/ds/Pill";
 
 export function assembleRoadmap(
   stages: DbStage[],

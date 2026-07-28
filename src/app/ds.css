@@ -75,7 +75,6 @@
 .pill-amber{color:var(--amber);background:var(--amber-tint);border-color:var(--amber-line);}
 .pill-red{color:var(--red);background:var(--red-tint);border-color:var(--red-line);}
 .pill-green{color:var(--green);background:var(--green-tint);border-color:var(--green-line);}
-.status-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;}
 /* ── Controls ──────────────────────────────────────────────────────────────
    ONE input, dropdown, toggle and checkbox for the whole platform. Every field
    already carries `.af`, so restyling here restyles every screen at once; the
