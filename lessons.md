@@ -231,3 +231,22 @@ progress, stage approvals, documents and schedule events all needed one.
 R2 keys are literal so it was not exploitable, but ownership by prefix is only
 meaningful once the key cannot climb out of its prefix. Reject "..", leading and
 double slashes, backslashes and control characters before comparing.
+
+## Two components, one Supabase channel topic (28 Jul 2026)
+Second occurrence of this bug class, after the presence one. supabase-js returns
+the SAME channel object for a repeated topic, so a second `.on()` after the
+first `.subscribe()` throws "cannot add postgres_changes callbacks after
+subscribe()" and takes the page down. It appeared the moment `useNotifications`
+was mounted twice at once — the sidebar badge and the Overview card.
+Rule: a per-user realtime subscription inside a hook must be shared and
+reference-counted at module level, never created per component. Assume any hook
+that subscribes will one day be mounted twice, because a count shown in two
+places is normal, not exotic.
+
+## A badge that never reaches zero is reading sample data
+The notification badge showed 3 on every account forever. The count came from
+the demo NOTIFICATIONS array, while the Notifications module itself already read
+the real table — so the two disagreed and nobody noticed.
+Rule: when placeholder data is replaced by a real source, grep for every
+importer of the placeholder and delete the export. Leaving it exported is what
+lets a second component keep rendering fiction next to the truth.
