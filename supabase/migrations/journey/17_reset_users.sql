@@ -52,21 +52,36 @@ delete from public.payments                  where user_id not in (select id fro
 delete from public.profiles  where id not in (select id from keep_user);
 delete from auth.users       where id not in (select id from keep_user);
 
-/* The survivor keeps their staff role but starts clean: no stale plan, no
-   half-finished onboarding, no receipt pointing at a deleted R2 object. */
+commit;
+
+/* ── Tidy the survivor ─────────────────────────────────────────────────────
+   Deliberately AFTER the commit, and deliberately its own statement.
+
+   This part is cosmetic: it clears a stale plan and an avatar pointing at an
+   R2 object that no longer exists. The deletion above is not. Keeping them in
+   one transaction meant a surprise here — a NOT NULL column, a trigger — rolled
+   back the whole wipe, which is exactly what happened on the first run.
+
+   Each column is set to the value a fresh account has: plan_status is NOT NULL
+   and the application treats anything other than 'active' as unpaid, so it
+   takes 'none', the same word 15_profile_guard.sql resets to. */
 update public.profiles
    set plan = null,
-       plan_status = null,
+       plan_status = 'none',
        plan_activated_at = null,
-       avatar_path = null,
        banned = false
- where id in (select id from keep_user);
+ where email is not null
+   and lower(email) = lower('index.abde06@gmail.com');
 
-commit;
+/* The avatar is cleared separately: if avatar_path turns out to be NOT NULL on
+   this database, only this one statement fails and everything above stands. */
+update public.profiles
+   set avatar_path = null
+ where lower(email) = lower('index.abde06@gmail.com');
 
 /* ── Verify ────────────────────────────────────────────────────────────────
    Expect 1 / 1 and 0 everywhere else. */
-select 'auth.users'   as table, count(*) from auth.users
+select 'auth.users'   as relation, count(*) from auth.users
 union all select 'profiles',    count(*) from public.profiles
 union all select 'payments',    count(*) from public.payments
 union all select 'messages',    count(*) from public.messages
