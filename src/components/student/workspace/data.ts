@@ -117,12 +117,6 @@ export const REQUIRED_DOCS: RequiredDoc[] = [
   { key: "insurance", name: "Health insurance", desc: "Covers full study period", status: "pending", updated: "—" },
 ];
 
-export const DOC_LABEL: Record<DocStatus, string> = {
-  approved: "Approved", under_review: "Under review", needs_changes: "Needs changes", pending: "Pending", uploaded: "Uploaded",
-};
-export const DOC_TONE: Record<DocStatus, "green" | "amber" | "red" | "grey" | "indigo"> = {
-  approved: "green", under_review: "amber", needs_changes: "red", pending: "grey", uploaded: "indigo",
-};
 
 export type Activity = { icon: "doc" | "check" | "message" | "flag"; text: string; time: string };
 export const RECENT_ACTIVITY: Activity[] = [

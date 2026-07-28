@@ -62,16 +62,25 @@ export default function Schedule({ profile, onNav, role = "student" }: {
     const before = new Map(events.map((e) => [e.id, e]));
     for (const e of next) {
       const prev = before.get(e.id);
-      if (!prev || JSON.stringify(prev) !== JSON.stringify(e)) {
-        await dbSave({
-          ...(e as FullEvent), userId: profile.userId, date: e.date,
-          /* Authorship belongs to whoever created the event, so editing an
-             existing one never reassigns it. Only a genuinely new event takes
-             the current role. Rewriting this on every save is what let a
-             student's edit silently claim an advisor's entry. */
-          createdBy: e.createdBy ?? (role === "advisor" ? "advisor" : "student"),
-        });
-      }
+      if (prev && JSON.stringify(prev) === JSON.stringify(e)) continue;   // untouched
+      await dbSave({
+        ...(e as FullEvent),
+        /* A brand new event must not carry its client-side id.
+         *
+         * newId() mints "evt-xxxxxxxx" as a temporary handle for React keys.
+         * It is not a uuid, and saveEvent branches on `id`: given one it
+         * UPDATEs, so a new event was written to a row that does not exist and
+         * silently vanished on the next reload. Dropping the id here sends it
+         * down the insert branch and the database mints the real one. */
+        id: prev ? e.id : undefined,
+        userId: profile.userId,
+        date: e.date,
+        /* Authorship belongs to whoever created the event, so editing an
+           existing one never reassigns it. Only a genuinely new event takes
+           the current role. Rewriting this on every save is what let a
+           student's edit silently claim an advisor's entry. */
+        createdBy: e.createdBy ?? (role === "advisor" ? "advisor" : "student"),
+      });
     }
     for (const e of events) if (!next.some((n) => n.id === e.id)) await dbDelete(e.id);
     await reload();

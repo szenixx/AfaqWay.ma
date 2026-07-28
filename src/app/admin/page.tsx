@@ -469,7 +469,7 @@ export default function AdminPage() {
             <button type="button" onClick={() => setPage("reports")} title={lbl("Reports")} className={cls(page === "reports")}>
               <span className="adm-item-ico" style={{ position: "relative" }}>
                 <Bell size={18} />
-                {unread > 0 && <span style={{ position: "absolute", top: -6, right: -8, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 999, background: "var(--red)", color: "#fff", font: "700 9.5px/16px var(--font-sans)", textAlign: "center" }}>{unread > 9 ? "9+" : unread}</span>}
+                {unread > 0 && <span style={{ position: "absolute", top: -6, right: -8, display: "flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", background: "var(--red)", color: "#fff", font: "700 9.5px/1 var(--font-sans)", boxSizing: "border-box" }}>{unread > 9 ? "9+" : unread}</span>}
               </span>
               {!collapsed && "Reports"}
             </button>

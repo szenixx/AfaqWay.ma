@@ -15,7 +15,7 @@ import { loadAvatarFieldsFor } from "@/lib/avatarProfile";
 import WorkspaceShell, { type Nav } from "@/components/student/workspace/WorkspaceShell";
 import type { WsProfile, WsPayment } from "@/components/student/workspace/Modules";
 import { deriveStudy, deriveAcademic } from "@/lib/studyApplication";
-import { useNotifications, useNotificationToasts } from "@/lib/notifications";
+import { useNotificationToasts } from "@/lib/notifications";
 import { useChatUnread } from "@/lib/chatUnread";
 import { useSingleSession } from "@/lib/useSingleSession";
 
@@ -136,12 +136,6 @@ export default function Dashboard() {
     return !error;
   }
 
-  /* Both badge counts come from real rows, never from sample data: the
-     notification centre's own unread total, and advisor messages the student
-     has not opened. Either is zero when nothing is waiting, and the badge
-     disappears with it. */
-  const { unread: unreadNotifs } = useNotifications(userId);
-
   /* Every notification that arrives also floats in from the top of the screen.
      Its action opens the page the notification points at — for a journey
      decision or an advisor message that is the conversation, which then scrolls
@@ -158,7 +152,6 @@ export default function Dashboard() {
       nav={nav}
       onNav={setNav}
       chatUnread={chatUnread}
-      unreadNotifs={unreadNotifs}
       onSignOut={signOut}
       onProgramRequest={onProgramRequest}
       onReload={reload}

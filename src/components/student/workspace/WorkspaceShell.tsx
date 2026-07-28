@@ -50,11 +50,11 @@ const MODULE_TITLE: Record<Nav, string> = {
 };
 
 export default function WorkspaceShell({
-  profile, nav, onNav, chatUnread, unreadNotifs, onSignOut, onProgramRequest, onReload,
+  profile, nav, onNav, chatUnread, onSignOut, onProgramRequest, onReload,
 }: {
   profile: WsProfile; nav: Nav; onNav: (n: Nav) => void;
-  /** Unread counts. Both are live, and both are zero when nothing is waiting. */
-  chatUnread: number; unreadNotifs: number; onSignOut: () => void;
+  /** Unread advisor messages. The only red badge in the workspace. */
+  chatUnread: number; onSignOut: () => void;
   onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean>;
   onReload: () => Promise<void>;
 }) {
@@ -184,7 +184,7 @@ export default function WorkspaceShell({
             {/* Everything above is a place in the journey; below is everything
                 waiting for the student's attention. */}
             <div className="sw-nav-divider" role="separator" />
-            {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />, { badge: unreadNotifs })}
+            {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />)}
             {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread })}
           </nav>
           <SidebarCarousel />
@@ -205,7 +205,12 @@ export default function WorkspaceShell({
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
               <button type="button" className={`sw-iconbtn${nav === "notifications" ? " active" : ""}`} onClick={() => navigate("notifications")} aria-label="Notifications">
-                <Bell size={20} />{unreadNotifs > 0 && nav !== "notifications" && <span className="sw-dot">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>}
+                {/* No count here. A notification is a record of
+                    something that already reached the student — as a
+                    toast, and in the conversation. The red dot is
+                    reserved for the one thing that still needs them:
+                    an unread message. */}
+                <Bell size={20} />
               </button>
               <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
                 <MessageCircle size={20} />{chatUnread > 0 && nav !== "messages" && <span className="sw-dot">{chatUnread > 9 ? "9+" : chatUnread}</span>}
@@ -255,7 +260,7 @@ export default function WorkspaceShell({
         <div className="sw-group-label">Platform</div>
         {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
         <div className="sw-nav-divider" role="separator" />
-        {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />, { badge: unreadNotifs })}
+        {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />)}
         {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread })}
         {navItem("subscription", "Subscription", <CreditCard size={NAV_ICON} />)}
         {navItem("support", "Support", <LifeBuoy size={NAV_ICON} />)}

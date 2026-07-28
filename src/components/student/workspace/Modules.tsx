@@ -5,6 +5,7 @@
    data comes from ./data. Presentational pieces come from ./parts. */
 
 import { useState, useRef } from "react";
+import { DOC_STATUS } from "@/lib/journey";
 import { supabase } from "@/lib/supabase/client";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
@@ -15,7 +16,7 @@ import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, icon
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import { useActivity } from "@/lib/activity";
 import { useJourneySummary } from "@/lib/useJourneySummary";
-import { useNotifications, markRead, markAllRead } from "@/lib/notifications";
+import { useNotifications, markRead } from "@/lib/notifications";
 import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
   Bell, MessageCircle, ArrowRight, Plus, Check, Pencil, Mail, Phone, MapPin,
@@ -27,7 +28,7 @@ import { PAY_METHODS } from "@/lib/plans";
 import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
 import {
-  JOURNEY, REQUIRED_DOCS, DOC_LABEL, DOC_TONE, RECENT_ACTIVITY,
+  JOURNEY, REQUIRED_DOCS, RECENT_ACTIVITY,
   UPCOMING_TASKS, FAQ,
 } from "./data";
 import {
@@ -116,7 +117,7 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
                 <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 4px", borderBottom: "1px solid var(--line-soft)" }}>
                   <span style={{ width: 30, height: 30, borderRadius: 9, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={15} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13px/17px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div><div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{d.updated}</div></div>
-                  <Pill tone={DOC_TONE[d.status]}>{DOC_LABEL[d.status]}</Pill>
+                  <Status state={DOC_STATUS[d.status].state} label={DOC_STATUS[d.status].label} />
                 </div>
               ))}
             </div>
@@ -210,10 +211,21 @@ const NOTIF_ICON: Record<string, React.ReactNode> = {
 
 /* The real notification centre: journey decisions, document verifications,
    schedule reminders and platform announcements, live. */
+/* The notification centre is a history, not an inbox.
+ *
+ * Every notification here has already reached the student once as a floating
+ * toast, and anything that needs an answer — a journey decision, an advisor's
+ * message — lives in the conversation where they can reply. So this list
+ * carries no unread state and no red dot: it is the record of what has
+ * happened, kept so nothing is lost when a toast disappears.
+ *
+ * The one red badge left in the workspace is on Messages. */
 export function Notifications({ profile, onNav }: { profile: WsProfile; onNav?: (id: string) => void }) {
-  const { items, unread, loading, reload } = useNotifications(profile.userId);
+  const { items, loading, reload } = useNotifications(profile.userId);
 
   const open = async (n: { id: string; read: boolean; link: string }) => {
+    // Opening still clears the row's own unread flag, so the history reads as
+    // seen; nothing about it was ever shown in red.
     if (!n.read) { await markRead(n.id); await reload(); }
     if (n.link && onNav) onNav(n.link);
   };
@@ -222,16 +234,9 @@ export function Notifications({ profile, onNav }: { profile: WsProfile; onNav?: 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {unread > 0 && (
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <BtnGhost onClick={async () => { await markAllRead(profile.userId); await reload(); }}>
-            <Check size={15} />Mark all read
-          </BtnGhost>
-        </div>
-      )}
       <Panel style={{ padding: 8 }}>
         {items.length === 0 ? (
-          <EmptyState icon={<Bell size={26} />} title="All caught up" sub="Updates about your journey, documents and schedule appear here." />
+          <EmptyState icon={<Bell size={26} />} title="Nothing yet" sub="Every update you receive is kept here, so you can look back at it after the notification disappears." />
         ) : items.map((n, i) => (
           <button
             key={n.id} type="button" onClick={() => open(n)}
@@ -248,7 +253,6 @@ export function Notifications({ profile, onNav }: { profile: WsProfile; onNav?: 
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{n.title}</span>
-                {!n.read && <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--red)" }} />}
               </span>
               {n.body && <span style={{ display: "block", font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>{n.body}</span>}
               <span style={{ display: "block", font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", marginTop: 3 }}>

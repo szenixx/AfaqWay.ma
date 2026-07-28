@@ -467,7 +467,12 @@ a {
 .sw-topnav { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sw-topnav-sep { width: 1px; height: 22px; background: rgba(22,46,140,.16); margin: 0 4px; flex: none; }
 .sw-topnav-title { font: 700 24px/30px var(--font-sans); color: var(--ink); letter-spacing: -.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sw-dot { position: absolute; top: 8px; right: 9px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--red); color: #fff; font: 700 9px/15px var(--font-sans); text-align: center; border: 2px solid #fff; }
+/* The one red badge in the workspace, on Messages. A circle, not a pill:
+   width and height are equal and there is no horizontal padding to stretch
+   it, so a one- and a two-digit count are the same shape. */
+.sw-dot { position: absolute; top: 6px; right: 7px; display: flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; padding: 0; border-radius: 50%; background: var(--red); color: #fff;
+  font: 700 9px/1 var(--font-sans); border: 2px solid #fff; box-sizing: border-box; }
 .sw-avatar { width: 42px; height: 42px; border-radius: 14px; flex: none; background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700)); color: #fff; border: none; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); box-shadow: 0 6px 16px rgba(22,46,140,.32); }
 /* Profile capsule: avatar + name/email, white pill, thin border, soft shadow. */
 .sw-profile { display: inline-flex; align-items: center; gap: 11px; padding: 6px 12px 6px 6px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1px solid rgba(22,46,140,.07); box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 10px 24px -20px rgba(22,46,140,.24); cursor: pointer; transition: background 220ms var(--ease), box-shadow 220ms var(--ease), transform 220ms var(--ease); }
