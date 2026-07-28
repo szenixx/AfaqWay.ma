@@ -102,13 +102,15 @@ export default function Schedule({ profile, onNav, role = "student" }: {
   return (
     <div className="sw-withpanel">
       {/* ── Calendar ── */}
-      <div style={{ minWidth: 0 }}>
-        {/* Quick actions sit with the calendar they add to, in one row. */}
+      {/* A fixed frame: the actions and the month header hold their place and
+          only the grid below them scrolls. */}
+      <div className="sch-main">
+        {/* Quick actions sit with the calendar they add to, filling the row. */}
         <div className="sch-quick" role="group" aria-label="Add to calendar">
           {QUICK.map((q) => (
-            <button key={q.kind} type="button" className="sch-quick-btn" onClick={() => setForm({ kind: q.kind })}>
+            <button key={q.kind} type="button" className="sch-quick-btn" title={`Add ${q.label.toLowerCase()}`} onClick={() => setForm({ kind: q.kind })}>
               <span className="sch-quick-ico" style={{ color: KIND_META[q.kind].color, background: KIND_META[q.kind].tint }}>{q.icon}</span>
-              {q.label}
+              <span className="sch-quick-label">{q.label}</span>
             </button>
           ))}
         </div>
@@ -129,6 +131,8 @@ export default function Schedule({ profile, onNav, role = "student" }: {
 
           <div className="sch-weekdays">{DAYS.map((d) => <span key={d}>{d}</span>)}</div>
 
+          {/* The only part that scrolls. Everything above it stays visible. */}
+          <div className="sch-cal-body">
           <div className="sch-grid">
             {grid.map((d) => {
               const key = iso(d);
@@ -154,6 +158,7 @@ export default function Schedule({ profile, onNav, role = "student" }: {
                 </button>
               );
             })}
+          </div>
           </div>
         </section>
       </div>

@@ -161,17 +161,14 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <header className="dm-head">
         <div style={{ minWidth: 0 }}>
-          <h2 className="dm-title">Documents</h2>
+          {/* The stage reads as part of the title, at the same size and with no
+              frame around it: "Documents — Stage 1: Pre-Application". */}
+          <h2 className="dm-title">
+            Documents
+            {stage && <span className="dm-title-stage">Stage {stage.index}: {stage.title}</span>}
+          </h2>
           <p className="dm-sub">Everything your current stage needs.</p>
         </div>
-        {/* Slim current-stage card, the same height as the header beside it. */}
-        {stage && (
-          <aside className="dm-stage" aria-label="Current stage">
-            <span className="dm-stage-label">Current stage</span>
-            <span className="dm-stage-num">Stage {stage.index}</span>
-            <span className="dm-stage-title">{stage.title}</span>
-          </aside>
-        )}
       </header>
 
       {error && <p className="stp-hint"><TriangleAlert size={14} />{error}</p>}
