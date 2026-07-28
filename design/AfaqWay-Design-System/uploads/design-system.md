@@ -38,10 +38,10 @@ Use this file as the single reference for *how anything looks* on any Vartai pag
 
 | Token | Hex | Use |
 |---|---|---|
-| `--indigo-700` | `#183BA8` | Pressed / active state of any primary control |
-| `--indigo-600` | `#2755DF` | **Primary.** Buttons, links, focus border, selected states |
-| `--indigo-500` | `#1E49CC` | Hover of primary |
-| `--indigo-100` | `#EAF0FF` | Tint — ghost fill, selected-row wash, focus ring glow |
+| `--indigo-700` | `#0F256F` | Pressed / active state of any primary control |
+| `--indigo-600` | `#162E8C` | **Primary.** Buttons, links, focus border, selected states |
+| `--indigo-500` | `#1230A6` | Hover of primary |
+| `--indigo-100` | `#E8EEFF` | Tint — ghost fill, selected-row wash, focus ring glow |
 
 ### 2.3 Status — the only status language on the platform
 
@@ -50,7 +50,7 @@ Every status has **three tones**: text, tint (background), line (border). Text o
 | Status | Text | Tint | Line | Meaning |
 |---|---|---|---|---|
 | **Grey** | `#8695AB` | `#F1F4F7` | `#DCE2EA` | Not started / locked |
-| **Indigo** | `#2755DF` | `#EAF0FF` | `#C2D2FA` | Applied / submitted |
+| **Indigo** | `#162E8C` | `#E8EEFF` | `#C4CEEE` | Applied / submitted |
 | **Amber** | `#8A5A0C` | `#FBF0DA` | `#E7C583` | Under review / pending / deadline |
 | **Red** | `#B23B27` | `#FBE7E2` | `#EDB3A6` | Needs changes / rejected / error |
 | **Green** | `#256B49` | `#E3F0E9` | `#9CCBB2` | Approved / done |
@@ -424,10 +424,10 @@ Buttons: single active verbs — *Continue, Upload, Save draft, Withdraw*. Hints
   --line:#DCE2EA; --line-soft:#E7ECF1;
   --shadow-card:0 2px 10px rgba(23,35,58,.04);
 
-  --indigo-700:#183BA8; --indigo-600:#2755DF; --indigo-500:#1E49CC; --indigo-100:#EAF0FF;
+  --indigo-700:#0F256F; --indigo-600:#162E8C; --indigo-500:#1230A6; --indigo-100:#E8EEFF;
 
   --grey:#8695AB;  --grey-tint:#F1F4F7;  --grey-line:#DCE2EA;
-  --indigo-text:#2755DF; --indigo-tint:#EAF0FF; --indigo-line:#C2D2FA;
+  --indigo-text:#162E8C; --indigo-tint:#E8EEFF; --indigo-line:#C4CEEE;
   --amber:#8A5A0C; --amber-tint:#FBF0DA; --amber-line:#E7C583;
   --red:#B23B27;   --red-tint:#FBE7E2;   --red-line:#EDB3A6;
   --green:#256B49; --green-tint:#E3F0E9; --green-line:#9CCBB2;

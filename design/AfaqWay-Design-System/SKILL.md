@@ -9,7 +9,7 @@ If creating visual artifacts (slides, mocks, throwaway prototypes, etc), copy as
 If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.
 
 Key rules (full spec in `uploads/design-system.md`):
-- Poppins only; indigo #2755DF is the sole accent; cool paper #ECEFF3 background, white cards, hairline borders.
+- Poppins only; indigo #162E8C is the sole accent; cool paper #ECEFF3 background, white cards, hairline borders.
 - Status is a closed five-word/five-colour set: Not started · Applied · Under review · Needs changes · Approved — each with text/tint/line trio and a circle-housed icon.
 - Icons: outline, 1.75px stroke, rounded caps, from `assets/icons/` only.
 - Radii: 8/12/16/999 only. Never introduce a new colour, font, or component style.

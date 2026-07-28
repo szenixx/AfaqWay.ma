@@ -10,7 +10,7 @@ import { useEffect, useRef } from "react";
 
 type Piece = { x: number; y: number; vx: number; vy: number; rot: number; vr: number; size: number; color: string; life: number };
 
-const COLORS = ["#2755DF", "#1E49CC", "#C2D2FA", "#256B49", "#8A5A0C", "#FFFFFF"];
+const COLORS = ["#162E8C", "#1230A6", "#C4CEEE", "#256B49", "#8A5A0C", "#FFFFFF"];
 
 export function Confetti({ bursts = 2, particles = 70, spread = 260, height = 160 }: {
   /** How many times to fire, total. Never loops beyond this. */

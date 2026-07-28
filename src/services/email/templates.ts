@@ -38,7 +38,7 @@ const shell = (inner: string) => `<!doctype html><html><body style="margin:0;pad
 ${inner}
 </div></body></html>`;
 
-const linkStyle = "color:#2755DF;text-decoration:none";
+const linkStyle = "color:#162E8C;text-decoration:none";
 
 /* ── Platform announcement ─────────────────────────────────────────────────
    Sent by the platform itself: journey decisions, document requests, payment

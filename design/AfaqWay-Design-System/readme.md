@@ -18,7 +18,7 @@ AfaqWay is a digital platform that walks an international student through the en
 ## VISUAL FOUNDATIONS
 
 - **DNA: document dossier, not an app.** Cool official-paper background `--paper #ECEFF3`, white cards, hairline borders. Calm and formal.
-- **Colour:** one accent — indigo `--indigo-600 #2755DF` — marks the active/primary thing ONLY (primary button, links, focus, selected). Status is a strict five-colour traffic light (grey/indigo/amber/red/green), each with a text + tint + line trio; text on a tint always uses the family's dark tone. Closed palette; flags are the sole exception.
+- **Colour:** one accent — indigo `--indigo-600 #162E8C` — marks the active/primary thing ONLY (primary button, links, focus, selected). Status is a strict five-colour traffic light (grey/indigo/amber/red/green), each with a text + tint + line trio; text on a tint always uses the family's dark tone. Closed palette; flags are the sole exception.
 - **Type:** Poppins only, weights 400/500/600/700. Hierarchy by size/weight, no font pairing. Page title 27/34 700 · section 18/24 600 · body 15/24 400 · label 13/20 500 · eyebrow 11.5 caps 600 indigo · pill 10.5 caps 600.
 - **Backgrounds:** flat `--paper`; no gradients, no textures, no imagery system, no illustrations provided.
 - **Cards:** `--card` white, 1px `--line` border, radius 16px, whisper shadow `0 2px 10px rgba(23,35,58,.04)`, padding 24–28px. Never nest cards — use a `--line-soft` divider.

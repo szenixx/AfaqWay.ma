@@ -115,7 +115,7 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
         {/* A thin bar across the top, and nothing else about the card changes. */}
         {decision && <span className="chat-decision-bar" aria-hidden />}
         {quoted && (
-          <div style={{ borderLeft: `3px solid ${mine ? "rgba(255,255,255,.65)" : "var(--indigo-600)"}`, background: mine ? "rgba(255,255,255,.14)" : "rgba(39,85,223,.06)", borderRadius: 8, padding: "5px 9px", marginBottom: 7 }}>
+          <div style={{ borderLeft: `3px solid ${mine ? "rgba(255,255,255,.65)" : "var(--indigo-600)"}`, background: mine ? "rgba(255,255,255,.14)" : "rgba(22,46,140,.06)", borderRadius: 8, padding: "5px 9px", marginBottom: 7 }}>
             <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: mine ? "rgba(255,255,255,.9)" : "var(--indigo-600)" }}>{quotedAuthor}</span>
             <span style={{ display: "block", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: "400 11.5px/16px var(--font-sans)", color: mine ? "rgba(255,255,255,.75)" : "var(--ink-soft)" }}>
               {parseAsk(quoted.body)?.q ?? quoted.body?.slice(0, 60) ?? quoted.file_name ?? "Attachment"}
