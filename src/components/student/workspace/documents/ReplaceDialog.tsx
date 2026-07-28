@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatedModal, FileDrop, DialogCard, DialogHead, DialogFoot, Pill, type PillTone } from "@/components/ds";
+import { DOC_STATUS } from "@/lib/journey";
+import { AnimatedModal, FileDrop, DialogCard, DialogHead, DialogFoot, Status } from "@/components/ds";
 import { JrButton } from "../journey/parts";
 import type { DocRequirement, DocStatus } from "@/lib/journeyDb";
 
@@ -15,13 +16,6 @@ import type { DocRequirement, DocStatus } from "@/lib/journeyDb";
    The upload area is the platform's shared FileDrop, the same control used at
    checkout and check-in. */
 
-const LABEL: Record<DocStatus, string> = {
-  pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
-  needs_changes: "Rejected", approved: "Verified",
-};
-const TONE: Record<DocStatus, PillTone> = {
-  pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
-};
 
 export function ReplaceDialog({ requirement, status, existingName, onCancel, onConfirm }: {
   requirement: DocRequirement;
@@ -60,7 +54,7 @@ export function ReplaceDialog({ requirement, status, existingName, onCancel, onC
         <DialogCard tone="quiet">
           <div className="rpl-doc">
             <span className="rpl-doc-name">{requirement.name || requirement.key}</span>
-            <Pill tone={TONE[status]}>{LABEL[status]}</Pill>
+            <Status state={DOC_STATUS[status].state} label={DOC_STATUS[status].label} />
           </div>
           <dl className="rvw-facts">
             <div><dt>Required format</dt><dd>{requirement.acceptedTypes ? requirement.acceptedTypes.toUpperCase() : "Any"}</dd></div>

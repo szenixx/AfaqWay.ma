@@ -1,37 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  CircleCheck, Clock3, Hourglass, Info, Lock, SkipForward, TriangleAlert,
-} from "lucide-react";
-import type { StepState } from "@/lib/journey";
+import { Info } from "lucide-react";
 
 /* Shared Journey pieces.
 
-   Status is communicated by the icon itself, not by a separate badge, and every
-   action button in the module comes from JrButton so heights, radii, padding and
+   Status is communicated by the shared Status component, and every action
+   button in the module comes from JrButton so heights, radii, padding and
    typography match everywhere. Defined once so no screen can drift. */
-
-/* ── Status icons ─────────────────────────────────────────────────────────── */
-
-export const STEP_ICON: Record<StepState, { Icon: typeof CircleCheck; tone: string; label: string }> = {
-  completed: { Icon: CircleCheck,    tone: "green",  label: "Completed" },
-  submitted: { Icon: Hourglass,      tone: "amber",  label: "Waiting review" },
-  rejected:  { Icon: TriangleAlert,  tone: "red",    label: "Changes requested" },
-  skipped:   { Icon: SkipForward,    tone: "grey",   label: "Skipped" },
-  pending:   { Icon: Clock3,         tone: "orange", label: "Pending" },
-  locked:    { Icon: Lock,           tone: "grey",   label: "Locked" },
-};
-
-/** The step's status, as a single icon with an accessible label. */
-export function StepStatusIcon({ state, size = 18 }: { state: StepState; size?: number }) {
-  const { Icon, tone, label } = STEP_ICON[state];
-  return (
-    <span className={`jr-status jr-status-${tone}`} title={label} role="img" aria-label={label}>
-      <Icon size={size} />
-    </span>
-  );
-}
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 

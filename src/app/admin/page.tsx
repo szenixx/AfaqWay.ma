@@ -2,7 +2,7 @@
 
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useReviewAlerts } from "@/lib/reviewAlerts";
-import { BrandLogo, Pill, Toaster } from "@/components/ds";
+import { BrandLogo, Pill, Toaster, Status } from "@/components/ds";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
@@ -217,7 +217,7 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <Pill tone="red">Banned user</Pill>
+              <Status state="error" label="Banned user" />
               <span style={{ font: "700 15px/20px var(--font-sans)", color: "var(--red)" }}>{banPanel.user.full_name || "User"}</span>
             </div>
             <div style={{ padding: 20 }}>

@@ -5,16 +5,16 @@ import {
   CalendarDays, CircleCheck, Clock3, Download, ExternalLink, Eye, FileText, GraduationCap,
   History, Mail, MapPin, Phone, Route, TriangleAlert, X,
 } from "lucide-react";
-import { AnimatedModal, Input, Loader, Select, UserAvatar, Pill, type PillTone, ImageZoom, Status } from "@/components/ds";
+import { AnimatedModal, Input, Loader, Select, UserAvatar, ImageZoom, Status } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
-import { assembleRoadmap, roadmapProgress, type JourneyStage } from "@/lib/journey";
+import { assembleRoadmap, roadmapProgress, type JourneyStage, DOC_STATUS, STATE_BADGE, STATE_STATUS } from "@/lib/journey";
 import {
   fetchApprovals, fetchDocuments, fetchEvents, fetchProgress, fetchStages, fetchSteps,
   stepRequirements, subscribeJourney,
   type DbDocument, type DbEvent, type DbStep, type DocStatus, type Plan,
 } from "@/lib/journeyDb";
-import { JrButton, StepStatusIcon } from "@/components/student/workspace/journey/parts";
+import { JrButton } from "@/components/student/workspace/journey/parts";
 import { ScheduleManager } from "@/components/schedule/ScheduleManager";
 
 /* The one User Details module.
@@ -47,13 +47,6 @@ export type UserDetailsUser = {
 
 type Tab = "journey" | "documents" | "schedule";
 
-const DOC_LABEL: Record<DocStatus, string> = {
-  pending: "Pending", uploaded: "Uploaded", under_review: "Under review",
-  needs_changes: "Rejected", approved: "Verified",
-};
-const DOC_TONE: Record<DocStatus, PillTone> = {
-  pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
-};
 
 const stamp = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -227,7 +220,10 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
                     <ul className="usr-steps">
                       {stage.steps.map((step) => (
                         <li key={step.id}>
-                          <StepStatusIcon state={step.state} size={14} />
+                          {/* Dot only: the timeline is a dense list and the
+                              title carries the meaning; the state reaches a
+                              screen reader through the indicator's label. */}
+                          <Status state={STATE_STATUS[step.state]} label={STATE_BADGE[step.state].label} dotOnly />
                           <span>{step.title}</span>
                         </li>
                       ))}
@@ -281,7 +277,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
               <ul className="stp-docs">
                 {visibleDocs.map((d) => (
                   <li key={d.key} className="stp-doc">
-                    <span className={`stp-doc-ico tone-${DOC_TONE[d.status]}`}>
+                    <span className={`stp-doc-ico tone-${DOC_STATUS[d.status].state}`}>
                       {d.status === "approved" ? <CircleCheck size={16} />
                         : d.status === "needs_changes" ? <TriangleAlert size={16} />
                         : d.status === "under_review" ? <Clock3 size={16} /> : <FileText size={16} />}
@@ -295,7 +291,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
                       </span>
                       {d.upload?.review_comment && <span className="stp-doc-msg">{d.upload.review_comment}</span>}
                     </span>
-                    <Pill tone={DOC_TONE[d.status]} className="stp-doc-pill">{DOC_LABEL[d.status]}</Pill>
+                    <Status state={DOC_STATUS[d.status].state} label={DOC_STATUS[d.status].label} className="stp-doc-pill" />
                     <span className="stp-doc-acts">
                       {d.upload?.file_path && (
                         <>

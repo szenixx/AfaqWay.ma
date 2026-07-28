@@ -5,16 +5,16 @@ import {
   ChevronDown, CircleCheck, Clock3, FileText, GraduationCap, Landmark, Lock,
   Plane, Route, SkipForward,
 } from "lucide-react";
-import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, type JourneyStage, type JourneyStep } from "@/lib/journey";
+import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep } from "@/lib/journey";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
   requestStageApproval, setStepState, subscribeJourney, type DbDocument, type Plan,
 } from "@/lib/journeyDb";
-import { Loader, Pill } from "@/components/ds";
+import { Loader, Status } from "@/components/ds";
 import type { WsProfile } from "../Modules";
 import { JourneyStepModal } from "./JourneyStepModal";
 import { MarkDoneDialog } from "./MarkDoneDialog";
-import { InfoCard, JrButton, StepStatusIcon } from "./parts";
+import { InfoCard, JrButton } from "./parts";
 
 /* The Journey page — a roadmap of stages, not a checklist.
 
@@ -185,7 +185,7 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
               </span>
               <span className="jr-navtitle">{s.title}</span>
               <span className="jr-navfoot">
-                <Pill tone={STATE_BADGE[s.state].tone} size="sm" className="jr-navbadge">{STATE_BADGE[s.state].label}</Pill>
+                <Status state={STATE_STATUS[s.state]} label={STATE_BADGE[s.state].label} variant="plain" className="jr-navbadge" />
                 <span className="jr-navbar"><span style={{ width: `${s.pct}%` }} /></span>
                 <span className="jr-navpct">{s.done}/{s.total}</span>
               </span>
@@ -214,7 +214,7 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
                   <span className="jr-stage-num">Stage {stage.index}</span>
                   <span className="jr-stage-title">{stage.title}</span>
                 </span>
-                <Pill tone={locked ? "grey" : badge.tone}>{locked ? "Locked" : badge.label}</Pill>
+                <Status state={locked ? "neutral" : STATE_STATUS[stage.state]} label={locked ? "Locked" : badge.label} />
                 {!locked && <span className="jr-stage-count">{stage.done}/{stage.total}</span>}
                 {locked ? <Lock size={16} className="jr-stage-lock" /> : <ChevronDown size={17} className="jr-stage-chev" />}
               </button>
@@ -268,13 +268,21 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
                       return (
                         <li key={step.id} className={`jr-step ${step.state}`}>
                           <div className="jr-step-main">
-                            <StepStatusIcon state={step.state} />
                             <div className="jr-step-body">
+                              {/* The step's state is the shared Status, not a
+                                  bespoke glyph: the word is always rendered, so
+                                  colour is never the only carrier. */}
                               <span className="jr-step-num">
                                 Step {step.index}{step.due ? ` · ${step.due}` : ""}
                                 {docs.required > 0 && ` · ${docs.verified}/${docs.required} documents`}
                               </span>
-                              <div className="jr-step-title">{step.title}</div>
+                              {/* The title leads: it is what the student is
+                                  actually being asked to do. The state rides
+                                  beside it, small enough not to compete. */}
+                              <div className="jr-step-title">
+                                {step.title}
+                                <Status state={STATE_STATUS[step.state]} label={STATE_BADGE[step.state].label} size="xs" />
+                              </div>
                               <p className="jr-step-desc">{step.description}</p>
                               {blocked && actionable && (
                                 <p className="jr-step-block">Complete document upload first.</p>

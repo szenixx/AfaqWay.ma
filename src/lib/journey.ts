@@ -117,12 +117,43 @@ export const STATE_BADGE: Record<StepState | StageState, { label: string; tone: 
   locked: { label: "Locked", tone: "grey" },
 };
 
+/**
+ * How each document status is labelled and indicated.
+ *
+ * One table for the whole platform. There used to be six copies of this — in
+ * the documents module, the replace dialog, the step modal, the review modal,
+ * the admin user details and the workspace data file — and they had already
+ * drifted: the same approved document read "Approved" in one place and
+ * "Verified" in another, and a rejected one was "Needs changes" or "Rejected"
+ * depending on which screen you were looking at.
+ */
+export const DOC_STATUS: Record<DocStatus, { label: string; state: StatusState }> = {
+  pending:       { label: "Not uploaded", state: "neutral" },
+  uploaded:      { label: "Uploaded",     state: "submitted" },
+  under_review:  { label: "Under review", state: "waiting" },
+  needs_changes: { label: "Needs changes", state: "rejected" },
+  approved:      { label: "Verified",     state: "approved" },
+};
+
+/** The journey states, as the shared status vocabulary names them. */
+export const STATE_STATUS: Record<StepState | StageState, StatusState> = {
+  completed: "completed",
+  submitted: "waiting",
+  rejected: "rejected",
+  skipped: "cancelled",
+  current: "processing",
+  pending: "pending",
+  waiting_approval: "waiting",
+  locked: "neutral",
+};
+
 /* ── Database-backed roadmap ──────────────────────────────────────────────────
    Assembles the published configuration for a plan with the student's own
    progress and the advisor's stage approvals. Replaces every demo object. */
 
 import { stepAllowsSkip, stepRequirements, type DbApproval, type DbDocument, type DocRequirement, type DocStatus, type DbProgress, type DbStage, type DbStep } from "@/lib/journeyDb";
 import type { PillTone } from "@/components/ds/Pill";
+import type { StatusState } from "@/components/ds/Status";
 
 export function assembleRoadmap(
   stages: DbStage[],

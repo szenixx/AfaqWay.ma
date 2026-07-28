@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import {
   CircleCheckBig, Clock3, Download, ExternalLink, FileText, TriangleAlert, Upload,
 } from "lucide-react";
-import { Loader, Pill, type PillTone } from "@/components/ds";
+import { Loader, Status } from "@/components/ds";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
   saveDocument, stepRequirements, subscribeJourney,
   type DbDocument, type DbStep, type DocRequirement, type DocStatus, type Plan,
 } from "@/lib/journeyDb";
-import { assembleRoadmap } from "@/lib/journey";
+import { assembleRoadmap, DOC_STATUS } from "@/lib/journey";
 import { JrButton } from "../journey/parts";
 import { ReplaceDialog } from "./ReplaceDialog";
 import { DocumentViewer } from "@/components/admin/journey/DocumentViewer";
@@ -32,13 +32,6 @@ type Row = {
   status: DocStatus;
 };
 
-const LABEL: Record<DocStatus, string> = {
-  pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
-  needs_changes: "Needs changes", approved: "Verified",
-};
-const TONE: Record<DocStatus, PillTone> = {
-  pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
-};
 
 const FILTERS: { id: "all" | DocStatus; label: string }[] = [
   { id: "all", label: "All" },
@@ -201,7 +194,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
             return (
               /* Same treatment as the subscription plan card: tinted surface in
                  the platform colours with the file mark oversized behind it. */
-              <li key={`${row.step.id}:${r.key}`} className={`dm-card tone-${TONE[status]}`}>
+              <li key={`${row.step.id}:${r.key}`} className={`dm-card tone-${DOC_STATUS[status].state}`}>
                 <span aria-hidden className="dm-card-bg"><FileText size={150} /></span>
                 <span className="dm-card-ico">
                   {status === "approved" ? <CircleCheckBig size={18} />
@@ -217,7 +210,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
                   {r.description && <p className="jr-doc-desc">{r.description}</p>}
                   {r.instructions && <p className="jr-doc-desc">{r.instructions}</p>}
                   <div className="jr-doc-meta">
-                    <Pill tone={TONE[status]}>{LABEL[status]}</Pill>
+                    <Status state={DOC_STATUS[status].state} label={DOC_STATUS[status].label} />
                     {r.acceptedTypes && <span>{r.acceptedTypes.toUpperCase()}</span>}
                     {r.maxSizeMb > 0 && <span>max {r.maxSizeMb} MB</span>}
                     {upload?.file_name && <span>{upload.file_name}</span>}

@@ -248,10 +248,15 @@ export function EventDetailsModal({ event, role, onClose, onEdit, onDelete, onTo
           </>
         ) : (
           <>
+            {/* Read-only entries say so, rather than showing controls that
+                would be refused. */}
+            {!editable && <span className="sch-confirm-text">{event.kind === "official" ? "An official date, shown to everyone." : "Added by your advisor."}</span>}
             <button type="button" className="chat-chip" onClick={onClose}>Close</button>
             {editable && <button type="button" className="chat-chip" onClick={() => setConfirming(true)} style={{ color: "var(--red)", borderColor: "var(--red-line)" }}><Trash2 size={15} />Delete</button>}
             {editable && <button type="button" className="chat-chip" onClick={onEdit}>Edit</button>}
-            {event.kind !== "official" && (
+            {/* Completing is an edit, so it follows the same ownership rule:
+                only whoever created the entry may change its state. */}
+            {editable && (
               <button type="button" className="chat-send" onClick={onToggleComplete}>
                 <CircleCheck size={15} />{event.completed ? "Mark as open" : "Mark completed"}
               </button>

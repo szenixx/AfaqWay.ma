@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { DOC_STATUS } from "@/lib/journey";
 import {
   BookOpen, CircleCheck, Clock3, Eye, FileText, History, Info, MessageSquare,
   TriangleAlert,
 } from "lucide-react";
-import { AnimatedModal, Loader, Pill, type PillTone } from "@/components/ds";
+import { AnimatedModal, Loader, Pill, Status } from "@/components/ds";
 import {
   fetchBlocks, fetchDocuments, fetchEvents,
   stepRequirements, subscribeJourney,
@@ -28,13 +29,6 @@ import { DocumentViewer } from "./DocumentViewer";
 
 type Tab = "submission" | "documents" | "learn" | "timeline";
 
-const DOC_LABEL: Record<DocStatus, string> = {
-  pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
-  needs_changes: "Needs changes", approved: "Verified",
-};
-const DOC_TONE: Record<DocStatus, PillTone> = {
-  pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
-};
 
 const stamp = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -175,7 +169,7 @@ export function ReviewModal({ target, onClose }: {
                           </div>
                           {r.description && <p className="jr-doc-desc">{r.description}</p>}
                           <div className="jr-doc-meta">
-                            <Pill tone={DOC_TONE[st]}>{DOC_LABEL[st]}</Pill>
+                            <Status state={DOC_STATUS[st].state} label={DOC_STATUS[st].label} />
                             {up && <span>{up.file_name}</span>}
                             {up && <span>{stamp(up.updated_at)}</span>}
                           </div>

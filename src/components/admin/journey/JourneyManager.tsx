@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Archive, ChevronDown, Copy, Eye, GripVertical, History, Pencil, Plus, Route, Trash2, Undo2,
 } from "lucide-react";
-import { Input, TextArea, Select, Toggle, Loader, AnimatedModal, Pill, type PillTone } from "@/components/ds";
+import { Input, TextArea, Select, Toggle, Loader, AnimatedModal, Pill, Status, type StatusState } from "@/components/ds";
 import {
   deleteStage, deleteStep, duplicateStage, fetchStages, fetchSteps, fetchVersions,
   journeyReady, reorder, saveStage, saveStep, subscribeJourney,
@@ -24,8 +24,12 @@ const STATUSES: { value: PublishState; label: string }[] = [
   { value: "draft", label: "Draft" }, { value: "published", label: "Published" }, { value: "archived", label: "Archived" },
 ];
 
-const STATUS_PILL: Record<PublishState, PillTone> = {
-  draft: "grey", published: "green", archived: "amber",
+/* A publish state is a status, so it speaks the platform's status vocabulary
+   rather than carrying a colour of its own. */
+const STATUS_PILL: Record<PublishState, { state: StatusState; label: string }> = {
+  draft: { state: "draft", label: "Draft" },
+  published: { state: "approved", label: "Published" },
+  archived: { state: "cancelled", label: "Archived" },
 };
 
 /** True when this stage came from the Excel importer rather than by hand. */
@@ -160,7 +164,7 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
                     <span className="jm-stage-num">Stage {stage.sort_order + 1}</span>
                     <span className="jm-stage-title">{stage.title}</span>
                   </button>
-                  <Pill tone={STATUS_PILL[stage.status]}>{stage.status}</Pill>
+                  <Status state={STATUS_PILL[stage.status].state} label={STATUS_PILL[stage.status].label} />
                   {/* Imported stages stay fully editable; the pill is a warning
                       that a re-import will overwrite what you change here. */}
                   {fromExcel(stage) && (
@@ -207,7 +211,7 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
                               {step.document_keys?.length ? ` · ${step.document_keys.length} document(s)` : ""}
                             </div>
                           </div>
-                          <Pill tone={STATUS_PILL[step.status]}>{step.status}</Pill>
+                          <Status state={STATUS_PILL[step.status].state} label={STATUS_PILL[step.status].label} />
                           <div className="jm-actions">
                             <button type="button" className="chat-chip" onClick={() => setEditing(step)}>Content</button>
                             <button type="button" className="chat-act" title="Edit" onClick={() => setStepForm(step)}><Pencil size={14} /></button>

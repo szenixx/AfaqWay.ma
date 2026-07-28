@@ -1041,7 +1041,11 @@ body {
 .jr-step-row:hover { background: rgba(255,255,255,.62); }
 .jr-step-body { flex: 1; min-width: 0; }
 .jr-step-num { display: block; font: 600 9px/13px var(--font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
-.jr-step-title { font: 600 13px/18px var(--font-sans); color: var(--ink); margin-top: 2px; }
+/* The step title is the most important line in the row: largest type,
+   heaviest weight, full ink. The status badge sits beside it, baseline
+   aligned and deliberately much smaller. */
+.jr-step-title { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  font: 700 15px/21px var(--font-sans); color: var(--ink); letter-spacing: -.1px; margin-top: 3px; }
 .jr-step-desc { margin: 2px 0 0; font: 400 12px/18px var(--font-sans); color: var(--ink-soft); max-width: 62ch; }
 /* Status above, action underneath. */
 .jr-step-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
@@ -1167,12 +1171,6 @@ body {
 /* ══ Journey: shared parts (status icons, buttons, info cards, tabs) ═══════ */
 
 /* Status is the icon. There is no separate badge on a step row. */
-.jr-status { width: 34px; height: 34px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center; }
-.jr-status-green  { background: var(--green-tint); color: var(--green); }
-.jr-status-amber  { background: var(--amber-tint); color: var(--amber); }
-.jr-status-orange { background: #FCEDDF; color: #A2570B; }
-.jr-status-red    { background: var(--red-tint); color: var(--red); }
-.jr-status-grey   { background: var(--grey-tint); color: var(--ink-faint); }
 
 /* One action button for the whole module: same height, radius, padding, weight. */
 .jr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none;
@@ -1480,7 +1478,6 @@ body {
 .usr-stage-count { font: 600 11px/16px var(--font-sans); color: var(--ink-faint); }
 .usr-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .usr-steps li { display: flex; align-items: center; gap: 9px; font: 400 12.5px/19px var(--font-sans); color: var(--ink-soft); }
-.usr-steps .jr-status { width: 24px; height: 24px; border-radius: 8px; }
 .usr-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .usr-activity li { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
 .usr-act-dot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--ink-faint); }
@@ -2213,3 +2210,9 @@ body {
   .cg-cell:hover:not(.empty) { transform: none; }
   .cg-skeleton { animation: none; }
 }
+
+/* The status rides beside the step title, so it never inherits the meta
+   line's uppercase treatment. */
+.jr-step-title .ds-status { text-transform: none; letter-spacing: 0; flex: none; }
+/* The stage nav badge is the plain variant at the list's own small size. */
+.jr-navbadge { font-size: 9.5px; }

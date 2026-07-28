@@ -474,14 +474,34 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .ds-pill.ghost.act:hover{background:var(--subtle);border-color:var(--line);}
 .ds-pill.act:focus-visible{outline:2px solid var(--indigo-600);outline-offset:2px;}
 
-/* ══ Status ════════════════════════════════════════════════════════════════
-   A dot plus a word. The word is always rendered, so colour is never the only
-   carrier of the meaning. */
-.ds-status{display:inline-flex;align-items:center;gap:7px;font:600 11.5px/16px var(--font-sans);white-space:nowrap;vertical-align:middle;}
-.ds-status.chip{padding:4px 11px 4px 9px;border-radius:var(--radius-pill);}
-.ds-status.dot-only{gap:0;}
+/* ══ Status ══════════════════════════════════════════════════════════════════
+   Shaped after the Kibo UI status badge and rebuilt on our own tokens: a fully
+   rounded pill, an outline by default, a coloured indicator with a ping ring,
+   and the label beside it. Colour arrives inline from the state table; only
+   shape, rhythm and motion live here.
+
+   `md` carries the reference proportions (gap 16, padding 8/24, 14px). `sm` is
+   the dense variant for table cells and step rows, where a 40px pill in every
+   row would crowd everything else off the line. */
+.ds-status{display:inline-flex;align-items:center;vertical-align:middle;white-space:nowrap;
+  border:1px solid transparent;border-radius:var(--radius-pill);background:transparent;
+  font-family:var(--font-sans);font-weight:500;
+  transition:background 160ms var(--ease),border-color 160ms var(--ease),color 160ms var(--ease);}
+/* Reference proportions: gap-4, px-6 py-2, text-sm, rounded-full. */
+.ds-status.md{gap:16px;padding:8px 24px;font-size:14px;line-height:20px;}
+.ds-status.sm{gap:8px;padding:4px 12px;font-size:12px;line-height:16px;}
+/* Extra small: a companion to a title, never competing with it. */
+.ds-status.xs{gap:5px;padding:2px 8px;font-size:10.5px;line-height:15px;font-weight:600;}
+.ds-status.xs .ds-status-dot{width:6px;height:6px;}
+/* No pill at all: the indicator and the word, for dense rows. */
+.ds-status.plain{padding:0;border-color:transparent;background:none;gap:7px;font-weight:600;}
+.ds-status.dot-only{gap:0;padding:0;border:none;background:none;}
 .ds-status-label{letter-spacing:.01em;}
+
+/* The indicator: a solid dot, with the ring drawn behind it by ::after so the
+   markup stays one element. */
 .ds-status-dot{position:relative;width:8px;height:8px;border-radius:var(--radius-pill);flex:none;}
+.ds-status.md .ds-status-dot{width:9px;height:9px;}
 /* Pulse: the dot itself breathes — something is in progress. */
 .ds-status-dot.pulse{animation:dsStatusPulse 1.8s var(--ease) infinite;}
 @keyframes dsStatusPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(.82);}}

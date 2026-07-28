@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import {
   BookOpen, CircleCheck, Clock3, Download, ExternalLink, FileText, Info, TriangleAlert, Upload,
 } from "lucide-react";
-import { AnimatedModal, Loader, Pill, type PillTone } from "@/components/ds";
+import { AnimatedModal, Loader, Status } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { fetchDocuments, subscribeJourney, type DbDocument } from "@/lib/journeyDb";
-import { stepDocuments, type JourneyStage, type JourneyStep, type StepDoc } from "@/lib/journey";
+import { stepDocuments, type JourneyStage, type JourneyStep, DOC_STATUS } from "@/lib/journey";
 import type { StudyApp } from "@/lib/studyApplication";
 import { JrButton } from "./parts";
 import { ReviewBanner, bannerKindFor } from "./ReviewBanner";
@@ -25,13 +25,6 @@ import { StepBlocks } from "./StepBlocks";
 
 type Tab = "docs" | "learn";
 
-const DOC_LABEL: Record<StepDoc["status"], string> = {
-  pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
-  needs_changes: "Needs changes", approved: "Verified",
-};
-const DOC_TONE: Record<StepDoc["status"], PillTone> = {
-  pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
-};
 
 /** Opens a stored file in a new tab, signing the URL on demand. */
 async function openStored(path: string, name: string, download: boolean) {
@@ -120,7 +113,7 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
             <ul className="stp-docs">
               {docs.docs.map(({ requirement, upload, status }) => (
                 <li key={requirement.key} className="stp-doc">
-                  <span className={`stp-doc-ico tone-${DOC_TONE[status]}`}>
+                  <span className={`stp-doc-ico tone-${DOC_STATUS[status].state}`}>
                     {status === "approved" ? <CircleCheck size={16} />
                       : status === "needs_changes" ? <TriangleAlert size={16} />
                       : status === "under_review" ? <Clock3 size={16} /> : <FileText size={16} />}
@@ -136,7 +129,7 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
                     {upload?.review_comment && <span className="stp-doc-msg">{upload.review_comment}</span>}
                   </span>
 
-                  <Pill tone={DOC_TONE[status]} className="stp-doc-pill">{DOC_LABEL[status]}</Pill>
+                  <Status state={DOC_STATUS[status].state} label={DOC_STATUS[status].label} className="stp-doc-pill" />
 
                   <span className="stp-doc-acts">
                     {requirement.templatePath && (

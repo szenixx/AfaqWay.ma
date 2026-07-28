@@ -63,7 +63,14 @@ export default function Schedule({ profile, onNav, role = "student" }: {
     for (const e of next) {
       const prev = before.get(e.id);
       if (!prev || JSON.stringify(prev) !== JSON.stringify(e)) {
-        await dbSave({ ...(e as FullEvent), userId: profile.userId, date: e.date, createdBy: role === "advisor" ? "advisor" : "student" });
+        await dbSave({
+          ...(e as FullEvent), userId: profile.userId, date: e.date,
+          /* Authorship belongs to whoever created the event, so editing an
+             existing one never reassigns it. Only a genuinely new event takes
+             the current role. Rewriting this on every save is what let a
+             student's edit silently claim an advisor's entry. */
+          createdBy: e.createdBy ?? (role === "advisor" ? "advisor" : "student"),
+        });
       }
     }
     for (const e of events) if (!next.some((n) => n.id === e.id)) await dbDelete(e.id);

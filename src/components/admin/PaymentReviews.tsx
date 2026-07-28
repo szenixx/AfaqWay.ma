@@ -130,7 +130,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
 
   /* A payment's state maps onto the platform's shared status vocabulary. */
   const statusState = (s: string): StatusState =>
-    s === "approved" ? "success" : s === "rejected" ? "error" : s === "cancelled" ? "neutral" : "pending";
+    s === "approved" ? "paid" : s === "rejected" ? "failed" : s === "cancelled" ? "cancelled" : "pending";
   const statusLabel = (s: string) => s === "under_review" ? "Under review" : s.charAt(0).toUpperCase() + s.slice(1);
 
   return (
@@ -210,7 +210,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
                     <Pill tone="indigo">{plan?.name ?? r.plan}</Pill>
                     <Pill tone="grey">{r.amount.toLocaleString("en-US")} {r.currency === "MAD" ? "DH" : r.currency}</Pill>
                     <Pill tone="grey">{method?.name ?? r.method}</Pill>
-                    <Status state={statusState(r.status)} label={statusLabel(r.status)} chip />
+                    <Status state={statusState(r.status)} label={statusLabel(r.status)} variant="soft" />
                   </div>
                 </div>
                 <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 8 }}>Submitted {new Date(r.created_at).toLocaleString()}{r.reviewed_at ? ` · reviewed ${new Date(r.reviewed_at).toLocaleString()}` : ""}</div>

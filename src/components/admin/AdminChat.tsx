@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { Input, Toggle, Flag, fieldIcon, Loader, Pill } from "@/components/ds";
+import { Input, Toggle, Flag, fieldIcon, Loader, Pill, Status } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
@@ -184,7 +184,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
               style={{ ...glass, width: 210, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "24px 18px", borderRadius: 18, cursor: c.available ? "pointer" : "not-allowed", opacity: c.available ? 1 : 0.5 }}>
               <Flag stripes={c.stripes} size="lg" />
               <span style={{ font: "600 15px/21px var(--font-sans)", color: "var(--ink)" }}>{c.name}</span>
-              <Pill tone={c.available ? "green" : "amber"}>{c.available ? "Available now" : "Coming soon"}</Pill>
+              <Status state={c.available ? "online" : "pending"} label={c.available ? "Available now" : "Coming soon"} />
             </button>
           ))}
         </div>
@@ -328,7 +328,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
           >
             {pinned.map((m) => (
               <div key={m.id} className="chat-panel-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-                <div style={{ display: "flex", gap: 6 }}><Pill tone="indigo">Pinned</Pill>{m.emailed && <Pill tone="green">Emailed</Pill>}</div>
+                <div style={{ display: "flex", gap: 6 }}><Pill tone="indigo">Pinned</Pill>{m.emailed && <Status state="delivered" label="Emailed" />}</div>
                 <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{parseAsk(m.body)?.q ?? m.body ?? m.file_name}</div>
               </div>
             ))}

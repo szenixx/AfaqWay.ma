@@ -143,8 +143,8 @@ export default function StudentChat({ userId, full, onNav }: {
               </span>
             </span>
             <Status
-              state={advisor.online ? "online" : "offline"}
-              label={lastSeenLabel(advisor.lastSeen, advisor.online)}
+              state={advisor.typing ? "typing" : advisor.online ? "online" : "offline"}
+              label={advisor.typing ? "Typing…" : lastSeenLabel(advisor.lastSeen, advisor.online)}
             />
           </header>
 
