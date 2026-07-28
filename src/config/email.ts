@@ -18,13 +18,27 @@ export const EMAIL_BRAND = {
 /**
  * The two senders.
  *
- * They are deliberately distinct: an announcement is the platform talking, an
- * advisor email is a person talking, and a student should be able to tell them
- * apart in a crowded inbox before opening either.
+ * Deliberately distinct: an announcement is the platform talking, an advisor
+ * email is a person talking, and a student should be able to tell them apart in
+ * a crowded inbox before opening either.
+ *
+ * Addresses may be pointed at different mailboxes with EMAIL_FROM_ANNOUNCEMENT
+ * and EMAIL_FROM_ALERTS, which is useful when replies to each should land in
+ * different inboxes. Both fall back to one verified sender, so the platform
+ * works with a single mailbox configured. Whatever is used must be a sender
+ * ZeptoMail has verified for the domain, or delivery is refused.
  */
+const DEFAULT_FROM = process.env.NEXT_PUBLIC_EMAIL_FROM?.trim() || "noreply@afaqway.com";
+
 export const EMAIL_SENDERS: Record<EmailChannel, { name: string; address: string }> = {
-  announcement: { name: "AfaqWay Announcement", address: "noreply@afaqway.com" },
-  advisor: { name: "AfaqWay Alerts", address: "noreply@afaqway.com" },
+  announcement: {
+    name: "AfaqWay Announcement",
+    address: process.env.NEXT_PUBLIC_EMAIL_FROM_ANNOUNCEMENT?.trim() || DEFAULT_FROM,
+  },
+  advisor: {
+    name: "AfaqWay Alerts",
+    address: process.env.NEXT_PUBLIC_EMAIL_FROM_ALERTS?.trim() || DEFAULT_FROM,
+  },
 };
 
 /** RFC 5322 "Name <address>", which is what every provider expects as `from`. */

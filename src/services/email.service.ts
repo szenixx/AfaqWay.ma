@@ -49,6 +49,7 @@ export async function sendEmail(request: EmailRequest): Promise<EmailOutcome> {
 
   const result = await send({
     to: request.to,
+    toName: request.recipientName,
     from: senderFor(request.channel),
     replyTo: REPLY_TO,
     content,
