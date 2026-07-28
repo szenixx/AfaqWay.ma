@@ -26,7 +26,7 @@ import { PAY_METHODS } from "@/lib/plans";
 import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
 import {
-  JOURNEY, REQUIRED_DOCS, DOC_LABEL, DOC_TONE, NOTIFICATIONS, RECENT_ACTIVITY,
+  JOURNEY, REQUIRED_DOCS, DOC_LABEL, DOC_TONE, RECENT_ACTIVITY,
   UPCOMING_TASKS, FAQ,
 } from "./data";
 import {
@@ -64,7 +64,8 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
   const full = profile.plan === "full_service";
   // Live counters, shared with the Journey and Documents modules.
   const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree);
-  const unread = NOTIFICATIONS.filter((n) => !n.read).length;
+  // The student's real notifications, so the tile and the badge agree.
+  const { items: notifs, unread } = useNotifications(profile.userId);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Stat row */}
@@ -163,7 +164,11 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
           <Panel>
             <CardTitle title="Notifications" sub={`${unread} unread`} action={<BtnGhost onClick={() => onNav("notifications")} style={{ height: 34 }}>All<ArrowRight size={15} /></BtnGhost>} />
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {NOTIFICATIONS.slice(0, 3).map((n) => (
+              {notifs.length === 0 ? (
+                <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", padding: "9px 0" }}>
+                  Nothing yet. Updates about your journey, documents and schedule appear here.
+                </div>
+              ) : notifs.slice(0, 3).map((n) => (
                 <div key={n.id} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--line-soft)" }}>
                   {!n.read && <span style={{ width: 7, height: 7, borderRadius: 999, flex: "none", marginTop: 6, background: "var(--red)" }} />}
                   <div style={{ flex: 1, minWidth: 0, marginLeft: n.read ? 17 : 0 }}><div style={{ font: "600 12.5px/17px var(--font-sans)", color: "var(--ink)" }}>{n.title}</div><div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.body}</div></div>

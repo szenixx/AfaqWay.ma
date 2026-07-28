@@ -391,15 +391,18 @@ a {
 :root { --sw-side: 256px; --sw-side-icon: 60px; --sw-head: 56px; }
 .sw-sidebar { align-self: stretch; height: 100%; flex: none; width: var(--sw-side); display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,.8); backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; box-shadow: 0 20px 54px rgba(23,35,58,.12); padding: 14px 10px; overflow: hidden; transition: width 200ms linear; }
 
-/* Header: logo mark + wordmark, on the same line as the page header. */
-/* Workspace switcher card — mirrors .adm-ws in the admin sidebar. */
-.sw-brandrow { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 11px; height: var(--sw-head); padding: 9px 12px; border-radius: 18px; background: #fff; box-shadow: 0 6px 18px rgba(23,35,58,.08); }
+/* Header: logo mark + wordmark, centred on the sidebar itself. No card, no
+   frame — the mark sits directly on the glass. The collapse control is pulled
+   out of the flow so the logo stays optically centred whatever its width. */
+.sw-brandrow { position: relative; flex: none; display: flex; align-items: center; justify-content: center; gap: 11px; height: var(--sw-head); padding: 9px 12px; }
 .sw-ws-badge { width: 38px; height: 38px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--indigo-tint); }
-.sw-brand { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 0; }
-.sw-brand-name { font: 700 15px/18px var(--font-sans); color: var(--ink); letter-spacing: -.2px; }
-.sw-brand-sub { font: 600 9.5px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--indigo-600); margin-top: 2px; }
-.sw-sidebar-close { flex: none; width: 34px; height: 34px; border-radius: 11px; border: none; background: var(--subtle); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 150ms var(--ease), color 150ms var(--ease); }
-.sw-sidebar-close:hover { background: rgba(22,46,140,.08); color: var(--indigo-600); }
+.sw-brand { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0; }
+.sw-brand-name { font: 700 17px/20px var(--font-sans); color: var(--ink); letter-spacing: -.2px; }
+/* Bare icon: no card, no circle, no square. Colour is the only affordance. */
+.sw-sidebar-close { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); flex: none; width: 28px; height: 28px; padding: 0; border: none; background: none; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 150ms var(--ease), transform 150ms var(--ease); }
+.sw-sidebar-close:hover { color: var(--indigo-600); }
+.sw-sidebar-close:active { transform: translateY(-50%) scale(.9); }
+.sw-sidebar-close:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; border-radius: 8px; }
 
 /* Content */
 .sw-nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 2px; padding: 8px 4px; scrollbar-width: none; }
@@ -414,8 +417,13 @@ a {
 .sw-navitem.danger:hover { background: var(--red-tint); color: var(--red); }
 .sw-navico { flex: none; display: flex; color: inherit; }
 .sw-navico > svg { width: 16px; height: 16px; }
-.sw-navlabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sw-navbadge { flex: none; display: flex; align-items: center; justify-content: center; height: 20px; min-width: 20px; padding: 0 5px; border-radius: 6px; background: var(--indigo-600); color: #fff; font: 600 11px/1 var(--font-sans); font-variant-numeric: tabular-nums; transition: transform 200ms var(--ease); animation: afBadgePop 220ms var(--ease); }
+/* A shade larger than the row's own font, for readability. Family, weight and
+   spacing are inherited from .sw-navitem and deliberately untouched. */
+.sw-navlabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+/* Separates the journey modules above from what is waiting below. */
+.sw-nav-divider { flex: none; height: 1px; margin: 8px 8px; background: var(--line-soft); }
+/* Red, because every badge that uses it counts something unread. */
+.sw-navbadge { flex: none; display: flex; align-items: center; justify-content: center; height: 20px; min-width: 20px; padding: 0 5px; border-radius: 6px; background: var(--red); color: #fff; font: 600 11px/1 var(--font-sans); font-variant-numeric: tabular-nums; transition: transform 200ms var(--ease); animation: afBadgePop 220ms var(--ease); }
 @keyframes afBadgePop { from { transform: scale(.6); } to { transform: scale(1); } }
 
 /* Footer */
@@ -429,8 +437,10 @@ a {
 
 /* ── Icon-only state ── */
 .sw-sidebar.mini { width: var(--sw-side-icon); }
-.sw-sidebar.mini .sw-brandrow { justify-content: center; padding: 9px 0; }
-.sw-sidebar.mini .sw-sidebar-close { margin-left: 0; }
+/* Collapsed: no room for the mark and the control side by side, so they stack. */
+.sw-sidebar.mini .sw-brandrow { flex-direction: column; justify-content: center; gap: 6px; height: auto; padding: 6px 0; }
+.sw-sidebar.mini .sw-sidebar-close { position: static; transform: none; }
+.sw-sidebar.mini .sw-sidebar-close:active { transform: scale(.9); }
 .sw-sidebar.mini .sw-navitem { justify-content: center; padding: 0; gap: 0; }
 .sw-sidebar.mini .sw-navlabel, .sw-sidebar.mini .sw-navbadge, .sw-sidebar.mini .sw-carousel, .sw-sidebar.mini .sw-brand { display: none; }
 .sw-sidebar.mini .sw-group-label { margin-top: -32px; opacity: 0; pointer-events: none; }
@@ -634,8 +644,10 @@ body {
 .rp-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
 .rp-block { display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 14px; background: var(--subtle); transition: background 180ms var(--ease); }
 .rp-block:hover { background: var(--indigo-tint); }
+/* Secondary information icons. Softer than the text they label, so the value
+   reads first. The indigo one is the primary brand colour and stays as it is. */
 .rp-block-ico { width: 24px; height: 24px; border-radius: 8px; background: var(--card); color: var(--indigo-600); display: flex; align-items: center; justify-content: center; }
-.rp-block-ico.amber { color: var(--amber); }
+.rp-block-ico.amber { color: var(--amber-soft); }
 .rp-block-label { font: 400 10.5px/14px var(--font-sans); color: var(--ink-faint); }
 .rp-block-value { font: 600 12.5px/17px var(--font-sans); color: var(--ink); }
 .rp-status { margin-top: 14px; }
@@ -658,14 +670,16 @@ body {
 .rp-event-head { display: flex; align-items: center; gap: 6px; font: 500 10.5px/14px var(--font-sans); color: var(--ink-faint); }
 .rp-event-title { font: 600 12.5px/17px var(--font-sans); color: var(--ink); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp-event-time { font: 400 11px/15px var(--font-sans); color: var(--ink-soft); }
-.rp-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--amber); flex: none; }
-.rp-dot.green { background: var(--green); }
+.rp-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--amber-soft); flex: none; }
+.rp-dot.green { background: var(--green-soft); }
 
 /* Card 3 */
 .rp-stage { display: flex; align-items: center; gap: 8px; font: 600 13.5px/19px var(--font-sans); color: var(--ink); margin: 4px 0 11px; }
 .rp-progress { height: 8px; border-radius: 999px; background: var(--subtle); overflow: hidden; }
 .rp-progress-fill { display: block; height: 100%; border-radius: 999px; background: var(--indigo-600); transition: width 900ms var(--ease); }
-.rp-progress-fill.green { background: var(--green); }
+/* The indigo fill is the primary brand colour and is left alone; only the
+   green completion bar is softened. */
+.rp-progress-fill.green { background: var(--green-soft); }
 .rp-progress-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .rp-pct { font: 700 12.5px/17px var(--font-sans); color: var(--indigo-600); }
 .rp-next { display: flex; gap: 10px; margin-top: 11px; padding: 10px; border-radius: 14px; background: var(--subtle); }
@@ -869,13 +883,21 @@ body {
 .sch-more { font: 600 10px/14px var(--font-sans); color: var(--indigo-600); padding-left: 5px; }
 
 /* Quick add */
-.sch-quick { display: flex; flex-direction: column; gap: 7px; }
-.sch-quick-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); font: 600 12.5px/1 var(--font-sans); text-align: left; cursor: pointer; transition: border-color 180ms var(--ease), transform 180ms var(--ease), box-shadow 180ms var(--ease); }
+/* One horizontal row above the calendar. Wraps rather than scrolls, so every
+   action stays reachable on a narrow screen. */
+.sch-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sch-quick-btn { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px 7px 7px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--card); color: var(--ink); font: 600 12.5px/1 var(--font-sans); text-align: left; cursor: pointer; transition: border-color 180ms var(--ease), transform 180ms var(--ease), box-shadow 180ms var(--ease); }
 .sch-quick-btn:hover { border-color: var(--indigo-line); transform: translateY(-1px); box-shadow: 0 10px 22px -18px rgba(22,46,140,.7); }
-.sch-quick-ico { width: 28px; height: 28px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; }
+.sch-quick-btn:active { transform: scale(.97); }
+.sch-quick-btn:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; }
+.sch-quick-ico { width: 26px; height: 26px; border-radius: 999px; flex: none; display: flex; align-items: center; justify-content: center; }
 
 /* Notes card fills the remaining height */
-.sch-notes { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+/* Notes claim the leftover height, so the panel ends level with the calendar
+   and no gap is left where the Quick add card used to be. The card after it
+   keeps its natural size instead of competing for the same space. */
+.sch-notes { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 180px; }
+.rp-panel > .sch-notes ~ .rp-card:last-child { flex: 0 0 auto; }
 .sch-notes-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .sch-note { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); text-align: left; cursor: pointer; transition: border-color 180ms var(--ease), transform 180ms var(--ease), box-shadow 180ms var(--ease); }
 .sch-note:hover { border-color: var(--indigo-line); transform: translateY(-1px); box-shadow: 0 10px 22px -18px rgba(22,46,140,.7); }
@@ -892,6 +914,9 @@ body {
 .sch-modal-sub { font: 400 12px/17px var(--font-sans); color: var(--ink-faint); }
 .sch-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px; }
 .sch-modal-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--line-soft); background: var(--subtle); }
+/* The question asked before a delete goes through, sitting left of the two
+   answers so it reads as one sentence with them. */
+.sch-confirm-text { flex: 1; min-width: 0; font: 600 12.5px/17px var(--font-sans); color: var(--ink); }
 .sch-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .sch-block { margin-top: 14px; padding: 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--subtle); }
 .sch-toggle-row { display: flex; align-items: center; gap: 11px; }

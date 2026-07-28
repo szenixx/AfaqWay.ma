@@ -188,6 +188,43 @@ async function emailUpdate(input: { title: string; body: string }) {
 
 /* ── Live centre ──────────────────────────────────────────────────────────── */
 
+/* One realtime channel per user, however many components are listening.
+ *
+ * supabase-js returns the SAME channel object for a repeated topic, so a second
+ * `.on()` after the first `.subscribe()` throws and takes the page down. The
+ * workspace legitimately reads notifications from more than one place at once —
+ * the sidebar badge and the Overview card — so the subscription is shared and
+ * reference-counted here instead of being created per component. */
+const listeners = new Map<string, Set<() => void>>();
+const channels = new Map<string, ReturnType<typeof supabase.channel>>();
+
+function subscribeNotifications(userId: string, onChange: () => void): () => void {
+  let set = listeners.get(userId);
+  if (!set) {
+    set = new Set();
+    listeners.set(userId, set);
+    const channel = supabase
+      .channel(`notifs-${userId.slice(0, 8)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        () => { for (const fn of listeners.get(userId) ?? []) fn(); });
+    channel.subscribe();
+    channels.set(userId, channel);
+  }
+  set.add(onChange);
+
+  return () => {
+    const current = listeners.get(userId);
+    if (!current) return;
+    current.delete(onChange);
+    // The channel closes only when the last listener has gone.
+    if (current.size === 0) {
+      listeners.delete(userId);
+      const channel = channels.get(userId);
+      if (channel) { void supabase.removeChannel(channel); channels.delete(userId); }
+    }
+  };
+}
+
 export function useNotifications(userId: string | null | undefined) {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,12 +242,7 @@ export function useNotifications(userId: string | null | undefined) {
 
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase
-      .channel(`notifs-${userId.slice(0, 8)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        () => { void load(); });
-    channel.subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return subscribeNotifications(userId, () => { void load(); });
   }, [userId, load]);
 
   const unread = items.filter((n) => !n.read).length;

@@ -124,16 +124,6 @@ export const DOC_TONE: Record<DocStatus, "green" | "amber" | "red" | "grey" | "i
   approved: "green", under_review: "amber", needs_changes: "red", pending: "grey", uploaded: "indigo",
 };
 
-export type Notif = { id: string; kind: "doc" | "journey" | "message" | "deadline" | "system"; title: string; body: string; time: string; read: boolean };
-export const NOTIFICATIONS: Notif[] = [
-  { id: "n1", kind: "doc", title: "Document approved", body: "Your academic transcript was approved by our reviewer.", time: "2h ago", read: false },
-  { id: "n2", kind: "message", title: "New message from your advisor", body: "We reviewed your motivation letter, one small change needed.", time: "5h ago", read: false },
-  { id: "n3", kind: "journey", title: "Journey updated", body: "Stage 1, University Application, is now in progress.", time: "1d ago", read: false },
-  { id: "n4", kind: "deadline", title: "Upcoming deadline", body: "VFS appointments for autumn intake open in 3 weeks.", time: "1d ago", read: true },
-  { id: "n5", kind: "doc", title: "Document needs changes", body: "Your motivation letter needs a small revision before approval.", time: "1d ago", read: true },
-  { id: "n6", kind: "system", title: "Welcome to your workspace", body: "Everything for your Lithuania journey lives here in one place.", time: "3d ago", read: true },
-];
-
 export type Activity = { icon: "doc" | "check" | "message" | "flag"; text: string; time: string };
 export const RECENT_ACTIVITY: Activity[] = [
   { icon: "check", text: "Academic transcript approved", time: "2h ago" },

@@ -19,6 +19,10 @@
 --amber:#8A5A0C; --amber-tint:#FBF0DA; --amber-line:#E7C583;
 --red:#B23B27; --red-tint:#FBE7E2; --red-line:#EDB3A6;
 --green:#256B49; --green-tint:#E3F0E9; --green-line:#9CCBB2;
+/* Softened status colours, for secondary icons and graph strokes only. Each
+   clears 3.6:1 on every surface, the AA threshold for graphics and UI parts.
+   Text keeps the darker values above, which clear 5.3:1. */
+--green-soft:#3F8C63; --amber-soft:#A8741B; --red-soft:#C25A44;
 /* semantic aliases */
 --text-body:var(--ink); --text-secondary:var(--ink-soft); --text-hint:var(--ink-faint);
 --surface-page:var(--paper); --surface-card:var(--card); --surface-input:var(--subtle);
@@ -246,6 +250,11 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-send:hover:not(:disabled){background:var(--indigo-500);box-shadow:0 8px 20px -10px rgba(22,46,140,.8);}
 .chat-send:active:not(:disabled){transform:scale(.97);background:var(--indigo-700);}
 .chat-send:disabled{opacity:.5;cursor:not-allowed;}
+/* Destructive variant of the same control, for a confirmed delete. Same shape,
+   same size, only the colour says the action cannot be undone. */
+.chat-send.danger{background:var(--red);}
+.chat-send.danger:hover:not(:disabled){background:var(--red);box-shadow:0 8px 20px -10px rgba(178,59,39,.8);}
+.chat-send.danger:active:not(:disabled){background:var(--red);}
 
 /* ── Right information panel ── */
 .chat-panel{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px;gap:10px;overflow:hidden;}

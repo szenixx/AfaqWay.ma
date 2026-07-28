@@ -44,13 +44,15 @@ export function ProgressBar({ pct, tone = "primary" }: { pct: number; tone?: "pr
   );
 }
 
-/* Tiny sparkline for the document statistics. */
+/* Tiny sparkline for the document statistics. Drawn in the softened status
+   colours: a 26px line does not need the weight of body text, and the number
+   beside it already carries the meaning. */
 function Trend({ tone, up }: { tone: "green" | "amber" | "red"; up: boolean }) {
-  const color = tone === "green" ? "var(--green)" : tone === "amber" ? "var(--amber)" : "var(--red)";
+  const color = tone === "green" ? "var(--green-soft)" : tone === "amber" ? "var(--amber-soft)" : "var(--red-soft)";
   const d = up ? "M1 13 L9 9 L17 10 L25 3" : "M1 3 L9 8 L17 6 L25 13";
   return (
     <svg className="rp-trend" width="26" height="16" viewBox="0 0 26 16" fill="none" aria-hidden>
-      <path d={d} stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

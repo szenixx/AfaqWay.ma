@@ -4,7 +4,7 @@
    mounts the one universal WorkspaceShell. Content adapts to the user's plan
    (self_service vs full_service). See docs/workspace-architecture.md. */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Loader } from "@/components/ds";
@@ -14,8 +14,9 @@ import { setAvatarUrl } from "@/lib/avatar";
 import { loadAvatarFieldsFor } from "@/lib/avatarProfile";
 import WorkspaceShell, { type Nav } from "@/components/student/workspace/WorkspaceShell";
 import type { WsProfile, WsPayment } from "@/components/student/workspace/Modules";
-import { NOTIFICATIONS } from "@/components/student/workspace/data";
 import { deriveStudy, deriveAcademic } from "@/lib/studyApplication";
+import { useNotifications } from "@/lib/notifications";
+import { useChatUnread } from "@/lib/chatUnread";
 import { useSingleSession } from "@/lib/useSingleSession";
 
 export default function Dashboard() {
@@ -24,20 +25,9 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [nav, setNav] = useState<Nav>("overview");
-  const [chatUnread, setChatUnread] = useState(false);
-  const navRef = useRef<Nav>(nav);
   useSingleSession(userId);
-
-  useEffect(() => { navRef.current = nav; if (nav === "messages") setChatUnread(false); }, [nav]);
-
-  useEffect(() => {
-    if (!userId) return;
-    const ch = supabase.channel(`dash-unread-${userId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` }, (payload) => {
-      const m = payload.new as { sender?: string };
-      if (m.sender === "admin" && navRef.current !== "messages") setChatUnread(true);
-    }).subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [userId]);
+  // Live count of advisor messages, cleared while the chat is open.
+  const chatUnread = useChatUnread(userId, nav === "messages");
 
   const buildProfile = useCallback(async (uid: string, userEmail: string | null): Promise<WsProfile | null> => {
     const { data } = await supabase.from("profiles").select("full_name, email, onboarding_completed_at, plan, plan_status, user_number, banned, city, date_of_birth, whatsapp_country_code, whatsapp_number, destination_country, country_flow_answers, avatar_path").eq("id", uid).single();
@@ -146,7 +136,11 @@ export default function Dashboard() {
     return !error;
   }
 
-  const unreadNotifs = NOTIFICATIONS.filter((n) => !n.read).length;
+  /* Both badge counts come from real rows, never from sample data: the
+     notification centre's own unread total, and advisor messages the student
+     has not opened. Either is zero when nothing is waiting, and the badge
+     disappears with it. */
+  const { unread: unreadNotifs } = useNotifications(userId);
 
   if (loading || !profile) {
     return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block label="Loading your workspace" /></div>;

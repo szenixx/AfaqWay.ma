@@ -53,7 +53,8 @@ export default function WorkspaceShell({
   profile, nav, onNav, chatUnread, unreadNotifs, onSignOut, onProgramRequest, onReload,
 }: {
   profile: WsProfile; nav: Nav; onNav: (n: Nav) => void;
-  chatUnread: boolean; unreadNotifs: number; onSignOut: () => void;
+  /** Unread counts. Both are live, and both are zero when nothing is waiting. */
+  chatUnread: number; unreadNotifs: number; onSignOut: () => void;
   onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean>;
   onReload: () => Promise<void>;
 }) {
@@ -161,17 +162,13 @@ export default function WorkspaceShell({
       <div className="sw-shell">
         {/* Sidebar */}
         <aside className={`sw-sidebar${sidebarMini ? " mini" : ""}`}>
-          {/* Same workspace-switcher header as /admin: framed logo badge, name +
-              subtitle, collapse control on the right. */}
-          <div className="sw-brandrow" style={{ justifyContent: sidebarMini ? "center" : "space-between" }}>
-            {sidebarMini && <BrandLogo size={26} />}
-            {!sidebarMini && (
+          {/* Logo and wordmark, centred on the sidebar itself — no frame, no
+              card. The collapse control floats at the edge as a bare icon. */}
+          <div className="sw-brandrow">
+            {sidebarMini ? <BrandLogo size={32} /> : (
               <Link href="/" className="sw-brand" aria-label="AfaqWay home">
-                <BrandLogo size={26} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="sw-brand-name">AfaqWay</div>
-                  <div className="sw-brand-sub">Lithuania</div>
-                </div>
+                <BrandLogo size={32} />
+                <span className="sw-brand-name">AfaqWay</span>
               </Link>
             )}
             <button
@@ -182,6 +179,11 @@ export default function WorkspaceShell({
           <nav className="sw-nav">
             <div className="sw-group-label">Platform</div>
             {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
+            {/* Everything above is a place in the journey; below is everything
+                waiting for the student's attention. */}
+            <div className="sw-nav-divider" role="separator" />
+            {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />, { badge: unreadNotifs })}
+            {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread })}
           </nav>
           <SidebarCarousel />
         </aside>
@@ -204,7 +206,7 @@ export default function WorkspaceShell({
                 <Bell size={20} />{unreadNotifs > 0 && nav !== "notifications" && <span className="sw-dot">{unreadNotifs > 9 ? "9+" : unreadNotifs}</span>}
               </button>
               <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
-                <MessageCircle size={20} />{chatUnread && nav !== "messages" && <span className="sw-dot" style={{ background: "var(--red)", minWidth: 11, height: 11, padding: 0, top: 9, right: 10 }} />}
+                <MessageCircle size={20} />{chatUnread > 0 && nav !== "messages" && <span className="sw-dot">{chatUnread > 9 ? "9+" : chatUnread}</span>}
               </button>
               <div style={{ position: "relative" }}>
                 <button type="button" className="sw-profile" onClick={() => setMenu((v) => !v)} aria-label="Account menu">
@@ -250,9 +252,9 @@ export default function WorkspaceShell({
         </div>
         <div className="sw-group-label">Platform</div>
         {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
-        <div style={{ height: 1, background: "var(--line-soft)", margin: "6px 0" }} />
-        {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread ? 1 : 0 })}
+        <div className="sw-nav-divider" role="separator" />
         {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />, { badge: unreadNotifs })}
+        {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread })}
         {navItem("subscription", "Subscription", <CreditCard size={NAV_ICON} />)}
         {navItem("support", "Support", <LifeBuoy size={NAV_ICON} />)}
       </MobileNavigationHeader>

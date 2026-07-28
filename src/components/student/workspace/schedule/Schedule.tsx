@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   Bell, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, GraduationCap,
-  NotebookPen, Pin, Plus, Zap,
+  NotebookPen, Pin, Plus,
 } from "lucide-react";
 import { useEffect } from "react";
 import {
@@ -23,12 +23,14 @@ import { EventDetailsModal, EventFormModal } from "./EventModal";
    Journey Snapshot component. */
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/* Short labels: these sit in one row above the calendar, so the icon carries
+   the meaning and the word only names the kind. */
 const QUICK: { kind: Exclude<EventKind, "official">; label: string; icon: React.ReactNode }[] = [
-  { kind: "appointment", label: "Add appointment", icon: <CalendarPlus size={15} /> },
-  { kind: "deadline", label: "Add deadline", icon: <CalendarDays size={15} /> },
-  { kind: "interview", label: "Add interview", icon: <GraduationCap size={15} /> },
-  { kind: "note", label: "Add note", icon: <NotebookPen size={15} /> },
-  { kind: "reminder", label: "Add reminder", icon: <Bell size={15} /> },
+  { kind: "appointment", label: "Appointment", icon: <CalendarPlus size={15} /> },
+  { kind: "deadline", label: "Deadline", icon: <CalendarDays size={15} /> },
+  { kind: "interview", label: "Interview", icon: <GraduationCap size={15} /> },
+  { kind: "note", label: "Note", icon: <NotebookPen size={15} /> },
+  { kind: "reminder", label: "Reminder", icon: <Bell size={15} /> },
 ];
 
 export default function Schedule({ profile, onNav, role = "student" }: {
@@ -100,6 +102,16 @@ export default function Schedule({ profile, onNav, role = "student" }: {
     <div className="sw-withpanel">
       {/* ── Calendar ── */}
       <div style={{ minWidth: 0 }}>
+        {/* Quick actions sit with the calendar they add to, in one row. */}
+        <div className="sch-quick" role="group" aria-label="Add to calendar">
+          {QUICK.map((q) => (
+            <button key={q.kind} type="button" className="sch-quick-btn" onClick={() => setForm({ kind: q.kind })}>
+              <span className="sch-quick-ico" style={{ color: KIND_META[q.kind].color, background: KIND_META[q.kind].tint }}>{q.icon}</span>
+              {q.label}
+            </button>
+          ))}
+        </div>
+
         <section className="sch-cal">
           <header className="sch-cal-head">
             <h2 className="sch-month">{monthLabel}</h2>
@@ -147,21 +159,7 @@ export default function Schedule({ profile, onNav, role = "student" }: {
 
       {/* ── Right panel ── */}
       <aside className="rp-panel">
-        <section className="rp-card">
-          <header className="rp-head">
-            <span className="rp-head-ico"><Zap size={15} /></span>
-            <h3 className="rp-head-title">Quick add</h3>
-          </header>
-          <div className="sch-quick">
-            {QUICK.map((q) => (
-              <button key={q.kind} type="button" className="sch-quick-btn" onClick={() => setForm({ kind: q.kind })}>
-                <span className="sch-quick-ico" style={{ color: KIND_META[q.kind].color, background: KIND_META[q.kind].tint }}>{q.icon}</span>
-                {q.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
+        {/* Notes take the height the Quick add card used to occupy. */}
         <section className="rp-card sch-notes">
           <header className="rp-head">
             <span className="rp-head-ico"><NotebookPen size={15} /></span>

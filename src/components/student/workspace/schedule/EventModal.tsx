@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   AlignLeft, Bell, CalendarDays, CircleCheck, Clock, FolderOpen, GraduationCap,
-  Landmark, Link2, MapPin, NotebookPen, Pin, Type, X,
+  Landmark, Link2, MapPin, NotebookPen, Pin, Trash2, Type, X,
 } from "lucide-react";
 import { Input, TextArea, Select, Toggle, Checkbox } from "@/components/ds";
 import {
@@ -224,24 +224,40 @@ export function EventDetailsModal({ event, role, onClose, onEdit, onDelete, onTo
   onClose: () => void; onEdit: () => void; onDelete: () => void; onToggleComplete: () => void;
 }) {
   const meta = KIND_META[event.kind];
+  /* A student may only touch what they created; official dates and an advisor's
+     entries stay read-only. The database enforces the same rule, so this is the
+     visible half of it, not the whole of it. */
   const editable = role === "advisor" ? event.createdBy !== "system" : event.createdBy === "student";
   const plan = event.reminder?.enabled ? reminderTemplate(event) : null;
+  /* Deleting is irreversible, so the button asks first and only the second
+     press removes anything. */
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <ModalShell
       icon={<CalendarDays size={18} />} title={event.title} subtitle={`${meta.label} · ${new Date(event.date).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}${event.time ? ` · ${event.time}` : ""}`}
       onClose={onClose}
       footer={
-        <>
-          <button type="button" className="chat-chip" onClick={onClose}>Close</button>
-          {editable && <button type="button" className="chat-chip" onClick={onDelete} style={{ color: "var(--red)", borderColor: "var(--red-line)" }}>Delete</button>}
-          {editable && <button type="button" className="chat-chip" onClick={onEdit}>Edit</button>}
-          {event.kind !== "official" && (
-            <button type="button" className="chat-send" onClick={onToggleComplete}>
-              <CircleCheck size={15} />{event.completed ? "Mark as open" : "Mark completed"}
+        confirming ? (
+          <>
+            <span className="sch-confirm-text">Delete this {meta.label.toLowerCase()}?</span>
+            <button type="button" className="chat-chip" onClick={() => setConfirming(false)}>Keep it</button>
+            <button type="button" className="chat-send danger" onClick={onDelete}>
+              <Trash2 size={15} />Delete
             </button>
-          )}
-        </>
+          </>
+        ) : (
+          <>
+            <button type="button" className="chat-chip" onClick={onClose}>Close</button>
+            {editable && <button type="button" className="chat-chip" onClick={() => setConfirming(true)} style={{ color: "var(--red)", borderColor: "var(--red-line)" }}><Trash2 size={15} />Delete</button>}
+            {editable && <button type="button" className="chat-chip" onClick={onEdit}>Edit</button>}
+            {event.kind !== "official" && (
+              <button type="button" className="chat-send" onClick={onToggleComplete}>
+                <CircleCheck size={15} />{event.completed ? "Mark as open" : "Mark completed"}
+              </button>
+            )}
+          </>
+        )
       }
     >
       <div className="sch-detail">
