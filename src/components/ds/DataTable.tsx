@@ -36,7 +36,8 @@ export type Column<T> = {
 export type DataTableProps<T> = {
   columns: Column<T>[];
   rows: T[];
-  rowKey: (row: T) => string;
+  /** Stable React key. The index is offered for rows with no id of their own. */
+  rowKey: (row: T, index: number) => string;
   /** Whole-row activation. Rows become buttons for the keyboard when set. */
   onRowClick?: (row: T) => void;
   /** Marks a row as current, e.g. the conversation open beside the table. */
@@ -49,13 +50,19 @@ export type DataTableProps<T> = {
   footer?: ReactNode;
   /** Caps the scroll height so the sticky header has something to stick to. */
   maxHeight?: number | string;
+  /**
+   * Compact variant, for a table living inside another card: no card of its
+   * own, tighter rows, no minimum width. Same markup and the same header, so a
+   * dashboard widget and a full listing cannot drift apart.
+   */
+  compact?: boolean;
   className?: string;
   style?: CSSProperties;
 };
 
 export function DataTable<T>({
   columns, rows, rowKey, onRowClick, isRowActive, loading, skeletonRows = 6,
-  empty, footer, maxHeight, className = "", style,
+  empty, footer, maxHeight, compact, className = "", style,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
 
@@ -81,7 +88,7 @@ export function DataTable<T>({
   const colCount = columns.length;
 
   return (
-    <div className={`ds-table-wrap ${className}`.trim()} style={style}>
+    <div className={`ds-table-wrap${compact ? " compact" : ""} ${className}`.trim()} style={style}>
       {/* The scroller is what overflows, so the page never scrolls sideways. */}
       <div className="ds-table-scroll" style={maxHeight ? { maxHeight } : undefined}>
         <table className="ds-table">
@@ -128,11 +135,11 @@ export function DataTable<T>({
                 <td colSpan={colCount}>{empty ?? <span className="ds-table-empty">Nothing to show yet.</span>}</td>
               </tr>
             ) : (
-              sorted.map((row) => {
+              sorted.map((row, index) => {
                 const active = isRowActive?.(row) ?? false;
                 return (
                   <tr
-                    key={rowKey(row)}
+                    key={rowKey(row, index)}
                     className={`${onRowClick ? "clickable " : ""}${active ? "active" : ""}`.trim() || undefined}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     // A clickable row must be reachable and activatable without a mouse.

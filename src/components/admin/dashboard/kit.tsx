@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
-import { UserAvatar } from "@/components/ds";
+import { UserAvatar, DataTable, type Column } from "@/components/ds";
 
 const PALETTE = ["#3B5BDB", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
 // per-stat accent colours so the KPI row isn't a monochrome block
@@ -171,12 +171,28 @@ export function ProgressRow({ label, current, target, unit }: { label: string; c
 }
 
 // ── Simple table ─────────────────────────────────────────────────────────────
+/**
+ * The compact listing used inside dashboard cards.
+ *
+ * A thin wrapper over the platform's DataTable rather than a second table: it
+ * keeps the positional `cols` + `render` shape the dashboard grids already use,
+ * and hands the actual markup, header and empty state to the shared component.
+ */
 export function MiniTable<T>({ cols, rows, render }: { cols: string[]; rows: T[]; render: (r: T) => ReactNode[] }) {
+  const columns: Column<T>[] = cols.map((header, i) => ({
+    key: `${i}-${header}`,
+    header,
+    cell: (row) => render(row)[i],
+  }));
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead><tr style={{ textAlign: "left" }}>{cols.map((c) => <th key={c} style={{ position: "sticky", top: 0, background: "var(--card)", padding: "6px 8px", font: "600 10px/14px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)", borderBottom: "1px solid var(--line-soft)" }}>{c}</th>)}</tr></thead>
-      <tbody>{rows.map((r, i) => <tr key={i} className="dash-row">{render(r).map((cell, j) => <td key={j} style={{ padding: "8px 8px", font: "400 12px/17px var(--font-sans)", color: "var(--ink)", borderBottom: "1px solid var(--line-soft)", whiteSpace: "nowrap" }}>{cell}</td>)}</tr>)}</tbody>
-    </table>
+    <DataTable
+      compact
+      columns={columns}
+      rows={rows}
+      // Dashboard rows are positional and have no id of their own.
+      rowKey={(_, i) => String(i)}
+      empty="Nothing yet."
+    />
   );
 }
 

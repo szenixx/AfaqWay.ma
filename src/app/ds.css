@@ -617,3 +617,11 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-typing i:nth-child(3){animation-delay:.3s;margin-right:4px;}
 @keyframes dsTyping{0%,60%,100%{opacity:.3;transform:translateY(0);}30%{opacity:1;transform:translateY(-3px);}}
 @media (prefers-reduced-motion:reduce){.chat-typing i{animation:none;opacity:.7;}}
+
+/* Compact table: the same component inside another card, so it brings no card,
+   no minimum width and no shadow of its own. */
+.ds-table-wrap.compact{background:none;border:none;border-radius:0;box-shadow:none;}
+.ds-table-wrap.compact .ds-table{min-width:0;padding:0;border-spacing:0 4px;}
+.ds-table-wrap.compact thead th{padding:4px 8px 8px;font-size:10px;}
+.ds-table-wrap.compact tbody td{padding:8px;font:400 12px/17px var(--font-sans);white-space:nowrap;}
+.ds-table-wrap.compact tbody tr:hover td{background:var(--indigo-tint);}
