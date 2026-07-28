@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { fileUrl } from "@/lib/storage/client";
+import { emailAnnouncement } from "@/lib/email/client";
 
 /* The notification centre.
 
@@ -102,8 +102,7 @@ export async function clearUpdates(): Promise<void> {
  * Three deliveries, in order of importance:
  *   1. the platform_updates row, which a trigger fans out to a notification for
  *      every active student, so this stays one insert at any scale;
- *   2. email, one message per student through the same send-update function the
- *      chat uses, with the same payload shape it expects;
+ *   2. email, one message per student through the platform email service;
  *   3. nothing else — the notification centre is the record.
  *
  * Email never blocks publishing. The announcement is already stored and every
@@ -114,7 +113,7 @@ export async function publishUpdate(input: {
   title: string;
   body: string;
   attachments: PlatformUpdate["attachments"];
-}): Promise<{ ok: boolean; error?: string; emailed?: number; emailFailed?: number }> {
+}): Promise<{ ok: boolean; error?: string; emailed?: number; emailFailed?: number; emailSkipped?: number }> {
   const { data: auth } = await supabase.auth.getUser();
   const { error } = await supabase.from("platform_updates").insert({
     title: input.title, body: input.body, attachments: input.attachments,
@@ -169,49 +168,22 @@ async function recipients(): Promise<{ email: string; name: string }[]> {
 }
 
 /**
- * Sends the announcement by email, using exactly the contract the chat's
- * "email this message" option uses, so both paths behave identically.
- * Sent in small batches so a large audience does not open hundreds of
- * simultaneous requests.
+ * Sends the announcement by email through the platform's email service.
+ *
+ * The recipient list is built here because only this module knows who an
+ * announcement is for; rendering, the sender identity and the provider all
+ * live behind /api/email, so this function holds no template and no key.
  */
-async function emailUpdate(input: { title: string; body: string; attachments: PlatformUpdate["attachments"] }) {
+async function emailUpdate(input: { title: string; body: string }) {
   const people = await recipients();
   if (people.length === 0) return { emailed: 0, emailFailed: 0 };
 
-  // The chat signs attachments for a week so the link outlives the inbox visit.
-  const first = input.attachments[0];
-  let attachmentUrl: string | null = null;
-  if (first) attachmentUrl = await fileUrl(first.path, "update_files", undefined, 60 * 60 * 24 * 7);
-
-  const message = input.title ? `${input.title}\n\n${input.body}` : input.body;
-  let emailed = 0;
-  let emailFailed = 0;
-  const BATCH = 8;
-
-  for (let i = 0; i < people.length; i += BATCH) {
-    const slice = people.slice(i, i + BATCH);
-    const results = await Promise.all(slice.map(async (person) => {
-      try {
-        const { data, error } = await supabase.functions.invoke("send-update", {
-          body: {
-            to_email: person.email,
-            to_name: person.name,
-            message,
-            attachment_url: attachmentUrl,
-            attachment_name: first?.fileName ?? null,
-          },
-        });
-        const res = (data ?? {}) as { ok?: boolean; error?: string };
-        return !error && res.ok !== false;
-      } catch {
-        return false;
-      }
-    }));
-    for (const ok of results) {
-      if (ok) emailed += 1; else emailFailed += 1;
-    }
-  }
-  return { emailed, emailFailed };
+  const result = await emailAnnouncement({
+    to: people,
+    subject: input.title,
+    message: input.body,
+  });
+  return { emailed: result.sent, emailFailed: result.failed, emailSkipped: result.skipped };
 }
 
 /* ── Live centre ──────────────────────────────────────────────────────────── */

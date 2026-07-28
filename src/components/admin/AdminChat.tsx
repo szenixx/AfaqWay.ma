@@ -8,6 +8,7 @@ import { notify, requestNotify } from "@/lib/notify";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import { loadAvatarFields } from "@/lib/avatarProfile";
 import { useOnlineUsers } from "@/lib/presence";
+import { emailAdvisorMessage } from "@/lib/email/client";
 import { parseAsk } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
@@ -151,11 +152,17 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
       const ins = await supabase.from("messages").insert({ user_id: sel, sender: "admin", body: finalBody, file_path, file_name, pinned: pinOn, emailed: emailOn, created_by: user?.id, reply_to: replyTo?.id ?? null });
       if (ins.error) throw ins.error;
       if (emailOn && selUser.email) {
-        const { data: mail, error } = await supabase.functions.invoke("send-update", { body: { to_email: selUser.email, to_name: (selUser.full_name ?? "").split(" ")[0], message: finalBody, attachment_url: attachUrl, attachment_name: file_name } });
-        const res = (mail ?? {}) as { ok?: boolean; error?: string };
-        if (error) setStatus("Sent to chat. Email failed: " + error.message);
-        else if (res.ok) setStatus("Sent and emailed");
-        else setStatus("Sent to chat. Email failed: " + (res.error ?? "unknown error"));
+        /* The chat message is already saved; email is a second delivery of the
+           same words. Its outcome is reported, never allowed to fail silently
+           and never allowed to undo the message. */
+        const mail = await emailAdvisorMessage({
+          to: selUser.email,
+          subject: `Message from your AfaqWay advisor`,
+          message: attachUrl ? `${finalBody}\n\nAttachment: ${file_name}\n${attachUrl}` : finalBody,
+        });
+        if (mail.ok && mail.sent > 0) setStatus("Sent and emailed");
+        else if (mail.notConfigured) setStatus("Sent to chat. Email is not configured yet.");
+        else setStatus("Sent to chat. Email failed: " + (mail.error ?? "unknown error"));
       } else setStatus("Sent");
       setBody(""); setFile(null); setPinOn(false); setWhatsappOn(false); setShowQ(false); setQText(""); setQOpts(["", ""]); setReplyTo(null);
       void loadMsgs(sel);
