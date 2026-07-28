@@ -1,7 +1,7 @@
 import "server-only";
 import { REPLY_TO, senderFor, type EmailChannel } from "@/config/email";
 import { renderEmail } from "./email/templates";
-import { emailConfigured, providerName, send } from "./email/provider";
+import { emailConfigured, providerName, send, verifyProvider } from "./email/provider";
 
 /* The email service.
  *
@@ -96,4 +96,4 @@ export async function sendBulkEmail(
   return totals;
 }
 
-export { emailConfigured, providerName };
+export { emailConfigured, providerName, verifyProvider };

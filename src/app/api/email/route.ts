@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCaller } from "@/lib/storage/auth";
 import { storageErrorResponse } from "@/lib/storage/respond";
 import { StorageError } from "@/types/storage";
-import { sendBulkEmail, sendEmail, emailConfigured } from "@/services/email.service";
+import { sendBulkEmail, sendEmail, emailConfigured, providerName, verifyProvider } from "@/services/email.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,12 +68,25 @@ export async function POST(req: Request) {
   }
 }
 
-/** GET /api/email — whether email is switched on. Never reveals the key. */
+/* GET /api/email — diagnostics. Says whether email is switched on, which
+   provider is active, and whether the mailbox actually accepts the
+   credentials. Never returns the credential itself. */
 export async function GET(req: Request) {
   try {
     const caller = await requireCaller(req);
     if (!caller.isAdmin) throw new StorageError("forbidden", "forbidden", 403);
-    return NextResponse.json({ configured: emailConfigured() });
+
+    const configured = emailConfigured();
+    if (!configured) return NextResponse.json({ configured: false, provider: providerName() });
+
+    // Opens a connection and authenticates, without sending anything.
+    const check = await verifyProvider();
+    return NextResponse.json({
+      configured: true,
+      provider: providerName(),
+      reachable: check.ok,
+      ...(check.ok ? {} : { error: "error" in check ? check.error : "unavailable" }),
+    });
   } catch (err) {
     return storageErrorResponse(err);
   }
