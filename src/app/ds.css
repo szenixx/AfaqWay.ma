@@ -448,3 +448,160 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-decision-link{display:inline-flex;align-items:center;gap:5px;border:none;background:none;padding:0;cursor:pointer;
   font:600 12px/17px var(--font-sans);color:var(--decision,var(--indigo-600));transition:gap 160ms var(--ease);}
 .chat-decision-link:hover{text-decoration:underline;gap:8px;}
+
+/* ══ Pill ══════════════════════════════════════════════════════════════════
+   The one label/badge/tag/chip. Colour arrives inline from the tone tokens;
+   only shape, rhythm and the optional slots live here. */
+.ds-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid;border-radius:var(--radius-pill);
+  font-family:var(--font-sans);font-weight:600;letter-spacing:.04em;white-space:nowrap;vertical-align:middle;
+  transition:background 160ms var(--ease),border-color 160ms var(--ease),transform 160ms var(--ease);}
+.ds-pill.md{padding:5px 12px;font-size:10.5px;line-height:1;text-transform:uppercase;}
+.ds-pill.sm{padding:3px 9px;font-size:9.5px;line-height:1;text-transform:uppercase;}
+.ds-pill-text{display:inline-block;}
+.ds-pill-ico,.ds-pill-avatar{display:inline-flex;align-items:center;flex:none;}
+/* The avatar sits flush with the left edge so the pill reads as one object. */
+.ds-pill-avatar{margin-left:-7px;border-radius:var(--radius-pill);overflow:hidden;line-height:0;}
+.ds-pill.sm .ds-pill-avatar{margin-left:-5px;}
+.ds-pill-avatar>*{display:block;border-radius:var(--radius-pill);}
+/* The delta carries its own colour: direction matters more than the pill tone. */
+.ds-pill-delta{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;letter-spacing:0;
+  font-variant-numeric:tabular-nums;opacity:.9;}
+.ds-pill-delta.up{color:var(--green-soft);}
+.ds-pill-delta.down{color:var(--red-soft);}
+/* Ghost: invisible until pointed at, for pills packed into dense rows. */
+.ds-pill.ghost{border-color:transparent;background:transparent;}
+.ds-pill.act{cursor:pointer;}
+.ds-pill.act:hover{transform:translateY(-1px);}
+.ds-pill.ghost.act:hover{background:var(--subtle);border-color:var(--line);}
+.ds-pill.act:focus-visible{outline:2px solid var(--indigo-600);outline-offset:2px;}
+
+/* ══ Status ════════════════════════════════════════════════════════════════
+   A dot plus a word. The word is always rendered, so colour is never the only
+   carrier of the meaning. */
+.ds-status{display:inline-flex;align-items:center;gap:7px;font:600 11.5px/16px var(--font-sans);white-space:nowrap;vertical-align:middle;}
+.ds-status.chip{padding:4px 11px 4px 9px;border-radius:var(--radius-pill);}
+.ds-status.dot-only{gap:0;}
+.ds-status-label{letter-spacing:.01em;}
+.ds-status-dot{position:relative;width:8px;height:8px;border-radius:var(--radius-pill);flex:none;}
+/* Pulse: the dot itself breathes — something is in progress. */
+.ds-status-dot.pulse{animation:dsStatusPulse 1.8s var(--ease) infinite;}
+@keyframes dsStatusPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(.82);}}
+/* Ping: a ring travels outward — someone is present right now. */
+.ds-status-dot.ping::after{content:"";position:absolute;inset:0;border-radius:var(--radius-pill);
+  background:var(--ds-status);animation:dsStatusPing 1.8s var(--ease) infinite;}
+@keyframes dsStatusPing{0%{opacity:.55;transform:scale(1);}70%,100%{opacity:0;transform:scale(2.6);}}
+@media (prefers-reduced-motion:reduce){
+  .ds-status-dot.pulse,.ds-status-dot.ping::after{animation:none;}
+}
+
+/* ══ DataTable ═════════════════════════════════════════════════════════════
+   One table for every admin listing: sticky header, rounded rows, its own
+   horizontal scroll so the page never moves sideways. */
+.ds-table-wrap{background:var(--card);border:var(--card-border);border-radius:var(--radius-card);
+  box-shadow:var(--elev-2);overflow:hidden;}
+.ds-table-scroll{overflow:auto;overscroll-behavior-x:contain;}
+.ds-table{width:100%;border-collapse:separate;border-spacing:0 6px;padding:0 10px 10px;min-width:640px;}
+.ds-table thead th{position:sticky;top:0;z-index:2;background:var(--card);
+  padding:14px 14px 10px;text-align:left;white-space:nowrap;
+  font:600 10.5px/14px var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);
+  border-bottom:1px solid var(--line-soft);}
+.ds-table thead th.right{text-align:right;}
+.ds-table thead th.center{text-align:center;}
+.ds-th-sort{display:inline-flex;align-items:center;gap:5px;border:none;background:none;padding:0;cursor:pointer;
+  font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;transition:color 140ms var(--ease);}
+.ds-th-sort:hover,.ds-th-sort.active{color:var(--indigo-600);}
+.ds-th-hint{opacity:0;transition:opacity 140ms var(--ease);}
+.ds-th-sort:hover .ds-th-hint{opacity:.55;}
+.ds-th-sort:focus-visible{outline:2px solid var(--indigo-600);outline-offset:3px;border-radius:var(--radius-sm);}
+
+.ds-table tbody td{padding:13px 14px;background:var(--subtle);vertical-align:middle;
+  font:500 13px/18px var(--font-sans);color:var(--ink);
+  border-top:1px solid transparent;border-bottom:1px solid transparent;
+  transition:background 160ms var(--ease);}
+.ds-table tbody td.right{text-align:right;}
+.ds-table tbody td.center{text-align:center;}
+/* Rounded rows: the corner radius belongs to the first and last cell. */
+.ds-table tbody td:first-child{border-top-left-radius:var(--radius-lg);border-bottom-left-radius:var(--radius-lg);}
+.ds-table tbody td:last-child{border-top-right-radius:var(--radius-lg);border-bottom-right-radius:var(--radius-lg);}
+.ds-table tbody tr.clickable{cursor:pointer;}
+.ds-table tbody tr:hover td{background:var(--indigo-50);}
+.ds-table tbody tr.active td{background:var(--indigo-tint);color:var(--indigo-text);}
+.ds-table tbody tr.clickable:focus-visible{outline:none;}
+.ds-table tbody tr.clickable:focus-visible td{background:var(--indigo-tint);
+  border-top-color:var(--indigo-600);border-bottom-color:var(--indigo-600);}
+.ds-table tbody tr.ds-tr-empty td,.ds-table tbody tr.ds-tr-skeleton td{background:transparent;}
+.ds-table tbody tr.ds-tr-empty:hover td{background:transparent;}
+.ds-table tbody tr.ds-tr-empty td{padding:34px 14px;text-align:center;}
+.ds-table-empty{font:500 13px/19px var(--font-sans);color:var(--ink-faint);}
+.ds-table-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:12px 20px;border-top:1px solid var(--line-soft);background:var(--card);}
+
+/* Loading: a shimmer where the text will be, at the row's own height. */
+.ds-skel{display:block;height:11px;border-radius:var(--radius-pill);
+  background:linear-gradient(90deg,var(--subtle) 25%,var(--line-soft) 37%,var(--subtle) 63%);
+  background-size:400% 100%;animation:dsSkel 1.4s ease infinite;}
+@keyframes dsSkel{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+@media (prefers-reduced-motion:reduce){.ds-skel{animation:none;}}
+
+/* Columns that are context rather than content step aside on small screens. */
+@media (max-width:900px){
+  .ds-table th.secondary,.ds-table td.secondary{display:none;}
+  .ds-table{min-width:420px;}
+  .ds-table tbody td{padding:11px;font-size:12.5px;}
+}
+
+/* ══ Toast ═════════════════════════════════════════════════════════════════
+   Top-centre stack, above everything, one column. */
+.ds-toaster{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  width:min(420px,calc(100vw - 24px));pointer-events:none;}
+.ds-toast{pointer-events:auto;width:100%;background:var(--card);border:1px solid var(--indigo-line);
+  border-radius:var(--radius-lg);box-shadow:0 18px 44px -18px rgba(23,35,58,.34),0 2px 6px rgba(23,35,58,.06);
+  padding:12px 14px;animation:dsToastIn 260ms var(--ease) both;}
+/* Slide down and fade in; the exit reverses it and is shorter, so a dismissed
+   toast is gone before the eye follows it. */
+@keyframes dsToastIn{from{opacity:0;transform:translateY(-14px) scale(.97);}to{opacity:1;transform:none;}}
+.ds-toast.leaving{animation:dsToastOut 220ms var(--ease) both;}
+@keyframes dsToastOut{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(-10px) scale(.97);}}
+@media (prefers-reduced-motion:reduce){
+  .ds-toast,.ds-toast.leaving{animation-duration:1ms;}
+}
+.ds-toast-head{display:flex;align-items:center;gap:8px;}
+.ds-toast-brand{display:flex;flex:none;line-height:0;}
+.ds-toast-kind{display:flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;
+  border-radius:var(--radius-sm);}
+.ds-toast-kind.indigo{color:var(--indigo-600);background:var(--indigo-tint);}
+.ds-toast-kind.green{color:var(--green-soft);background:var(--green-tint);}
+.ds-toast-kind.amber{color:var(--amber-soft);background:var(--amber-tint);}
+.ds-toast-kind.red{color:var(--red-soft);background:var(--red-tint);}
+.ds-toast-kind.grey{color:var(--grey);background:var(--grey-tint);}
+.ds-toast-title{flex:1;min-width:0;font:700 13px/18px var(--font-sans);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ds-toast-x{flex:none;display:flex;border:none;background:none;padding:2px;margin:-2px;cursor:pointer;
+  color:var(--ink-faint);border-radius:var(--radius-sm);transition:color 140ms var(--ease);}
+.ds-toast-x:hover{color:var(--ink);}
+.ds-toast-x:focus-visible{outline:2px solid var(--indigo-600);outline-offset:1px;}
+/* Two lines of preview: enough to decide whether to open it, never the whole
+   message — that is what opening it is for. */
+.ds-toast-body{margin:7px 0 0;font:400 12.5px/18px var(--font-sans);color:var(--ink-soft);
+  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.ds-toast-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;}
+.ds-toast-when{font:400 10.5px/14px var(--font-sans);color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+.ds-toast-act{flex:none;border:none;border-radius:var(--radius-pill);background:var(--indigo-600);color:#fff;
+  padding:6px 14px;font:600 11.5px/1 var(--font-sans);cursor:pointer;
+  transition:background 140ms var(--ease),transform 120ms var(--ease);}
+.ds-toast-act:hover{background:var(--indigo-500);}
+.ds-toast-act:active{transform:scale(.96);}
+.ds-toast-act:focus-visible{outline:2px solid var(--indigo-600);outline-offset:2px;}
+
+/* ══ ImageZoom ═════════════════════════════════════════════════════════════
+   The viewport every preview is shown through. */
+.ds-zoom{position:relative;flex:1;min-height:0;width:100%;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;touch-action:none;}
+.ds-zoom.pannable{cursor:grab;}
+.ds-zoom.dragging{cursor:grabbing;}
+.ds-zoom-inner{display:flex;align-items:center;justify-content:center;max-width:100%;max-height:100%;
+  transform-origin:center center;will-change:transform;}
+.ds-zoom-inner>img{display:block;max-width:100%;max-height:100%;object-fit:contain;
+  /* The image is dragged as a whole; the browser's own drag would fight it. */
+  -webkit-user-drag:none;user-select:none;}

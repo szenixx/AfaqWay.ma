@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Field, fieldIcon } from "@/components/ds";
+import { Field, fieldIcon, Pill } from "@/components/ds";
 import { PROGRAMS } from "@/lib/programs/catalog";
 import { recommend } from "@/lib/programs/engine";
 import type { Program, Recommendation, StudentProfile } from "@/lib/programs/types";
@@ -44,10 +44,10 @@ function ProgramCard({ rec, order, canAdd, onToggle }: { rec: Recommendation; or
         </span>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
-        <span className="pill pill-grey">{p.degree}</span>
-        <span className="pill pill-grey">{p.field}</span>
-        {p.tuition_eur != null && <span className="pill pill-grey">€{p.tuition_eur.toLocaleString("en-US")}/yr</span>}
-        {p.intake && <span className="pill pill-grey">{p.intake}</span>}
+        <Pill tone="grey">{p.degree}</Pill>
+        <Pill tone="grey">{p.field}</Pill>
+        {p.tuition_eur != null && <Pill tone="grey">€{p.tuition_eur.toLocaleString("en-US")}/yr</Pill>}
+        {p.intake && <Pill tone="grey">{p.intake}</Pill>}
       </div>
       {rec.reasons.length > 0 && (
         <ul style={{ listStyle: "none", margin: "9px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 5 }}>

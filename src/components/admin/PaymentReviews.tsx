@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ban, Clock, CircleX, RotateCcw, ShieldCheck, Wallet } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Loader } from "@/components/ds";
+import { Loader, Pill, Status, type StatusState } from "@/components/ds";
 import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { fileUrl, deleteUserFile } from "@/lib/storage/client";
@@ -124,16 +124,10 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
     void load();
   }
 
-  const statusPill = (s: string) => s === "approved" ? "pill pill-green" : s === "rejected" ? "pill pill-red" : s === "cancelled" ? "pill pill-grey" : "pill pill-amber";
+  /* A payment's state maps onto the platform's shared status vocabulary. */
+  const statusState = (s: string): StatusState =>
+    s === "approved" ? "success" : s === "rejected" ? "error" : s === "cancelled" ? "neutral" : "pending";
   const statusLabel = (s: string) => s === "under_review" ? "Under review" : s.charAt(0).toUpperCase() + s.slice(1);
-  const statusIcon = (s: string) => {
-    const P = { width: 12, height: 12, viewBox: "0 0 20 20", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-    if (s === "approved") return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M6.5 10.5 9 13l4.5-5" /></svg>;
-    if (s === "rejected") return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M7.5 7.5l5 5M12.5 7.5l-5 5" /></svg>;
-    if (s === "cancelled") return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M6.5 6.5l7 7" /></svg>;
-    return <svg {...P}><circle cx="10" cy="10" r="7.5" /><path d="M10 6v4.3l2.8 1.6" /></svg>;
-  };
-  const badge = (cls: string, children: React.ReactNode) => <span className={cls} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{children}</span>;
 
   return (
     <div>
@@ -209,10 +203,10 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
                     {r.reference && <div style={{ font: "600 11px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 2 }}>ID {r.reference}</div>}
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", height: "fit-content" }}>
-                    <span className="pill pill-indigo">{plan?.name ?? r.plan}</span>
-                    <span className="pill pill-grey">{r.amount.toLocaleString("en-US")} {r.currency === "MAD" ? "DH" : r.currency}</span>
-                    <span className="pill pill-grey">{method?.name ?? r.method}</span>
-                    {badge(statusPill(r.status), <>{statusIcon(r.status)}{statusLabel(r.status)}</>)}
+                    <Pill tone="indigo">{plan?.name ?? r.plan}</Pill>
+                    <Pill tone="grey">{r.amount.toLocaleString("en-US")} {r.currency === "MAD" ? "DH" : r.currency}</Pill>
+                    <Pill tone="grey">{method?.name ?? r.method}</Pill>
+                    <Status state={statusState(r.status)} label={statusLabel(r.status)} chip />
                   </div>
                 </div>
                 <div style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 8 }}>Submitted {new Date(r.created_at).toLocaleString()}{r.reviewed_at ? ` · reviewed ${new Date(r.reviewed_at).toLocaleString()}` : ""}</div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CircleCheck, Eye, Inbox, RotateCcw, XCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Loader } from "@/components/ds";
+import { Loader, Pill } from "@/components/ds";
 import { subscribeJourney, type DbStep, type Plan } from "@/lib/journeyDb";
 import { JrButton } from "@/components/student/workspace/journey/parts";
 import { ReviewModal, type ReviewTarget } from "./ReviewModal";
@@ -177,7 +177,7 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
         <>
           {stages.map((row) => (
             <div key={row.id} className="jm-review">
-              <span className="jm-review-tag pill pill-amber">Stage</span>
+              <Pill tone="amber" className="jm-review-tag">Stage</Pill>
               <div className="jm-review-body">
                 <div className="jm-review-title">{row.stage_title}</div>
                 <div className="jm-review-sub">{row.student} asked for stage approval</div>
@@ -193,7 +193,7 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
 
           {steps.map((row) => (
             <div key={row.id} className="jm-review">
-              <span className="jm-review-tag pill pill-indigo">Step</span>
+              <Pill tone="indigo" className="jm-review-tag">Step</Pill>
               <div className="jm-review-body">
                 <div className="jm-review-title">{row.step_title}</div>
                 <div className="jm-review-sub">{row.student} · {row.stage_title}</div>

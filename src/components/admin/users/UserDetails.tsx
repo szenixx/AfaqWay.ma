@@ -5,7 +5,7 @@ import {
   CalendarDays, CircleCheck, Clock3, Download, ExternalLink, Eye, FileText, GraduationCap,
   History, Mail, MapPin, Phone, Route, TriangleAlert, X,
 } from "lucide-react";
-import { AnimatedModal, Input, Loader, Select, UserAvatar } from "@/components/ds";
+import { AnimatedModal, Input, Loader, Select, UserAvatar, Pill, type PillTone } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
 import { assembleRoadmap, roadmapProgress, type JourneyStage } from "@/lib/journey";
@@ -51,7 +51,7 @@ const DOC_LABEL: Record<DocStatus, string> = {
   pending: "Pending", uploaded: "Uploaded", under_review: "Under review",
   needs_changes: "Rejected", approved: "Verified",
 };
-const DOC_TONE: Record<DocStatus, string> = {
+const DOC_TONE: Record<DocStatus, PillTone> = {
   pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
 };
 
@@ -295,7 +295,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
                       </span>
                       {d.upload?.review_comment && <span className="stp-doc-msg">{d.upload.review_comment}</span>}
                     </span>
-                    <span className={`pill pill-${DOC_TONE[d.status]} stp-doc-pill`}>{DOC_LABEL[d.status]}</span>
+                    <Pill tone={DOC_TONE[d.status]} className="stp-doc-pill">{DOC_LABEL[d.status]}</Pill>
                     <span className="stp-doc-acts">
                       {d.upload?.file_path && (
                         <>

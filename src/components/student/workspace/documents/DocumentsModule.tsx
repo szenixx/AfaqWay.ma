@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   CircleCheckBig, Clock3, Download, ExternalLink, FileText, TriangleAlert, Upload,
 } from "lucide-react";
-import { Loader } from "@/components/ds";
+import { Loader, Pill, type PillTone } from "@/components/ds";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
@@ -35,7 +35,7 @@ const LABEL: Record<DocStatus, string> = {
   pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
   needs_changes: "Needs changes", approved: "Verified",
 };
-const TONE: Record<DocStatus, string> = {
+const TONE: Record<DocStatus, PillTone> = {
   pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
 };
 
@@ -215,7 +215,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
                   {r.description && <p className="jr-doc-desc">{r.description}</p>}
                   {r.instructions && <p className="jr-doc-desc">{r.instructions}</p>}
                   <div className="jr-doc-meta">
-                    <span className={`pill pill-${TONE[status]}`}>{LABEL[status]}</span>
+                    <Pill tone={TONE[status]}>{LABEL[status]}</Pill>
                     {r.acceptedTypes && <span>{r.acceptedTypes.toUpperCase()}</span>}
                     {r.maxSizeMb > 0 && <span>max {r.maxSizeMb} MB</span>}
                     {upload?.file_name && <span>{upload.file_name}</span>}

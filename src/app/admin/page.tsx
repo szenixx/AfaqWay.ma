@@ -2,7 +2,7 @@
 
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useReviewAlerts } from "@/lib/reviewAlerts";
-import { BrandLogo } from "@/components/ds";
+import { BrandLogo, Pill } from "@/components/ds";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
@@ -193,7 +193,7 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
               {!r.read && <span aria-hidden style={{ flex: "none", width: 8, height: 8, borderRadius: 999, background: "var(--indigo-600)", marginTop: 6 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span className={r.type === "ban" ? "pill pill-red" : "pill pill-indigo"}>{r.type.replace("_", " ")}</span>
+                  <Pill tone={r.type === "ban" ? "red" : "indigo"}>{r.type.replace("_", " ")}</Pill>
                   <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{r.title}</span>
                 </div>
                 {r.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 4 }}>{r.body}</div>}
@@ -217,7 +217,7 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span className="pill pill-red">Banned user</span>
+              <Pill tone="red">Banned user</Pill>
               <span style={{ font: "700 15px/20px var(--font-sans)", color: "var(--red)" }}>{banPanel.user.full_name || "User"}</span>
             </div>
             <div style={{ padding: 20 }}>

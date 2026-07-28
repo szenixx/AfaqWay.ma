@@ -11,7 +11,7 @@ import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
 import { removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
 import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel, Pill } from "@/components/ds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import { useJourneySummary } from "@/lib/useJourneySummary";
 import { useNotifications, markRead, markAllRead } from "@/lib/notifications";
@@ -30,7 +30,7 @@ import {
   UPCOMING_TASKS, FAQ,
 } from "./data";
 import {
-  Panel, CardTitle, StatTile, ProgressLine, Pill, EmptyState,
+  Panel, CardTitle, StatTile, ProgressLine, EmptyState,
   BtnPrimary, BtnGhost, StatusGlyph, IconChip, CompactCard,
   SectionTitle, InlineNote,
 } from "./parts";
@@ -102,7 +102,7 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
                 <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 14, background: "var(--subtle)" }}>
                   <span style={{ width: 30, height: 30, borderRadius: 10, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 10px rgba(23,35,58,.08)" }}><Calendar size={15} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{t.label}</div><div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{t.due}</div></div>
-                  <Pill tone={t.tone} text={t.due.includes("2 days") ? "Soon" : "Planned"} />
+                  <Pill tone={t.tone}>{t.due.includes("2 days") ? "Soon" : "Planned"}</Pill>
                 </div>
               ))}
             </div>
@@ -115,7 +115,7 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
                 <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 4px", borderBottom: "1px solid var(--line-soft)" }}>
                   <span style={{ width: 30, height: 30, borderRadius: 9, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={15} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13px/17px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div><div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{d.updated}</div></div>
-                  <Pill tone={DOC_TONE[d.status]} text={DOC_LABEL[d.status]} />
+                  <Pill tone={DOC_TONE[d.status]}>{DOC_LABEL[d.status]}</Pill>
                 </div>
               ))}
             </div>
@@ -126,7 +126,7 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Panel style={{ background: "linear-gradient(135deg, rgba(59,91,219,.14), rgba(132,94,247,.12))" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <span className={full ? "pill pill-indigo" : "pill pill-green"}>{planById(profile.plan)?.name ?? "Your plan"}</span>
+              <Pill tone={full ? "indigo" : "green"}>{planById(profile.plan)?.name ?? "Your plan"}</Pill>
               <Sparkles size={16} color="var(--indigo-600)" />
             </div>
             <div style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)" }}>
@@ -324,10 +324,10 @@ export function Subscription({ profile }: { profile: WsProfile }) {
           <span aria-hidden className="plan-glyph"><Wallet size={190} /></span>
           <div className="plan-body">
             <div className="plan-badges">
-              <span className={full ? "pill pill-indigo" : "pill pill-green"}>{full ? "Full Service" : "Self Service"}</span>
-              <span className={profile.verified ? "pill pill-green" : "pill pill-amber"}>
+              <Pill tone={full ? "indigo" : "green"}>{full ? "Full Service" : "Self Service"}</Pill>
+              <Pill tone={profile.verified ? "green" : "amber"}>
                 {profile.verified ? "Active" : "Pending"}
-              </span>
+              </Pill>
             </div>
 
             <div className="plan-name">{p?.name ?? "—"}</div>

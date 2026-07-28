@@ -21,3 +21,10 @@ export { Icon, ICON_NAMES, type IconName } from "./Icon";
 export { GoogleIcon } from "./GoogleIcon";
 export { StatusBadge, STATUS, type StatusName } from "./StatusBadge";
 export { Flag } from "./Flag";
+/* The shared UI vocabulary: one label, one status indicator, one table, one
+   notification and one preview viewport for the whole platform. */
+export { Pill, type PillTone, type PillProps } from "./Pill";
+export { Status, type StatusState, type StatusProps } from "./Status";
+export { DataTable, type Column, type DataTableProps } from "./DataTable";
+export { Toaster, toast, dismissToast, type Toast, type ToastKind } from "./Toast";
+export { ImageZoom } from "./ImageZoom";

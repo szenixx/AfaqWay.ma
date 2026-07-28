@@ -56,9 +56,6 @@ export function ProgressLine({ pct, color = "var(--indigo-600)", height = 9 }: {
   );
 }
 
-export function Pill({ text, tone }: { text: string; tone: "green" | "amber" | "red" | "indigo" | "grey" }) {
-  return <span className={`pill pill-${tone}`}>{text}</span>;
-}
 
 export function EmptyState({ icon, title, sub }: { icon: ReactNode; title: string; sub?: string }) {
   return (

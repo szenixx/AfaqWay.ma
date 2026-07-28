@@ -5,7 +5,7 @@ import {
   BookOpen, CircleCheck, Clock3, Eye, FileText, History, Info, MessageSquare,
   TriangleAlert,
 } from "lucide-react";
-import { AnimatedModal, Loader } from "@/components/ds";
+import { AnimatedModal, Loader, Pill, type PillTone } from "@/components/ds";
 import {
   fetchBlocks, fetchDocuments, fetchEvents,
   stepRequirements, subscribeJourney,
@@ -32,7 +32,7 @@ const DOC_LABEL: Record<DocStatus, string> = {
   pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
   needs_changes: "Needs changes", approved: "Verified",
 };
-const DOC_TONE: Record<DocStatus, string> = {
+const DOC_TONE: Record<DocStatus, PillTone> = {
   pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
 };
 
@@ -175,7 +175,7 @@ export function ReviewModal({ target, onClose }: {
                           </div>
                           {r.description && <p className="jr-doc-desc">{r.description}</p>}
                           <div className="jr-doc-meta">
-                            <span className={`pill pill-${DOC_TONE[st]}`}>{DOC_LABEL[st]}</span>
+                            <Pill tone={DOC_TONE[st]}>{DOC_LABEL[st]}</Pill>
                             {up && <span>{up.file_name}</span>}
                             {up && <span>{stamp(up.updated_at)}</span>}
                           </div>
@@ -210,7 +210,7 @@ export function ReviewModal({ target, onClose }: {
                   ? <p className="jr-sec-text">No content blocks on this step.</p>
                   : blocks.map((b) => (
                       <div key={b.id} className={`jr-blk${b.enabled ? "" : " jr-blk-off"}`}>
-                        {b.audience === "advisor" && <span className="pill pill-grey" style={{ marginBottom: 6 }}>Advisor only</span>}
+                        {b.audience === "advisor" && <Pill tone="grey" style={{ marginBottom: 6 }}>Advisor only</Pill>}
                         <JourneyBlock block={b} />
                       </div>
                     ))}

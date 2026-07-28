@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pill } from "@/components/ds";
 import { Container, SectionHead, Flag } from "./ui";
 import { DESTINATIONS as DESTS } from "@/lib/destinations";
 
@@ -17,7 +18,7 @@ export default function Destinations() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Flag country={d.name} open={d.open} />
                 <span style={{ font: "600 18px/24px var(--font-sans)", color: d.open ? "var(--ink)" : "var(--ink-soft)", flex: 1 }}>{d.name}</span>
-                {d.open ? <span className="pill pill-green">Available now</span> : <span className="pill pill-grey">Coming soon</span>}
+                {d.open ? <Pill tone="green">Available now</Pill> : <Pill tone="grey">Coming soon</Pill>}
               </div>
               {d.open && (
                 <div style={{ font: "600 11.5px/16px var(--font-sans)", color: "var(--green)" }}>

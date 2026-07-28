@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   BookOpen, CircleCheck, Clock3, Download, ExternalLink, FileText, Info, TriangleAlert, Upload,
 } from "lucide-react";
-import { AnimatedModal, Loader } from "@/components/ds";
+import { AnimatedModal, Loader, Pill, type PillTone } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { fetchDocuments, subscribeJourney, type DbDocument } from "@/lib/journeyDb";
 import { stepDocuments, type JourneyStage, type JourneyStep, type StepDoc } from "@/lib/journey";
@@ -29,7 +29,7 @@ const DOC_LABEL: Record<StepDoc["status"], string> = {
   pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
   needs_changes: "Needs changes", approved: "Verified",
 };
-const DOC_TONE: Record<StepDoc["status"], string> = {
+const DOC_TONE: Record<StepDoc["status"], PillTone> = {
   pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
 };
 
@@ -136,7 +136,7 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
                     {upload?.review_comment && <span className="stp-doc-msg">{upload.review_comment}</span>}
                   </span>
 
-                  <span className={`pill pill-${DOC_TONE[status]} stp-doc-pill`}>{DOC_LABEL[status]}</span>
+                  <Pill tone={DOC_TONE[status]} className="stp-doc-pill">{DOC_LABEL[status]}</Pill>
 
                   <span className="stp-doc-acts">
                     {requirement.templatePath && (

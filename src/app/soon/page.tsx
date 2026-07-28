@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pill } from "@/components/ds";
 
 export const metadata = {
   title: "Coming soon, AfaqWay",
@@ -18,7 +19,7 @@ export default function Soon() {
         gap: 16,
       }}
     >
-      <span className="pill pill-indigo">Coming soon</span>
+      <Pill tone="indigo">Coming soon</Pill>
       <h1 style={{ font: "700 34px/42px var(--font-sans)", color: "var(--ink)", margin: 0 }}>
         This page isn&apos;t built yet
       </h1>

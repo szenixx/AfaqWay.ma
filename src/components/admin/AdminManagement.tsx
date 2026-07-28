@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Input, Select, fieldIcon } from "@/components/ds";
+import { Input, Select, fieldIcon, DataTable, Pill, Status, type Column } from "@/components/ds";
 
 type Admin = { id: string; email: string; role: string; name: string | null; phone: string | null; describe_role: string | null; banned: boolean; must_reset_pw: boolean; created_at: string };
 type Form = { id?: string; name: string; email: string; phone: string; role: string; describe_role: string };
@@ -51,41 +51,48 @@ export default function AdminManagement() {
   const askForce = (a: Admin) => setConfirm({ title: a.must_reset_pw ? "Cancel forced reset?" : "Force password reset?", body: a.must_reset_pw ? "They will no longer be asked to reset their password." : "They will be asked to set a new password on their next login.", onYes: () => { void patch(a.id, { must_reset_pw: !a.must_reset_pw }); setConfirm(null); } });
   const askRemove = (a: Admin) => setConfirm({ title: "Remove this admin?", body: "They will immediately lose access to the workspace. This can't be undone.", onYes: () => { void removeNow(a.id); setConfirm(null); } });
 
+  /* One column set, rendered twice: super admins and everyone else. Defined
+     here so both tables stay identical by construction. */
+  const columns: Column<Admin>[] = [
+    { key: "id", header: "Admin ID", cell: (a) => a.id.slice(0, 8) },
+    { key: "name", header: "Full name", sortValue: (a) => (a.name ?? "").toLowerCase(), cell: (a) => a.name || "\u2014" },
+    { key: "email", header: "Email", sortValue: (a) => a.email.toLowerCase(), cell: (a) => a.email },
+    { key: "phone", header: "Number", secondary: true, cell: (a) => a.phone || "\u2014" },
+    {
+      key: "role", header: "Role", sortValue: (a) => a.role,
+      cell: (a) => (
+        <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <Pill tone={a.role === "superadmin" ? "indigo" : "grey"}>{a.role}</Pill>
+          {a.must_reset_pw && <Pill tone="amber">reset pw</Pill>}
+          {a.banned && <Status state="offline" label="Banned" />}
+        </span>
+      ),
+    },
+    {
+      key: "describe", header: "Describe role", secondary: true,
+      cell: (a) => <span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>{a.describe_role || "\u2014"}</span>,
+    },
+    {
+      key: "control", header: "Control",
+      cell: (a) => a.email === MASTER_EMAIL ? <span style={{ color: "var(--ink-faint)" }}>\u2014</span> : (
+        <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
+          <button type="button" onClick={() => openForm(a)} style={{ ...btnGhost, minWidth: 74, width: 74, border: "1px solid var(--indigo-line)", background: "var(--indigo-tint)", color: "var(--indigo-text)" }}>Edit</button>
+          <button type="button" onClick={() => askBan(a)} style={{ ...btnGhost, minWidth: 74, width: 74 }}>{a.banned ? "Unban" : "Ban"}</button>
+          <button type="button" onClick={() => askForce(a)} style={{ ...btnGhost, minWidth: 74, width: 74 }}>Reset</button>
+          <button type="button" onClick={() => askRemove(a)} style={{ ...btnRedGhost, minWidth: 74, width: 74 }}>Remove</button>
+        </div>
+      ),
+    },
+  ];
+
   function renderTable(title: string, list: Admin[]) {
     return (
       <div style={{ marginTop: 20 }}>
         <div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)", marginBottom: 8 }}>{title} <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>({list.length})</span></div>
-        <div style={{ overflowX: "auto", border: "1px solid var(--line)", borderRadius: 18, background: "var(--card)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
-            <thead>
-              <tr style={{ textAlign: "left", font: "600 11px/15px var(--font-sans)", letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-faint)" }}>
-                {["Admin ID", "Full name", "Email", "Number", "Role", "Describe role", "Control"].map((h) => <th key={h} style={{ padding: "12px 14px", borderBottom: "1px solid var(--line-soft)" }}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {list.length === 0 ? <tr><td colSpan={7} style={{ ...td, color: "var(--ink-faint)" }}>None yet.</td></tr> : list.map((a) => (
-                <tr key={a.id} style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink)", opacity: a.banned ? 0.55 : 1 }}>
-                  <td style={td}>{a.id.slice(0, 8)}</td>
-                  <td style={td}>{a.name || "—"}</td>
-                  <td style={td}>{a.email}</td>
-                  <td style={td}>{a.phone || "—"}</td>
-                  <td style={td}><span className={a.role === "superadmin" ? "pill pill-indigo" : "pill pill-grey"}>{a.role}</span>{a.must_reset_pw && <span className="pill pill-amber" style={{ marginLeft: 6 }}>reset pw</span>}</td>
-                  <td style={{ ...td, maxWidth: 240 }}><span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>{a.describe_role || "—"}</span></td>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}>
-                    {a.email === MASTER_EMAIL ? <span style={{ color: "var(--ink-faint)" }}>—</span> : (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" }}>
-                        <button type="button" onClick={() => openForm(a)} style={{ ...btnGhost, minWidth: 74, width: 74, border: "1px solid var(--indigo-line)", background: "var(--indigo-tint)", color: "var(--indigo-text)" }}>Edit</button>
-                        <button type="button" onClick={() => askBan(a)} style={{ ...btnGhost, minWidth: 74, width: 74 }}>{a.banned ? "Unban" : "Ban"}</button>
-                        <button type="button" onClick={() => askForce(a)} style={{ ...btnGhost, minWidth: 74, width: 74 }}>Reset</button>
-                        <button type="button" onClick={() => askRemove(a)} style={{ ...btnRedGhost, minWidth: 74, width: 74 }}>Remove</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          rows={list} rowKey={(a) => a.id} columns={columns} loading={loading}
+          empty="None yet."
+        />
       </div>
     );
   }
@@ -149,6 +156,4 @@ export default function AdminManagement() {
     </div>
   );
 }
-
-const td = { padding: "12px 14px", borderBottom: "1px solid var(--line-soft)", verticalAlign: "middle" } as const;
 const lbl = { display: "flex", flexDirection: "column", gap: 6, font: "500 13px/18px var(--font-sans)", color: "var(--ink)" } as const;

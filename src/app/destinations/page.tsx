@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pill } from "@/components/ds";
 import SiteHeader from "@/components/home/SiteHeader";
 import Footer from "@/components/home/Footer";
 import { Container, SectionHead, Flag, IconArrow } from "@/components/home/ui";
@@ -30,11 +31,11 @@ export default function DestinationsPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       <Flag country={d.name} open={d.open} />
                       <span style={{ font: "700 24px/30px var(--font-sans)", color: d.open ? "var(--ink)" : "var(--ink-soft)" }}>{d.name}</span>
-                      {d.open ? <span className="pill pill-green">Available now</span> : <span className="pill pill-grey">Coming soon</span>}
+                      {d.open ? <Pill tone="green">Available now</Pill> : <Pill tone="grey">Coming soon</Pill>}
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
                       {d.degrees.map((deg) => (
-                        <span key={deg} className="pill pill-indigo">{deg}</span>
+                        <Pill key={deg} tone="indigo">{deg}</Pill>
                       ))}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 0, marginTop: 18, border: "1px solid var(--line-soft)", borderRadius: 12, overflow: "hidden" }}>

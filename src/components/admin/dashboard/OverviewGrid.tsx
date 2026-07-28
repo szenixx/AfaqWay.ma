@@ -1,6 +1,7 @@
 "use client";
 
-import { DashCard, StatCard, Donut, Bars, MiniTable, Pill, SuperAdminBar, ACCENTS, useOverviewData } from "@/components/admin/dashboard/kit";
+import { DashCard, StatCard, Donut, Bars, MiniTable, SuperAdminBar, ACCENTS, useOverviewData } from "@/components/admin/dashboard/kit";
+import { Pill } from "@/components/ds";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { Users, CircleCheckBig, UserPlus, Globe, FileText, Plane } from "lucide-react";
 
@@ -40,7 +41,7 @@ export default function OverviewGrid() {
             s.full_name || "Unnamed",
             s.destination_country ? (countryByCode(s.destination_country)?.name ?? s.destination_country) : "—",
             s.plan === "full_service" ? "Full" : s.plan === "self_service" ? "Self" : "—",
-            <Pill key="p" tone={s.plan_status === "active" ? "green" : "grey"} text={s.plan_status === "active" ? "Active" : "Lead"} />,
+            <Pill key="p" tone={s.plan_status === "active" ? "green" : "grey"}>{s.plan_status === "active" ? "Active" : "Lead"}</Pill>,
           ]}
         />
       </DashCard>
@@ -50,7 +51,7 @@ export default function OverviewGrid() {
           <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--line-soft)" }}>
             <span style={{ width: 30, height: 30, borderRadius: 9, flex: "none", background: "var(--amber-tint)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 12px/1 var(--font-sans)" }}>{j.label[0]}</span>
             <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 12.5px/17px var(--font-sans)", color: "var(--ink)" }}>{j.label} stage</div><div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{j.value} students</div></div>
-            <Pill tone="amber" text="Review" />
+            <Pill tone="amber">Review</Pill>
           </div>
         ))}
       </DashCard>

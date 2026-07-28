@@ -180,9 +180,6 @@ export function MiniTable<T>({ cols, rows, render }: { cols: string[]; rows: T[]
   );
 }
 
-export function Pill({ text, tone }: { text: string; tone: "green" | "amber" | "red" | "indigo" | "grey" }) {
-  return <span className={`pill pill-${tone}`}>{text}</span>;
-}
 
 // ── Live data hooks ──────────────────────────────────────────────────────────
 type Student = { id: string; full_name: string | null; destination_country: string | null; plan: string | null; created_at: string; plan_status: string | null };

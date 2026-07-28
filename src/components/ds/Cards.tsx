@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { Pill } from "./Pill";
 import { ArrowRight, Bookmark, TrendingDown, TrendingUp } from "lucide-react";
 
 /* The platform's five card roles. Everything that presents an item on any page
@@ -46,7 +47,7 @@ export function FeatureCard({ image, imageNode, badge, title, description, actio
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {image ? <img src={image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : imageNode}
         {badge && (
-          <span className="pill pill-indigo" style={{ position: "absolute", top: 12, left: 12, background: "var(--card)" }}>{badge}</span>
+          <Pill tone="indigo" style={{ position: "absolute", top: 12, left: 12, background: "var(--card)" }}>{badge}</Pill>
         )}
         {onBookmark && (
           <button

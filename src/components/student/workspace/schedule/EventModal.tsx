@@ -5,7 +5,7 @@ import {
   AlignLeft, Bell, CalendarDays, CircleCheck, Clock, FolderOpen, GraduationCap,
   Landmark, Link2, MapPin, NotebookPen, Pin, Trash2, Type, X,
 } from "lucide-react";
-import { Input, TextArea, Select, Toggle, Checkbox } from "@/components/ds";
+import { Input, TextArea, Select, Toggle, Checkbox, Pill } from "@/components/ds";
 import {
   DEFAULT_TIMING, KIND_META, TIMING_LABEL, newId, reminderTemplate,
   type EventKind, type ReminderTiming, type ScheduleEvent,
@@ -261,9 +261,9 @@ export function EventDetailsModal({ event, role, onClose, onEdit, onDelete, onTo
       }
     >
       <div className="sch-detail">
-        <span className="pill" style={{ color: meta.color, background: meta.tint, borderColor: meta.color }}>{meta.label}</span>
-        {event.completed && <span className="pill pill-green">Completed</span>}
-        {event.pinned && <span className="pill pill-indigo">Pinned</span>}
+        <Pill style={{ color: meta.color, background: meta.tint, borderColor: meta.color }}>{meta.label}</Pill>
+        {event.completed && <Pill tone="green">Completed</Pill>}
+        {event.pinned && <Pill tone="indigo">Pinned</Pill>}
       </div>
       {event.description && <p className="sch-detail-body">{event.description}</p>}
       <div className="sch-detail-rows">

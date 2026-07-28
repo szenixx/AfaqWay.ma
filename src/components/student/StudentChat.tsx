@@ -7,7 +7,7 @@ import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { parseAsk } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
-import { Loader } from "@/components/ds";
+import { Loader, Pill } from "@/components/ds";
 
 type Msg = { id: string; sender: string; body: string; file_path: string | null; file_name: string | null; created_at: string; reply_to: string | null; pinned: boolean; emailed: boolean };
 
@@ -118,7 +118,7 @@ export default function StudentChat({ userId, full, onNav }: {
               </span>
               <span className="chat-header-sub"><Mail size={12} />{SUPPORT_EMAIL}</span>
             </span>
-            <span className="pill pill-green">Online</span>
+            <Pill tone="green">Online</Pill>
           </header>
 
           <div ref={threadRef} className="chat-thread stu-chat-texture">
@@ -185,7 +185,7 @@ export default function StudentChat({ userId, full, onNav }: {
           >
             {pinned.map((m) => (
               <div key={m.id} className="chat-panel-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-                <div style={{ display: "flex", gap: 6 }}><span className="pill pill-indigo">Pinned</span></div>
+                <div style={{ display: "flex", gap: 6 }}><Pill tone="indigo">Pinned</Pill></div>
                 <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink)", whiteSpace: "pre-wrap" }}>{parseAsk(m.body)?.q ?? m.body ?? m.file_name}</div>
               </div>
             ))}

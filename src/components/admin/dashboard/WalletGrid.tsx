@@ -1,6 +1,7 @@
 "use client";
 
-import { DashCard, StatCard, Donut, Bars, MiniTable, ProgressRow, Pill, ACCENTS, useWalletData } from "@/components/admin/dashboard/kit";
+import { DashCard, StatCard, Donut, Bars, MiniTable, ProgressRow, ACCENTS, useWalletData } from "@/components/admin/dashboard/kit";
+import { Pill } from "@/components/ds";
 import { methodById } from "@/lib/plans";
 import { Wallet, CalendarDays, Clock3, CircleCheckBig, CircleX, Users } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default function WalletGrid() {
             p.plan === "full_service" ? "Full" : "Self",
             dh(p.amount || 0),
             methodById(p.method)?.name ?? p.method,
-            <Pill key="s" tone={p.status === "approved" ? "green" : p.status === "rejected" ? "red" : p.status === "under_review" ? "amber" : "grey"} text={p.status === "under_review" ? "Review" : p.status.charAt(0).toUpperCase() + p.status.slice(1)} />,
+            <Pill key="s" tone={p.status === "approved" ? "green" : p.status === "rejected" ? "red" : p.status === "under_review" ? "amber" : "grey"}>{p.status === "under_review" ? "Review" : p.status.charAt(0).toUpperCase() + p.status.slice(1)}</Pill>,
           ]}
         />
       </DashCard>
@@ -53,7 +54,7 @@ export default function WalletGrid() {
           <div key={k} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--line-soft)" }}>
             <span style={{ width: 32, height: 32, borderRadius: 10, flex: "none", background: "var(--amber-tint)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 12px/1 var(--font-sans)" }}>{(d.names[p.user_id] ?? "?").charAt(0).toUpperCase()}</span>
             <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.names[p.user_id] ?? "—"}</div><div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{dh(p.amount || 0)} · {methodById(p.method)?.name ?? p.method}</div></div>
-            <Pill tone="amber" text="Verify" />
+            <Pill tone="amber">Verify</Pill>
           </div>
         ))}
       </DashCard>

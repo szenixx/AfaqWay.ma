@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { Pill } from "@/components/ds";
 import {
   Bell, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, GraduationCap,
   NotebookPen, Pin, Plus,
@@ -174,7 +175,7 @@ export default function Schedule({ profile, onNav, role = "student" }: {
               <button key={n.id} type="button" className="sch-note" onClick={() => setDetails(n)}>
                 <div className="sch-note-top">
                   <span className="sch-note-title">{n.title}</span>
-                  {n.pinned && <span className="pill pill-indigo" style={{ padding: "2px 8px", fontSize: 9 }}><Pin size={9} />Pinned</span>}
+                  {n.pinned && <Pill tone="indigo" style={{ padding: "2px 8px", fontSize: 9 }}><Pin size={9} />Pinned</Pill>}
                 </div>
                 <span className="sch-note-date">{new Date(n.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
                 {n.description && <span className="sch-note-preview">{n.description}</span>}

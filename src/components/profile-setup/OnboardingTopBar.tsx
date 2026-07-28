@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Icon } from "@/components/ds";
+import { Icon, Pill } from "@/components/ds";
 import { supabase } from "@/lib/supabase/client";
 
 /* Flat 60px top bar for the onboarding shell. No search (this platform has none).
@@ -55,7 +55,7 @@ export default function OnboardingTopBar({ planLabel, profileId }: { planLabel?:
                   <div style={{ font: "500 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>Your plan</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
                     <span style={{ font: "600 13px/18px var(--font-sans)", color: "var(--ink)" }}>{planLabel}</span>
-                    <span className="pill pill-green">Paid</span>
+                    <Pill tone="green">Paid</Pill>
                   </div>
                 </div>
               )}

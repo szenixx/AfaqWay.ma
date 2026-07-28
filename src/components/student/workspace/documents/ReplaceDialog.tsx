@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatedModal, FileDrop, DialogCard, DialogHead, DialogFoot } from "@/components/ds";
+import { AnimatedModal, FileDrop, DialogCard, DialogHead, DialogFoot, Pill, type PillTone } from "@/components/ds";
 import { JrButton } from "../journey/parts";
 import type { DocRequirement, DocStatus } from "@/lib/journeyDb";
 
@@ -19,7 +19,7 @@ const LABEL: Record<DocStatus, string> = {
   pending: "Not uploaded", uploaded: "Uploaded", under_review: "Under review",
   needs_changes: "Rejected", approved: "Verified",
 };
-const TONE: Record<DocStatus, string> = {
+const TONE: Record<DocStatus, PillTone> = {
   pending: "grey", uploaded: "indigo", under_review: "amber", needs_changes: "red", approved: "green",
 };
 
@@ -60,7 +60,7 @@ export function ReplaceDialog({ requirement, status, existingName, onCancel, onC
         <DialogCard tone="quiet">
           <div className="rpl-doc">
             <span className="rpl-doc-name">{requirement.name || requirement.key}</span>
-            <span className={`pill pill-${TONE[status]}`}>{LABEL[status]}</span>
+            <Pill tone={TONE[status]}>{LABEL[status]}</Pill>
           </div>
           <dl className="rvw-facts">
             <div><dt>Required format</dt><dd>{requirement.acceptedTypes ? requirement.acceptedTypes.toUpperCase() : "Any"}</dd></div>

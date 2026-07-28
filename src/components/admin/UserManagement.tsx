@@ -4,12 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Check, X, Users, UserCheck, UserX } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { UserDetails } from "./users/UserDetails";
-import { Loader } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { plansForCountry, PLAN_LABEL } from "@/config/pricing";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
-import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar } from "@/components/ds";
+import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar, DataTable, Pill, Status, type Column } from "@/components/ds";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
@@ -113,6 +112,74 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
     return copy;   // "recent" keeps the query order, newest activation first
   }, [list, sortBy]);
 
+  /* Column definitions for the shared table. Every cell renders exactly what
+     the hand-written table rendered; only the markup around them changed. */
+  const columns = useMemo<Column<U>[]>(() => [
+    {
+      key: "user", header: "User",
+      sortValue: (u) => (u.full_name ?? "").toLowerCase(),
+      cell: (u) => (
+        <span className="um-user">
+          <UserAvatar size={36} user={{ id: u.id, name: u.full_name }} />
+          <span className="um-user-text">
+            <b>{u.full_name || "Unnamed"}</b>
+            <em>
+              {awu(u.user_number)}
+              {u.banned && <Status state="error" label="Suspended" />}
+            </em>
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "contact", header: "Contact", secondary: true,
+      sortValue: (u) => (u.email ?? "").toLowerCase(),
+      cell: (u) => (
+        <span className="um-contact">
+          <span>{u.email || "—"}</span>
+          {u.whatsapp_number && <em>{`${u.whatsapp_country_code ?? ""}${u.whatsapp_number}`}</em>}
+        </span>
+      ),
+    },
+    {
+      key: "country", header: "Country", secondary: true,
+      sortValue: (u) => u.destination_country ?? "",
+      cell: (u) => u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—",
+    },
+    {
+      key: "plan", header: "Plan",
+      sortValue: (u) => u.plan ?? "",
+      cell: (u) => (
+        <Select
+          value={u.plan ?? ""} icon={fieldIcon("plan")} ariaLabel="Change plan"
+          options={[{ value: "self_service", label: "Self Service" }, { value: "full_service", label: "Full Service" }]}
+          onChange={(v) => setConfirm({ title: "Change this user's plan?", body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.", tone: "orange", onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); } })}
+          style={{ minWidth: 168 }}
+        />
+      ),
+    },
+    {
+      key: "city", header: "City", secondary: true,
+      sortValue: (u) => u.city ?? "",
+      cell: (u) => u.city || "—",
+    },
+    {
+      key: "controls", header: "Controls",
+      cell: (u) => (
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <button type="button" title="Track" onClick={() => setTrack(u)} style={ctrl}><Eye size={16} /></button>
+          <button type="button" title="Edit details" onClick={() => setEdit(u)} style={ctrlBlue}><Pencil size={16} /></button>
+          <button type="button" title="Change program / major" onClick={() => setProgram(u)} style={ctrlBlue}><GraduationCap size={16} /></button>
+          {onOpenChat && <button type="button" title="Chat" onClick={() => onOpenChat(u.id)} style={ctrlBlue}><MessageCircle size={16} /></button>}
+          <a title="Email" href={u.email ? `mailto:${u.email}` : undefined} style={ctrl}><Mail size={16} /></a>
+          <button type="button" title={u.banned ? "Unban" : "Ban"} onClick={() => setConfirm({ title: u.banned ? "Unban this user?" : "Ban this user?", body: u.banned ? "They will regain access to their workspace." : "They will lose access to their workspace until you unban them.", tone: "red", onYes: () => { void patch(u.id, { banned: !u.banned }); setConfirm(null); } })} style={ctrlRed}><Ban size={16} /></button>
+        </div>
+      ),
+    },
+  // `patch` is stable enough for this list: it only closes over `load`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [onOpenChat]);
+
   async function patch(id: string, p: Record<string, unknown>) { await supabase.from("profiles").update(p).eq("id", id); void load(); }
   async function saveEdit() {
     if (!edit) return;
@@ -171,7 +238,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
           {Object.keys(stats.byCountry).length > 0 && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
               {Object.entries(stats.byCountry).sort((a, b) => b[1] - a[1]).map(([c, n]) => (
-                <span key={c} className="pill pill-grey">{c === "—" ? "No country" : (countryByCode(c)?.name ?? c)}: {n}</span>
+                <Pill key={c} tone="grey">{c === "—" ? "No country" : (countryByCode(c)?.name ?? c)}: {n}</Pill>
               ))}
             </div>
           )}
@@ -206,64 +273,21 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
         <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" aria-label="Search users" containerStyle={{ flex: "1 1 220px", maxWidth: 340 }} />
       </div>
 
-      {loading ? <Loader block /> : sorted.length === 0 ? (
-        <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No paid users yet. They appear here once a payment is approved.</div>
-      ) : (
-        <div className="um-table-wrap">
-          <table className="um-table">
-            <thead>
-              <tr>
-                {["User", "Contact", "Country", "Plan", "City", "Controls"].map((h) => <th key={h}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((u) => (
-                <tr key={u.id} className={u.banned ? "um-row banned" : "um-row"}>
-                  {/* Identity: avatar, name and reference in one scannable cell. */}
-                  <td style={td}>
-                    <span className="um-user">
-                      <UserAvatar size={36} user={{ id: u.id, name: u.full_name }} />
-                      <span className="um-user-text">
-                        <b>{u.full_name || "Unnamed"}</b>
-                        <em>
-                          {awu(u.user_number)}
-                          {u.banned && <span className="um-susp"><Ban size={10} />Suspended</span>}
-                        </em>
-                      </span>
-                    </span>
-                  </td>
-                  <td style={td}>
-                    <span className="um-contact">
-                      <span>{u.email || "—"}</span>
-                      {(u.whatsapp_number) && <em>{`${u.whatsapp_country_code ?? ""}${u.whatsapp_number}`}</em>}
-                    </span>
-                  </td>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</td>
-                  <td style={td}>
-                    <Select
-                      value={u.plan ?? ""} icon={fieldIcon("plan")} ariaLabel="Change plan"
-                      options={[{ value: "self_service", label: "Self Service" }, { value: "full_service", label: "Full Service" }]}
-                      onChange={(v) => setConfirm({ title: "Change this user's plan?", body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.", tone: "orange", onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); } })}
-                      style={{ minWidth: 168 }}
-                    />
-                  </td>
-                  <td style={td}>{u.city || "—"}</td>
-                  <td style={{ ...td, whiteSpace: "nowrap" }}>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <button type="button" title="Track" onClick={() => setTrack(u)} style={ctrl}><Eye size={16} /></button>
-                      <button type="button" title="Edit details" onClick={() => setEdit(u)} style={ctrlBlue}><Pencil size={16} /></button>
-                      <button type="button" title="Change program / major" onClick={() => setProgram(u)} style={ctrlBlue}><GraduationCap size={16} /></button>
-                      {onOpenChat && <button type="button" title="Chat" onClick={() => onOpenChat(u.id)} style={ctrlBlue}><MessageCircle size={16} /></button>}
-                      <a title="Email" href={u.email ? `mailto:${u.email}` : undefined} style={ctrl}><Mail size={16} /></a>
-                      <button type="button" title={u.banned ? "Unban" : "Ban"} onClick={() => setConfirm({ title: u.banned ? "Unban this user?" : "Ban this user?", body: u.banned ? "They will regain access to their workspace." : "They will lose access to their workspace until you unban them.", tone: "red", onYes: () => { void patch(u.id, { banned: !u.banned }); setConfirm(null); } })} style={ctrlRed}><Ban size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* The shared table renders the rows; the filters, search and sort above
+          still own which rows and in what order. */}
+      <DataTable
+        rows={sorted}
+        rowKey={(u) => u.id}
+        loading={loading}
+        columns={columns}
+        empty="No paid users yet. They appear here once a payment is approved."
+        footer={
+          <>
+            <span className="ds-table-count">{sorted.length} of {rows.length} {rows.length === 1 ? "user" : "users"}</span>
+            {sorted.length !== rows.length && <Pill tone="indigo" size="sm">Filtered</Pill>}
+          </>
+        }
+      />
 
       {edit && (
         <Modal title="Edit user" onClose={() => setEdit(null)} onSave={saveEdit}>
@@ -414,5 +438,3 @@ function Modal({ title, children, onClose, onSave }: { title: string; children: 
     </div>
   );
 }
-
-const td = { padding: "9px 12px", borderBottom: "1px solid var(--line-soft)", verticalAlign: "middle" } as const;

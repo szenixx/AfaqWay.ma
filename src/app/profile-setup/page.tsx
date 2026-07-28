@@ -3,7 +3,7 @@
 import { titleCase } from "@/lib/text";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon, Loader } from "@/components/ds";
+import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon, Loader, Pill } from "@/components/ds";
 import { Confetti } from "@/components/ds/Confetti";
 import { GENDER_OPTIONS, type Gender } from "@/lib/avatarIdentity";
 import { ensureGeneratedAvatar } from "@/lib/avatarProfile";
@@ -654,7 +654,7 @@ export default function ProfileSetup() {
                       <Flag stripes={c.stripes} size="lg" />
                       <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <span style={{ font: "600 14.5px/20px var(--font-sans)", color: selected ? "var(--indigo-text)" : "var(--ink)" }}>{c.name}</span>
-                        <span className={c.available ? "pill pill-green" : "pill pill-amber"}>{c.available ? "Available now" : "Coming soon"}</span>
+                        <Pill tone={c.available ? "green" : "amber"}>{c.available ? "Available now" : "Coming soon"}</Pill>
                       </span>
                     </button>
                   );
