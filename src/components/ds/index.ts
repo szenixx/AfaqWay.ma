@@ -28,3 +28,4 @@ export { Status, type StatusState, type StatusProps } from "./Status";
 export { DataTable, type Column, type DataTableProps } from "./DataTable";
 export { Toaster, toast, dismissToast, type Toast, type ToastKind } from "./Toast";
 export { ImageZoom } from "./ImageZoom";
+export { ContributionGraph } from "./ContributionGraph";

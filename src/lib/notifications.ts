@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { emailAnnouncement } from "@/lib/email/client";
-import { toast, type ToastKind } from "@/components/ds";
+/* Imported from the module, not the design-system barrel: pulling the barrel
+   into a lib drags in every component and creates an import cycle back
+   through anything that reads notifications. */
+import { toast, type ToastKind } from "@/components/ds/Toast";
 
 /* The notification centre.
 

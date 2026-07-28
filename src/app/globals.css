@@ -2141,3 +2141,82 @@ body {
 .stp-segbtn { border-radius: var(--radius-pill); }
 .sch-day, .sch-note, .sch-daylist-item { border-radius: var(--radius-lg); }
 .sch-chip, .sch-more { border-radius: var(--radius-pill); }
+
+/* ══ Profile ═══════════════════════════════════════════════════════════════
+   More air than the rest of the workspace: this is a page to read, not to work
+   in, so the type is larger and the cards are further apart. */
+.pf { display: flex; flex-direction: column; gap: 20px; padding-bottom: 8px; }
+.pf-card { background: var(--card); border: var(--card-border); border-radius: var(--radius-card);
+  box-shadow: var(--elev-2); overflow: hidden; }
+.pf-pad { padding: 24px 28px 26px; }
+
+/* The cover: platform blue and white, identical for everyone, not editable.
+   The mark is bled off the right edge so it reads as a texture, not a logo
+   placed on a banner. */
+.pf-cover { position: relative; height: 148px; overflow: hidden;
+  background: linear-gradient(115deg, var(--indigo-700) 0%, var(--indigo-600) 46%, var(--indigo-500) 100%); }
+.pf-cover::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(255,255,255,.14) 100%); }
+.pf-cover-mark { position: absolute; top: 50%; right: -46px; transform: translateY(-50%);
+  color: #fff; opacity: .1; line-height: 0; pointer-events: none; }
+
+.pf-head { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;
+  padding: 0 28px 20px; margin-top: -46px; }
+/* A white ring lifts the avatar off the cover it overlaps. */
+.pf-avatar { flex: none; border-radius: var(--radius-pill); padding: 5px; background: var(--card);
+  box-shadow: 0 8px 24px -10px rgba(23,35,58,.4); line-height: 0; }
+.pf-id { flex: 1; min-width: 0; padding-bottom: 4px; }
+.pf-name { margin: 0; font: 800 26px/32px var(--font-sans); color: var(--ink); letter-spacing: -.4px; }
+.pf-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 7px; }
+.pf-handle { font: 500 13px/18px var(--font-sans); color: var(--ink-soft); }
+.pf-head > .af-btn, .pf-head > button { flex: none; margin-bottom: 4px; }
+
+/* Four figures across the foot of the identity card. */
+.pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line-soft); }
+.pf-stat { display: flex; flex-direction: column; gap: 2px; padding: 18px 28px;
+  border-right: 1px solid var(--line-soft); transition: background 180ms var(--ease); }
+.pf-stat:last-child { border-right: none; }
+.pf-stat:hover { background: var(--indigo-50); }
+.pf-stat-value { font: 800 22px/28px var(--font-sans); color: var(--ink); font-variant-numeric: tabular-nums; }
+.pf-stat-label { font: 600 12px/17px var(--font-sans); color: var(--ink); }
+.pf-stat-sub { font: 400 11px/15px var(--font-sans); color: var(--ink-faint); }
+
+.pf-sec { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.pf-sec-title { margin: 0; font: 700 16px/22px var(--font-sans); color: var(--ink); }
+.pf-sec-sub { margin: 3px 0 0; font: 400 12.5px/18px var(--font-sans); color: var(--ink-soft); }
+
+@media (max-width: 900px) {
+  .pf-stats { grid-template-columns: repeat(2, 1fr); }
+  .pf-stat:nth-child(2) { border-right: none; }
+  .pf-stat:nth-child(-n+2) { border-bottom: 1px solid var(--line-soft); }
+  .pf-head { padding: 0 18px 18px; }
+  .pf-pad { padding: 20px 18px 22px; }
+  .pf-name { font-size: 22px; line-height: 28px; }
+}
+
+/* ══ Contribution graph ════════════════════════════════════════════════════ */
+.cg { display: flex; flex-direction: column; gap: 10px; }
+/* The year scrolls sideways inside itself; the page never does. */
+.cg-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
+.cg-inner { display: inline-flex; flex-direction: column; gap: 5px; min-width: 100%; }
+.cg-months { display: flex; gap: 3px; padding-left: 34px; }
+.cg-month { width: 13px; flex: none; font: 500 10px/13px var(--font-sans); color: var(--ink-faint); white-space: nowrap; }
+.cg-body { display: flex; gap: 5px; }
+.cg-days { display: flex; flex-direction: column; gap: 3px; width: 29px; flex: none; }
+.cg-day-label { height: 13px; font: 500 9.5px/13px var(--font-sans); color: var(--ink-faint); }
+.cg-grid { display: flex; gap: 3px; }
+.cg-week { display: flex; flex-direction: column; gap: 3px; }
+.cg-cell { width: 13px; height: 13px; border-radius: 3px; flex: none;
+  transition: transform 120ms var(--ease), outline-color 120ms var(--ease);
+  outline: 1px solid rgba(23,35,58,.04); outline-offset: -1px; }
+.cg-cell.empty { background: transparent; outline: none; }
+.cg-cell:hover:not(.empty) { transform: scale(1.28); outline-color: var(--indigo-600); }
+.cg-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.cg-legend-text { font: 400 11px/15px var(--font-sans); color: var(--ink-faint); margin: 0 3px; }
+.cg-skeleton { height: 112px; border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, var(--subtle) 25%, var(--line-soft) 37%, var(--subtle) 63%);
+  background-size: 400% 100%; animation: dsSkel 1.4s ease infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .cg-cell:hover:not(.empty) { transform: none; }
+  .cg-skeleton { animation: none; }
+}

@@ -11,8 +11,9 @@ import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
 import { removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
 import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel, Pill } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel, Pill, Status, ContributionGraph } from "@/components/ds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
+import { useActivity } from "@/lib/activity";
 import { useJourneySummary } from "@/lib/useJourneySummary";
 import { useNotifications, markRead, markAllRead } from "@/lib/notifications";
 import {
@@ -400,6 +401,11 @@ export function Subscription({ profile }: { profile: WsProfile }) {
 /* ── Profile (read-only) ──────────────────────────────────────────────────── */
 export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
+  /* Real activity, from the rows the platform already writes. Never generated:
+     an empty square means nothing happened that day. */
+  const activity = useActivity(profile.userId);
+  const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree);
+
   const rows = [
     { label: "Full name", value: profile.fullName || "—", icon: <UserRound size={15} /> },
     { label: "Email", value: profile.email || "—", icon: <Mail size={15} /> },
@@ -410,17 +416,73 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
   ];
   const st = profile.study ?? { program: "—", tuition: "—", city: "—", country: "Lithuania", language: "English", university: "—" };
   const ac = profile.academic ?? { lastDegree: "—", field: "—", year: "—", grade: "—", target: "—", targetDegree: "", englishLevel: "—", test: "—" };
+
+  const stats = [
+    { label: "Journey", value: `${j.pct}%`, sub: j.stageCount ? `Stage ${j.stageIndex} of ${j.stageCount}` : "Not started" },
+    { label: "Documents", value: `${j.docsApproved}/${j.docsTotal}`, sub: "Verified" },
+    { label: "Actions this year", value: String(activity.total), sub: "Across the platform" },
+    { label: "Day streak", value: String(activity.streak), sub: activity.streak === 1 ? "day in a row" : "days in a row" },
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Panel>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18, borderBottom: "1px solid var(--line-soft)", marginBottom: 6 }}>
-          <UserAvatar size={64} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: profile.avatarSeed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ font: "800 20px/26px var(--font-sans)", color: "var(--ink)" }}>{profile.fullName || "Student"}</div>
-            <div style={{ font: "500 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>ID {profile.profileId} · {planById(profile.plan)?.name ?? "—"}</div>
-          </div>
-          <BtnGhost tone="blue" style={{ marginLeft: "auto" }} onClick={() => onNav("settings")}><Pencil size={15} />Edit</BtnGhost>
+    <div className="pf">
+      {/* ── Identity ── */}
+      <section className="pf-card">
+        {/* Fixed platform cover: blue and white, the same for every student.
+            Not editable, deliberately — the profile is a record, not a page to
+            decorate. */}
+        <div className="pf-cover" aria-hidden>
+          <span className="pf-cover-mark"><LogoMark size={260} /></span>
         </div>
+
+        <div className="pf-head">
+          <span className="pf-avatar">
+            <UserAvatar size={104} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: profile.avatarSeed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
+          </span>
+          <div className="pf-id">
+            <h2 className="pf-name">{profile.fullName || "Student"}</h2>
+            <div className="pf-meta">
+              <span className="pf-handle">ID {profile.profileId}</span>
+              <Pill tone={profile.plan === "full_service" ? "indigo" : "green"}>{planById(profile.plan)?.name ?? "No plan"}</Pill>
+              {profile.verified && <Status state="success" label="Verified" />}
+            </div>
+          </div>
+          <BtnGhost tone="blue" onClick={() => onNav("settings")}><Pencil size={15} />Edit profile</BtnGhost>
+        </div>
+
+        <div className="pf-stats">
+          {stats.map((stat) => (
+            <div key={stat.label} className="pf-stat">
+              <span className="pf-stat-value">{stat.value}</span>
+              <span className="pf-stat-label">{stat.label}</span>
+              <span className="pf-stat-sub">{stat.sub}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Activity ── */}
+      <section className="pf-card pf-pad">
+        <header className="pf-sec">
+          <div>
+            <h3 className="pf-sec-title">Activity</h3>
+            <p className="pf-sec-sub">
+              {activity.loading ? "Reading your activity…"
+                : activity.total === 0 ? "Your journey steps, messages, documents and schedule entries appear here."
+                : `${activity.total} ${activity.total === 1 ? "action" : "actions"} in the past year.`}
+            </p>
+          </div>
+        </header>
+        <ContributionGraph days={activity.days} best={activity.best} loading={activity.loading} />
+      </section>
+
+      <section className="pf-card pf-pad">
+        <header className="pf-sec">
+          <div>
+            <h3 className="pf-sec-title">Details</h3>
+            <p className="pf-sec-sub">From your onboarding. To change them, use Settings.</p>
+          </div>
+        </header>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 26px" }} className="sw-2col">
           {rows.map((r) => (
             <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--line-soft)" }}>
@@ -429,8 +491,7 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
             </div>
           ))}
         </div>
-        <InlineNote>These details come from your onboarding. To change them, use Settings.</InlineNote>
-      </Panel>
+      </section>
 
       {/* Personal Academic Information — sits above Study Application (always shown) */}
       <Panel>
