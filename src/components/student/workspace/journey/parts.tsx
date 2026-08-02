@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Info } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { EllipsisVertical, Info } from "lucide-react";
 
 /* Shared Journey pieces.
 
@@ -39,6 +39,67 @@ export function JrButton({
       {icon}
       {children}
     </button>
+  );
+}
+
+/* ── Overflow menu ────────────────────────────────────────────────────────── */
+
+/**
+ * The three-dot menu.
+ *
+ * Extracted rather than copied: the admin chat draws the same popup with inline
+ * styles, and a second hand-styled copy is how two menus start disagreeing about
+ * radius, shadow and spacing. This one owns the behaviour too — click outside,
+ * scroll and Escape all close it, which the inline version only half did.
+ */
+export function JrMenu({ label = "Options", items }: {
+  label?: string;
+  items: { label: string; icon?: ReactNode; danger?: boolean; onSelect: () => void }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => {
+      if (e.type === "keydown" && (e as KeyboardEvent).key !== "Escape") return;
+      // A click inside the menu is a selection, not a dismissal.
+      if (e.type === "pointerdown" && root.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("keydown", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+
+  return (
+    <div className="jr-menu" ref={root}>
+      <button
+        type="button" className="jr-menu-btn" title={label} aria-label={label}
+        aria-haspopup="menu" aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <EllipsisVertical size={16} />
+      </button>
+      {open && (
+        <div className="jr-menu-pop" role="menu">
+          {items.map((item) => (
+            <button
+              key={item.label} type="button" role="menuitem"
+              className={`jr-menu-item${item.danger ? " danger" : ""}`}
+              onClick={() => { setOpen(false); item.onSelect(); }}
+            >
+              {item.icon}{item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

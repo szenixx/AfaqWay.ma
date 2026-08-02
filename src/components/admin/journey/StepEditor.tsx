@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Reorder } from "framer-motion";
 import { ArrowDown, ArrowUp, Bell, Copy, FileText, GripVertical, Paperclip, Plus, Trash2, Undo2 } from "lucide-react";
 import { Input, TextArea, Select, Toggle, Checkbox, Loader, AnimatedModal } from "@/components/ds";
 import { uploadUserFile } from "@/lib/storage/client";
@@ -11,7 +12,8 @@ import {
 } from "@/lib/journeyDb";
 import { JrButton } from "@/components/student/workspace/journey/parts";
 import { BLOCK_KINDS, blockKindOf, starterData, type BlockKind } from "@/lib/journeyBlocks";
-import { BlockEditor } from "./BlockEditors";
+import { BlockEditor, PlanPicker } from "./BlockEditors";
+import { StepBehaviour } from "./StepBehaviour";
 
 /* Step content editor.
 
@@ -28,7 +30,7 @@ const PRIORITIES = ["low", "normal", "high"].map((v) => ({ value: v, label: v[0]
 const REPEATS = ["none", "daily", "weekly", "monthly"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
 
 export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => void }) {
-  const [tab, setTab] = useState<"content" | "documents" | "reminders">("content");
+  const [tab, setTab] = useState<"content" | "documents" | "behaviour" | "reminders">("content");
   /* Document requirements live in journey_steps.rules, so an administrator can
      define what a step needs without any schema change. The Documents module
      reads exactly this list. */
@@ -37,7 +39,6 @@ export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => voi
   const [blocks, setBlocks] = useState<DbBlock[]>([]);
   const [reminders, setReminders] = useState<DbReminder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [drag, setDrag] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<string | null>(null);
@@ -116,11 +117,14 @@ export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => voi
     await saveBlock({ step_id: step.id, sort_order: b.sort_order + 1, kind: b.kind, enabled: b.enabled, title: b.title, body: b.body, data: b.data, audience: b.audience });
     await load();
   };
-  const dropBlock = async (target: DbBlock) => {
-    if (!drag || drag === target.id) return;
-    const ids = blocks.map((b) => b.id).filter((id) => id !== drag);
-    ids.splice(blocks.findIndex((b) => b.id === target.id), 0, drag);
-    setDrag(null); await flushSaves(); await reorder("journey_blocks", ids); await load();
+  /* Drag-to-reorder (framer-motion Reorder): the drag updates `blocks` live for
+     smooth visual feedback; the DB write happens once, on drop. */
+  const blocksRef = useRef(blocks);
+  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
+  const persistBlockOrder = async () => {
+    await flushSaves();
+    await reorder("journey_blocks", blocksRef.current.map((b) => b.id));
+    await load();
   };
 
   /* Attachments upload through the platform storage gateway. */
@@ -185,6 +189,7 @@ export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => voi
         <span className="chat-tabs">
           <button type="button" className={`chat-tab${tab === "content" ? " active" : ""}`} onClick={() => setTab("content")}>Content</button>
           <button type="button" className={`chat-tab${tab === "documents" ? " active" : ""}`} onClick={() => setTab("documents")}>Documents</button>
+          <button type="button" className={`chat-tab${tab === "behaviour" ? " active" : ""}`} onClick={() => setTab("behaviour")}>Behaviour</button>
           <button type="button" className={`chat-tab${tab === "reminders" ? " active" : ""}`} onClick={() => setTab("reminders")}>Reminders</button>
         </span>
       </header>
@@ -196,38 +201,47 @@ export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => voi
           <>
             {blocks.length === 0 && <p className="jr-sec-text">No content yet. Add the first block below.</p>}
 
-            {blocks.map((b) => {
-              const kind = blockKindOf(b.kind);
-              return (
-                <div
-                  key={b.id} className={`jm-block${b.enabled ? "" : " off"}`}
-                  draggable onDragStart={() => setDrag(b.id)}
-                  onDragOver={(e) => e.preventDefault()} onDrop={() => dropBlock(b)}
-                >
-                  <div className="jm-block-head">
-                    <span className="jm-grip"><GripVertical size={14} /></span>
-                    <Select
-                      value={kind} onChange={(v) => changeKind(b, v as BlockKind)} options={KIND_OPTIONS}
-                      ariaLabel="Block type" containerStyle={{ minWidth: 168 }}
-                    />
-                    <Select
-                      value={b.audience} onChange={(v) => patchBlock(b, { audience: v as DbBlock["audience"] })}
-                      options={[{ value: "student", label: "Student" }, { value: "advisor", label: "Advisor only" }]}
-                      ariaLabel="Audience" containerStyle={{ minWidth: 150 }}
-                    />
-                    <Toggle checked={b.enabled} onChange={(v) => patchBlock(b, { enabled: v })} ariaLabel="Enabled" />
-                    <button type="button" className="chat-act" title="Duplicate block" onClick={() => duplicateBlock(b)}><Copy size={14} /></button>
-                    <button type="button" className="chat-act" title="Delete block" onClick={() => removeBlock(b)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
-                  </div>
+            <Reorder.Group as="div" axis="y" values={blocks} onReorder={setBlocks} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {blocks.map((b) => {
+                const kind = blockKindOf(b.kind);
+                return (
+                  <Reorder.Item
+                    as="div" key={b.id} value={b}
+                    onDragEnd={() => { void persistBlockOrder(); }}
+                    className={`jm-block${b.enabled ? "" : " off"}`}
+                    transition={{ type: "spring", stiffness: 520, damping: 32 }}
+                    whileDrag={{ scale: 1.02, boxShadow: "0 20px 45px rgba(23,35,58,.18)" }}
+                    style={{ cursor: "grab" }}
+                  >
+                    <div className="jm-block-head">
+                      <span className="jm-grip" style={{ cursor: "grab" }}><GripVertical size={14} /></span>
+                      <Select
+                        value={kind} onChange={(v) => changeKind(b, v as BlockKind)} options={KIND_OPTIONS}
+                        ariaLabel="Block type" containerStyle={{ minWidth: 168 }}
+                      />
+                      <Select
+                        value={b.audience} onChange={(v) => patchBlock(b, { audience: v as DbBlock["audience"] })}
+                        options={[{ value: "student", label: "Student" }, { value: "advisor", label: "Advisor only" }]}
+                        ariaLabel="Audience" containerStyle={{ minWidth: 150 }}
+                      />
+                      <Toggle checked={b.enabled} onChange={(v) => patchBlock(b, { enabled: v })} ariaLabel="Enabled" />
+                      <button type="button" className="chat-act" title="Duplicate block" onClick={() => duplicateBlock(b)}><Copy size={14} /></button>
+                      <button type="button" className="chat-act" title="Delete block" onClick={() => removeBlock(b)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
+                    </div>
 
-                  {/* Each kind edits exactly the shape the student renderer reads. */}
-                  <BlockEditor
-                    kind={kind} block={b} patch={(patch) => patchBlock(b, patch)}
-                    onPickFile={() => pickFile(b.id)} uploading={uploading === b.id}
-                  />
-                </div>
-              );
-            })}
+                    {/* Each kind edits exactly the shape the student renderer reads. */}
+                    <BlockEditor
+                      kind={kind} block={b} patch={(patch) => patchBlock(b, patch)}
+                      onPickFile={() => pickFile(b.id)} uploading={uploading === b.id}
+                    />
+                    {/* Which plan sees it — one control, every kind. Blocks the
+                        import tagged for a single plan were otherwise invisible
+                        as such, so an edit could silently reach half the students. */}
+                    <PlanPicker block={b} patch={(patch) => patchBlock(b, patch)} />
+                  </Reorder.Item>
+                );
+              })}
+            </Reorder.Group>
 
             <div className="jm-addblock">
               <span className="jm-addblock-label"><Plus size={14} />Add block</span>
@@ -315,6 +329,11 @@ export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => voi
 
             <button type="button" className="jm-addstep" onClick={addReq}><Plus size={15} />Add required document</button>
           </>
+        ) : tab === "behaviour" ? (
+          /* Everything the importer can write into a step's rules, an
+             administrator can read and change. Keyed on the step so switching
+             steps re-reads the rules rather than keeping the previous ones. */
+          <StepBehaviour key={step.id} step={step} />
         ) : (
           <>
             {reminders.length === 0 && <p className="jr-sec-text">No reminders on this step yet.</p>}

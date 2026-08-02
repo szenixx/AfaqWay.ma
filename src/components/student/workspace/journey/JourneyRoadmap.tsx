@@ -1,19 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ChevronDown, CircleCheck, Clock3, FileText, GraduationCap, Landmark, Lock,
+  ChevronDown, CircleCheck, Clock3, FileText, FlaskConical, GraduationCap, Landmark, Lock,
   Plane, Route, SkipForward,
 } from "lucide-react";
 import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep } from "@/lib/journey";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
-  requestStageApproval, setStepState, subscribeJourney, type DbDocument, type Plan,
+  mergeStepMeta, requestStageApproval, setStepState, subscribeJourney,
+  type DbDocument, type Plan, type StepMeta,
 } from "@/lib/journeyDb";
+import {
+  announceStage, emitJourneyEvent, saveVfsAppointment, type Appointment,
+} from "@/lib/journeyEvents";
 import { Loader, Status } from "@/components/ds";
 import type { WsProfile } from "../Modules";
 import { JourneyStepModal } from "./JourneyStepModal";
 import { MarkDoneDialog } from "./MarkDoneDialog";
+import { CompleteDialog } from "./CompleteDialog";
+import { VfsAppointmentDialog } from "./VfsAppointmentDialog";
+import { TrpDecisionDialog, TrpCelebration, JourneyCompleteCelebration, type TrpOutcome } from "./TrpDecisionDialog";
+import { OptionalModule, ModuleDialog, type ModuleDialogKind } from "./OptionalModule";
+import { SUPPORT_WHATSAPP } from "@/config/support";
 import { InfoCard, JrButton } from "./parts";
 
 /* The Journey page — a roadmap of stages, not a checklist.
@@ -31,7 +40,18 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<{ stage: JourneyStage; step: JourneyStep } | null>(null);
-  const [confirming, setConfirming] = useState<{ stage: JourneyStage; step: JourneyStep } | null>(null);
+  /* One "what is being completed" slot, with the shape of dialog the step's own
+     rules ask for. Four separate booleans is how two dialogs end up open at once. */
+  const [acting, setActing] = useState<
+    { kind: "submit" | "confirm" | "appointment" | "decision"; stage: JourneyStage; step: JourneyStep } | null
+  >(null);
+  const [celebrating, setCelebrating] = useState(false);
+  /* Which optional modules are expanded, and which dialog one of them is asking.
+     Expanded-by-default once enabled: a student who just switched it on wants to
+     see what they got. */
+  const [openModules, setOpenModules] = useState<Set<string>>(new Set());
+  const [moduleAsk, setModuleAsk] = useState<{ kind: ModuleDialogKind; step: JourneyStep } | null>(null);
+  const [finished, setFinished] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -43,12 +63,14 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
     const [progress, approvals, docs] = await Promise.all([
       fetchProgress(profile.userId), fetchApprovals(profile.userId), fetchDocuments(profile.userId),
     ]);
-    const built = assembleRoadmap(dbStages, dbSteps, progress, approvals);
+    const built = assembleRoadmap(dbStages, dbSteps, progress, approvals, {
+      plan: profile.plan, tester: profile.tester,
+    });
     setStages(built);
     setUploads(docs);
     setExpanded((cur) => cur ?? built.find((s) => s.state === "current" || s.state === "waiting_approval")?.id ?? built[0]?.id ?? null);
     setLoading(false);
-  }, [profile.plan, profile.userId, profile.academic?.targetDegree]);
+  }, [profile.plan, profile.userId, profile.tester, profile.academic?.targetDegree]);
   // Fetching from Supabase is the "subscribe to an external system" case; the
   // state set here is the query result, not derived render state.
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -56,6 +78,89 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
   /* Live sync: any journey change an administrator makes, new content, a new
      document requirement, an approval, arrives here with no page refresh. */
   useEffect(() => subscribeJourney(() => { void load(); }), [load]);
+
+  /* ── Stage unlock automation ──────────────────────────────────────────────
+     "Immediately after the student completes Stage 3 and Stage 4 becomes
+     unlocked: automatically send an Important Preparation notification … the
+     platform notification and WhatsApp message should be sent only once."
+
+     Once is enforced in the database by a dedupe key, not here: a second tab, a
+     refresh or a realtime reload must not produce a second warning. The ref only
+     keeps this from making the same no-op call on every render. */
+  const announced = useRef(new Set<string>());
+  useEffect(() => {
+    const open = stages.find((s) => s.state === "current" || s.state === "waiting_approval");
+    if (!open) return;
+
+    const key = `stage:${open.id}`;
+    if (!announced.current.has(key)) {
+      announced.current.add(key);
+      void emitJourneyEvent("stage_unlocked", {
+        ctx: { stage: open.title }, stageId: open.id, once: key,
+      });
+    }
+
+    for (const step of open.steps) {
+      if (!step.announce || announced.current.has(step.id)) continue;
+      announced.current.add(step.id);
+      void announceStage({
+        userId: profile.userId, stepId: step.id, stageId: open.id, announce: step.announce,
+      });
+    }
+  }, [stages, profile.userId]);
+
+  /* ── The end of the journey ───────────────────────────────────────────────
+     Every stage the student can actually enter is complete. Plan-locked stages
+     do not count: a Self Service student has finished their journey when Stage 4
+     is done, and telling them otherwise because Stage 5 exists would be wrong.
+
+     Shown once per browser. The database has no "journey finished" flag, and
+     inventing one to drive a confetti burst would be a schema change for an
+     animation. */
+  useEffect(() => {
+    if (!stages.length || finished) return;
+    const reachable = stages.filter((s) => !s.planLocked && s.total > 0);
+    if (!reachable.length || !reachable.every((s) => s.state === "completed")) return;
+    try {
+      const key = `af.journey.done.${profile.userId}`;
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+    } catch { /* storage blocked — show it, once per session is close enough */ }
+    // Reacting to the roadmap reaching a terminal state, not deriving render state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFinished(true);
+  }, [stages, finished, profile.userId]);
+
+  /* ── The optional-module reminder ─────────────────────────────────────────
+     "When a student completes every normal Stage 3 step WITHOUT enabling the
+     sponsorship module, display a reminder dialog."
+
+     Offered once, at the moment the rest of the stage is finished — which is
+     the last point at which enabling it still saves them a delay. "No Thanks"
+     writes moduleReminderDismissed and it is never offered again.
+
+     Deliberately does not fire while another dialog is open: interrupting a
+     student mid-completion with an unrelated offer is how a prompt gets
+     dismissed without being read. */
+  useEffect(() => {
+    if (moduleAsk || acting) return;
+    for (const stage of stages) {
+      if (stage.state !== "current" && stage.state !== "waiting_approval") continue;
+      const modules = stage.steps.filter((s) => s.moduleKey);
+      if (!modules.length) continue;
+      // Every step that is not a module container, and not one of its children.
+      const ordinary = stage.steps.filter((s) => !s.moduleKey);
+      if (!ordinary.length || !ordinary.every((s) => s.state === "completed" || s.state === "skipped")) continue;
+
+      const offer = modules.find((m) => !m.moduleEnabled && !m.moduleReminderDismissed && m.moduleDialogs.remind);
+      if (offer) {
+        // Reacting to the stage reaching a terminal state, not deriving render state.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setModuleAsk({ kind: "remind", step: offer });
+        return;
+      }
+    }
+  }, [stages, moduleAsk, acting]);
 
   /* Coming back from an upload reopens the step that sent the student away. */
   useEffect(() => {
@@ -98,9 +203,157 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
       user_id: profile.userId, step_id: step.id, stage_id: stage.id,
       kind: "submitted", actor: "student", message: comment || "Marked the step as done.",
     });
-    setConfirming(null);
+    setActing(null);
     await load();
     setBusy(null);
+  };
+
+  /* ── Self-completion ────────────────────────────────────────────────────────
+     The steps the Excel hands to the student: "Do not require admin approval …
+     automatically mark the step as Completed and unlock the next Journey step."
+
+     The database guard checks the same rule, so this is the convenient path and
+     not the only one: a request that skipped this function still could not
+     complete a reviewed step. */
+  const completeStep = async (
+    stage: JourneyStage, step: JourneyStep, meta?: StepMeta, message = "Completed this step.",
+  ) => {
+    setBusy(step.id);
+    await setStepState(profile.userId, step.id, "completed", undefined, meta);
+    await logEvent({
+      user_id: profile.userId, step_id: step.id, stage_id: stage.id,
+      kind: "completed", actor: "student", message,
+    });
+    await emitJourneyEvent("step_completed", {
+      ctx: { step: step.title, stage: stage.title }, stepId: step.id, stageId: stage.id,
+      once: `step-done:${step.id}`,
+    });
+    setActing(null);
+    await load();
+    setBusy(null);
+  };
+
+  /* "Save the appointment date, time, and timezone in the database. Automatically
+     create a new event in the student's Schedule module … create automatic
+     reminders." Then, and only then, the step completes. */
+  const saveAppointment = async (stage: JourneyStage, step: JourneyStep, appointment: Appointment) => {
+    setBusy(step.id);
+    const eventId = await saveVfsAppointment({
+      userId: profile.userId, stepId: step.id, stageId: stage.id,
+      appointment, previousEventId: step.meta.eventId,
+    });
+    await completeStep(
+      stage, step,
+      { ...step.meta, appointment, eventId: eventId ?? step.meta.eventId },
+      `Booked the VFS appointment for ${appointment.date} at ${appointment.time}.`,
+    );
+  };
+
+  /* The residence permit outcome. Approved completes the step and opens the next
+     stage; rejected deliberately does not — "keep the current step active" — and
+     opens the conversation instead. */
+  const decideTrp = async (stage: JourneyStage, step: JourneyStep, outcome: TrpOutcome) => {
+    setBusy(step.id);
+    if (outcome === "approved") {
+      await emitJourneyEvent("trp_approved", { stepId: step.id, stageId: stage.id, once: `trp:${step.id}` });
+      await completeStep(stage, step, { ...step.meta, decision: "approved" }, "Reported an approved residence permit.");
+      setCelebrating(true);
+      return;
+    }
+
+    await mergeStepMeta(profile.userId, step.id, { ...step.meta, decision: "rejected" });
+    await logEvent({
+      user_id: profile.userId, step_id: step.id, stage_id: stage.id,
+      kind: "trp_rejected", actor: "student", message: "Reported a rejected residence permit.",
+    });
+    await emitJourneyEvent("trp_rejected", { stepId: step.id, stageId: stage.id, once: `trp:${step.id}` });
+    setActing(null);
+    await load();
+    setBusy(null);
+    // "Automatically open the Platform Chat" — the support conversation is where
+    // a rejection is handled, so the student is taken straight there.
+    onNav("messages");
+  };
+
+  /**
+   * "Chat with Support" — Stage 5's first step.
+   *
+   * The student is not reporting work done, they are asking for help after
+   * landing in a new country. So this submits the step for review (which is what
+   * puts it in the administrator's queue) carrying the details the Excel asks
+   * the request to include, opens the conversation so they can start talking
+   * straight away, and waits. Approving it is what unlocks the rest of Stage 5.
+   */
+  const requestSupport = async (stage: JourneyStage, step: JourneyStep) => {
+    setBusy(step.id);
+    const details = [
+      `Support request from ${profile.fullName ?? "a student"}.`,
+      profile.whatsapp ? `WhatsApp: ${profile.whatsapp}` : null,
+      profile.study?.university && profile.study.university !== "—" ? `University: ${profile.study.university}` : null,
+      "Journey: Bachelor · Lithuania",
+      `Stage: ${stage.title}`,
+      `Step: ${step.title}`,
+    ].filter(Boolean).join("\n");
+
+    await setStepState(profile.userId, step.id, "in_progress", details);
+    await logEvent({
+      user_id: profile.userId, step_id: step.id, stage_id: stage.id,
+      kind: "support_requested", actor: "student", message: details,
+    });
+    await load();
+    setBusy(null);
+    onNav("messages");
+  };
+
+  /* ── Optional modules ──────────────────────────────────────────────────────
+     Enabling writes one flag on the container's own progress row. The child
+     steps already exist in the database, so nothing is created or destroyed —
+     they simply start counting, and start being shown.
+
+     Disabling is the same write in reverse. Uploads are deliberately left
+     alone: "Previously uploaded documents will remain stored in the Documents
+     Module unless removed separately." A student who switches the module back
+     on finds their work where they left it. */
+  const setModuleEnabled = async (step: JourneyStep, enabled: boolean) => {
+    setBusy(step.id);
+    await mergeStepMeta(profile.userId, step.id, { ...step.meta, moduleEnabled: enabled });
+    await logEvent({
+      user_id: profile.userId, step_id: step.id, stage_id: null,
+      kind: enabled ? "module_enabled" : "module_disabled", actor: "student",
+      message: `${enabled ? "Enabled" : "Disabled"} the ${step.title} module.`,
+    });
+    setOpenModules((set) => {
+      const next = new Set(set);
+      if (enabled) next.add(step.id); else next.delete(step.id);
+      return next;
+    });
+    setModuleAsk(null);
+    await load();
+    setBusy(null);
+  };
+
+  /** "No Thanks" on the reminder: never offer it again. */
+  const dismissModuleReminder = async (step: JourneyStep) => {
+    setModuleAsk(null);
+    await mergeStepMeta(profile.userId, step.id, { ...step.meta, moduleReminderDismissed: true });
+    await load();
+  };
+
+  /** Opens whichever dialog this step's rules call for. */
+  const startCompletion = (stage: JourneyStage, step: JourneyStep) => {
+    if (step.support) return void requestSupport(stage, step);
+    if (step.completion === "decision") return setActing({ kind: "decision", stage, step });
+    if (step.capture === "vfs_appointment") return setActing({ kind: "appointment", stage, step });
+    if (step.completion === "self") {
+      /* Most of Stage 4 asks a question first. Stage 5's steps are "Done" and
+         nothing more, so a step with no question and no checklist completes on
+         the click — opening a dialog with nothing in it would be a dead button. */
+      if (!step.confirm && step.gate.length === 0) return void completeStep(stage, step);
+      return setActing({ kind: "confirm", stage, step });
+    }
+    // The default: submit for review, with an optional note for the advisor.
+    if (step.requirements.length > 0) return void submitStep(stage, step, "");
+    return setActing({ kind: "submit", stage, step });
   };
 
   const undoSubmit = async (step: JourneyStep) => {
@@ -132,6 +385,108 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
     setBusy(null);
   };
 
+
+  /* One step row, used for ordinary steps AND for an optional module's
+     sub-steps. Extracted rather than duplicated: the brief asks sub-steps to
+     "use the same mini-step component used throughout the Journey", and a
+     second copy is how the two quietly stop matching. */
+  const renderStep = (stage: JourneyStage, step: JourneyStep) => {
+const docs = stepDocuments(step, uploads);
+    const blocked = docs.missingRequired > 0;
+    const actionable = step.state === "pending" || step.state === "rejected";
+    /* Full Service never reports the residence permit outcome:
+       "hide the Mark as Completed button … the application
+       status is managed entirely by administrators." */
+    const adminOnly = step.completion === "decision" && profile.plan !== "self_service";
+    /* A step may name its own button. Stage 5's first step is
+       "Chat with Support" and must never read "Done": the
+       student is asking for help, not reporting work. */
+    const label = step.cta
+      || (step.completion === "decision" ? "Report my decision"
+        : step.completion === "self" ? "Mark as Completed" : "Mark as Done");
+
+    return (
+      <li key={step.id} className={`jr-step ${step.state}`}>
+        <div className="jr-step-main">
+          <div className="jr-step-body">
+            {/* The step's state is the shared Status, not a
+                bespoke glyph: the word is always rendered, so
+                colour is never the only carrier. */}
+            <span className="jr-step-num">
+              Step {step.index}{step.due ? ` · ${step.due}` : ""}
+              {docs.required > 0 && ` · ${docs.verified}/${docs.required} documents`}
+            </span>
+            {/* The title leads: it is what the student is
+                actually being asked to do. The state rides
+                beside it, small enough not to compete. */}
+            <div className="jr-step-title">
+              {step.title}
+              <Status state={STATE_STATUS[step.state]} label={STATE_BADGE[step.state].label} size="xs" />
+            </div>
+            <p className="jr-step-desc">{step.description}</p>
+
+            {/* "Display a checklist showing any incomplete
+                prerequisites." A locked step that says only
+                "locked" tells the student nothing they can act on. */}
+            {step.blockedBy.length > 0 && (
+              <div className="jr-prereq">
+                <span className="jr-prereq-head">Finish these first</span>
+                <ul>{step.blockedBy.map((t) => <li key={t}>{t}</li>)}</ul>
+              </div>
+            )}
+
+            {blocked && actionable && (
+              <p className="jr-step-block">Complete document upload first.</p>
+            )}
+            {adminOnly && step.state !== "completed" && (
+              <p className="jr-step-block">
+                Our team records this decision for you. You do not need to do anything.
+              </p>
+            )}
+            {step.meta.appointment && (
+              <p className="jr-step-note">
+                Appointment saved for {step.meta.appointment.date} at {step.meta.appointment.time}.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="jr-step-acts">
+          {actionable && !adminOnly && (
+            <JrButton
+              tone="primary" disabled={busy === step.id || blocked}
+              title={blocked ? "Complete document upload first." : undefined}
+              onClick={() => (blocked ? undefined : startCompletion(stage, step))}
+            >
+              {busy === step.id ? "Saving…" : label}
+            </JrButton>
+          )}
+          {/* An appointment can be moved after it is booked;
+              the reminders and the calendar event follow it. */}
+          {step.capture === "vfs_appointment" && step.state === "completed" && (
+            <JrButton
+              disabled={busy === step.id}
+              onClick={() => setActing({ kind: "appointment", stage, step })}
+            >
+              Change appointment
+            </JrButton>
+          )}
+          {step.state === "submitted" && (
+            <JrButton disabled={busy === step.id} onClick={() => undoSubmit(step)}>
+              {step.support ? "Cancel request" : "Undo submit"}
+            </JrButton>
+          )}
+          {actionable && step.allowSkip && (
+            <JrButton icon={<SkipForward size={14} />} disabled={busy === step.id} onClick={() => skipStep(stage, step)}>
+              Skip
+            </JrButton>
+          )}
+          <JrButton tone="outline" onClick={() => setDetail({ stage, step })}>View Details</JrButton>
+        </div>
+      </li>
+    );
+  };
+
   if (loading) return <div className="jr-root"><Loader size={48} block label="Loading your roadmap" /></div>;
 
   if (!stages.length) {
@@ -160,6 +515,18 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
             {stages.length} stages from application to arrival. Work through the steps of your current
             stage in any order, then send the stage to your advisor.
           </p>
+          {/* Unlocking the whole roadmap silently would read as a bug, and worse,
+              a tester could mistake an open stage for one they had earned. */}
+          {profile.tester && (
+            <p className="jr-testerbar">
+              <FlaskConical size={14} aria-hidden />
+              <span>
+                <b>Tester access.</b> Every stage and step is open for review, whatever your real
+                progress. Other accounts are unaffected, and completing a step still follows the
+                normal rules.
+              </span>
+            </p>
+          )}
         </div>
         <div className="jr-overall">
           <span className="jr-overall-pct">{overall.pct}%</span>
@@ -201,6 +568,51 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
           const locked = stage.state === "locked";
           const open = expanded === stage.id && !locked;
           const badge = STATE_BADGE[stage.state];
+
+          /* A stage the plan excludes is shown, not hidden: the header stays
+             sharp so a Self Service student can read what Stage 5 covers, and
+             the steps behind it are blurred with the upgrade over them. Hiding
+             it would make the roadmap look shorter than it is. */
+          if (stage.planLocked) {
+            return (
+              <section key={stage.id} className="jr-stage plan-locked">
+                <div className="jr-stage-head as-static">
+                  <span className={`jr-stage-ico tone-${stage.tone}`}><Icon size={20} /></span>
+                  <span className="jr-stage-meta">
+                    <span className="jr-stage-num">Stage {stage.index}</span>
+                    <span className="jr-stage-title">{stage.title}</span>
+                  </span>
+                  <Status state="neutral" label="Locked" />
+                  <Lock size={16} className="jr-stage-lock" />
+                </div>
+
+                <div className="jr-planlock">
+                  {/* Inert and hidden from assistive technology: it is a texture
+                      showing there is something here, not readable content. */}
+                  <ol className="jr-planlock-ghost" aria-hidden inert>
+                    {stage.steps.slice(0, 5).map((s) => (
+                      <li key={s.id}>
+                        <span className="jr-planlock-ghost-title">{s.title}</span>
+                        <span className="jr-planlock-ghost-desc">{s.description}</span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="jr-planlock-card">
+                    <span className="jr-planlock-ico"><Lock size={20} /></span>
+                    <p className="jr-planlock-title">Only available with the Full Service Plan.</p>
+                    <p className="jr-planlock-text">
+                      {stage.total} steps that help you settle in Lithuania after you arrive: accommodation,
+                      registration, banking, healthcare, transport and university life.
+                    </p>
+                    <JrButton tone="primary" size="md" onClick={() => onNav("subscription")}>
+                      See Full Service
+                    </JrButton>
+                  </div>
+                </div>
+              </section>
+            );
+          }
 
           return (
             <section key={stage.id} className={`jr-stage ${stage.state}${open ? " open" : ""}`}>
@@ -261,58 +673,25 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
 
                   {/* ── Steps: status icon and text left, actions right ── */}
                   <ol className="jr-timeline">
-                    {stage.steps.map((step) => {
-                      const docs = stepDocuments(step, uploads);
-                      const blocked = docs.missingRequired > 0;
-                      const actionable = step.state === "pending" || step.state === "rejected";
-                      return (
-                        <li key={step.id} className={`jr-step ${step.state}`}>
-                          <div className="jr-step-main">
-                            <div className="jr-step-body">
-                              {/* The step's state is the shared Status, not a
-                                  bespoke glyph: the word is always rendered, so
-                                  colour is never the only carrier. */}
-                              <span className="jr-step-num">
-                                Step {step.index}{step.due ? ` · ${step.due}` : ""}
-                                {docs.required > 0 && ` · ${docs.verified}/${docs.required} documents`}
-                              </span>
-                              {/* The title leads: it is what the student is
-                                  actually being asked to do. The state rides
-                                  beside it, small enough not to compete. */}
-                              <div className="jr-step-title">
-                                {step.title}
-                                <Status state={STATE_STATUS[step.state]} label={STATE_BADGE[step.state].label} size="xs" />
-                              </div>
-                              <p className="jr-step-desc">{step.description}</p>
-                              {blocked && actionable && (
-                                <p className="jr-step-block">Complete document upload first.</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="jr-step-acts">
-                            {actionable && (
-                              <JrButton
-                                tone="primary" disabled={busy === step.id || blocked}
-                                title={blocked ? "Complete document upload first." : undefined}
-                                onClick={() => (blocked ? undefined : docs.required > 0 ? submitStep(stage, step, "") : setConfirming({ stage, step }))}
-                              >
-                                {busy === step.id ? "Saving…" : "Mark as Done"}
-                              </JrButton>
-                            )}
-                            {step.state === "submitted" && (
-                              <JrButton disabled={busy === step.id} onClick={() => undoSubmit(step)}>Undo submit</JrButton>
-                            )}
-                            {actionable && step.allowSkip && (
-                              <JrButton icon={<SkipForward size={14} />} disabled={busy === step.id} onClick={() => skipStep(stage, step)}>
-                                Skip
-                              </JrButton>
-                            )}
-                            <JrButton tone="outline" onClick={() => setDetail({ stage, step })}>View Details</JrButton>
-                          </div>
-                        </li>
-                      );
-                    })}
+                    {stage.steps.map((step) => (
+                      step.moduleKey
+                        ? (
+                          <OptionalModule
+                            key={step.id} step={step}
+                            open={openModules.has(step.id)}
+                            onToggleOpen={() => setOpenModules((set) => {
+                              const next = new Set(set);
+                              if (next.has(step.id)) next.delete(step.id); else next.add(step.id);
+                              return next;
+                            })}
+                            busy={busy === step.id}
+                            onEnable={() => setModuleAsk({ kind: "enable", step })}
+                            onDisable={() => setModuleAsk({ kind: "disable", step })}
+                            renderStep={(child) => renderStep(stage, child)}
+                          />
+                        )
+                        : renderStep(stage, step)
+                    ))}
                   </ol>
                 </div>
               )}
@@ -330,13 +709,63 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
         />
       )}
 
-      {confirming && (
+      {/* One slot, four shapes: which one opens is decided by the step's own
+          rules, so adding a fifth never means another boolean here. */}
+      {acting?.kind === "submit" && (
         <MarkDoneDialog
-          step={confirming.step} open
-          onCancel={() => setConfirming(null)}
-          onConfirm={(comment) => submitStep(confirming.stage, confirming.step, comment)}
+          step={acting.step} open
+          onCancel={() => setActing(null)}
+          onConfirm={(comment) => submitStep(acting.stage, acting.step, comment)}
         />
       )}
+
+      {acting?.kind === "confirm" && acting.step.confirm && (
+        <CompleteDialog
+          open title={acting.step.title}
+          confirm={acting.step.confirm} gate={acting.step.gate}
+          busy={busy === acting.step.id}
+          onCancel={() => setActing(null)}
+          onConfirm={(ticked) =>
+            completeStep(acting.stage, acting.step, { ...acting.step.meta, gate: ticked })}
+        />
+      )}
+
+      {acting?.kind === "appointment" && (
+        <VfsAppointmentDialog
+          open existing={acting.step.meta.appointment ?? null}
+          busy={busy === acting.step.id}
+          onCancel={() => setActing(null)}
+          onSave={(appointment) => saveAppointment(acting.stage, acting.step, appointment)}
+        />
+      )}
+
+      {acting?.kind === "decision" && (
+        <TrpDecisionDialog
+          open busy={busy === acting.step.id}
+          onCancel={() => setActing(null)}
+          onDecide={(outcome) => decideTrp(acting.stage, acting.step, outcome)}
+        />
+      )}
+
+      {moduleAsk && (
+        <ModuleDialog
+          kind={moduleAsk.kind} step={moduleAsk.step} open
+          busy={busy === moduleAsk.step.id}
+          onCancel={() => (moduleAsk.kind === "remind"
+            ? void dismissModuleReminder(moduleAsk.step)
+            : setModuleAsk(null))}
+          onConfirm={() => void setModuleEnabled(moduleAsk.step, moduleAsk.kind !== "disable")}
+        />
+      )}
+
+      <TrpCelebration open={celebrating} onClose={() => setCelebrating(false)} />
+
+      <JourneyCompleteCelebration
+        open={finished}
+        name={(profile.fullName ?? "").split(" ")[0]}
+        whatsapp={SUPPORT_WHATSAPP}
+        onClose={() => setFinished(false)}
+      />
     </div>
   );
 }

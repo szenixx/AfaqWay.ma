@@ -8,6 +8,7 @@ import FeaturesDoc from "@/components/pricing/FeaturesDoc";
 import { PLANS, planById, PAY_METHODS, type Plan, type PayMethod } from "@/lib/plans";
 import { uploadUserFile, deleteUserFile } from "@/lib/storage/client";
 import { Loader, FileDrop } from "@/components/ds";
+import { SpotlightCard } from "@/components/ds/SpotlightCard";
 
 /* Pricing & Checkout. Renders its own af-frame-body + af-frame-footer so the
    Back/primary buttons stay pinned to the bottom of the frame on every view.
@@ -42,7 +43,7 @@ function CheckDot() {
 
 function GlassPlanCard({ plan, onChoose, onSeeAll }: { plan: Plan; onChoose: () => void; onSeeAll: () => void }) {
   return (
-    <div className="af-glass-card af-plan-card">
+    <SpotlightCard className="af-glass-card af-plan-card">
       {plan.popular && <span className="af-plan-tab">Most popular</span>}
       <div className="af-plan-split">
         {/* left: badge, price, tagline, CTA */}
@@ -72,7 +73,7 @@ function GlassPlanCard({ plan, onChoose, onSeeAll }: { plan: Plan; onChoose: () 
           </button>
         </div>
       </div>
-    </div>
+    </SpotlightCard>
   );
 }
 

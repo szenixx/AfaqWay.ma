@@ -1,0 +1,17 @@
+/* AfaqWay radius — one system. Controls are capsules; surfaces are 12–28px.
+   sm/md/lg/pill/card are the ones components render with; xs/xl/2xl/3xl/circle
+   fill out the SaaS-grade scale without displacing them. */
+:root{
+  --radius-xs:4px;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-xl:20px;
+  --radius-2xl:24px;
+  --radius-3xl:28px;
+  --radius-card:var(--radius-3xl);  /* 28px — the floating card */
+  --radius-dialog:32px;              /* dialogs, floating panels — one step past the card */
+  --radius-pill:999px;               /* v2: reserved for search bars, segmented tracks, FAB, chips/status — not generic buttons */
+  --radius-control:18px;             /* v2: the default button radius — rounder rect, not a full capsule */
+  --radius-circle:50%;
+}

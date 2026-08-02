@@ -1,6 +1,5 @@
 import Hero from "@/components/home/Hero";
 import Statistics from "@/components/home/Statistics";
-import HowItFeels from "@/components/home/HowItFeels";
 import HowItWorks from "@/components/home/HowItWorks";
 import Destinations from "@/components/home/Destinations";
 import Platform from "@/components/home/Platform";
@@ -13,7 +12,6 @@ export default function Home() {
     <main>
       <Hero />
       <Statistics />
-      <HowItFeels />
       <HowItWorks />
       <Destinations />
       <Platform />

@@ -29,7 +29,7 @@ export default function Soon() {
       <Link
         className="af-btn-primary"
         href="/"
-        style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: 999, font: "600 15px/1 var(--font-sans)", marginTop: 8 }}
+        style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: "var(--radius-control)", font: "600 15px/1 var(--font-sans)", marginTop: 8 }}
       >
         Back to home
       </Link>

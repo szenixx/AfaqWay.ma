@@ -1,0 +1,19 @@
+<!-- @dsCard group="Colors" viewport="700x190" name="Layered surfaces" subtitle="0 → 3, floating, sidebar glass, highlight" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;font-family:var(--font-sans);background:var(--paper);padding:20px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sw{border-radius:var(--radius-lg);height:76px;display:flex;flex-direction:column;justify-content:flex-end;padding:9px;box-sizing:border-box;border:1px solid var(--line)}
+.n{font:600 10.5px/14px var(--font-sans);color:var(--ink)}
+.h{font:500 9px/12px var(--font-sans);color:var(--ink-faint)}
+.glass{background:var(--surface-sidebar);backdrop-filter:blur(var(--blur-lg)) saturate(1.5);-webkit-backdrop-filter:blur(var(--blur-lg)) saturate(1.5);border:1px solid rgba(255,255,255,.9)}
+</style></head>
+<body><div class="grid">
+<div class="sw" style="background:var(--surface-0)"><span class="n">surface-0</span><span class="h">page</span></div>
+<div class="sw" style="background:var(--surface-1);box-shadow:var(--shadow-md)"><span class="n">surface-1</span><span class="h">card</span></div>
+<div class="sw" style="background:var(--surface-2)"><span class="n">surface-2</span><span class="h">recessed</span></div>
+<div class="sw" style="background:var(--surface-3)"><span class="n">surface-3</span><span class="h">deep recess</span></div>
+<div class="sw" style="background:var(--surface-1);box-shadow:var(--shadow-floating)"><span class="n">floating</span><span class="h">elev-hover</span></div>
+<div class="sw glass"><span class="n">sidebar</span><span class="h">glass 80%</span></div>
+<div class="sw" style="background:var(--surface-highlight);border-color:var(--indigo-line)"><span class="n">highlight</span><span class="h">indigo tint</span></div>
+<div class="sw" style="background:var(--surface-1);box-shadow:var(--shadow-modal)"><span class="n">modal</span><span class="h">elev-modal</span></div>
+</div></body></html>

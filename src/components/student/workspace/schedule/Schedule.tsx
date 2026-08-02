@@ -206,7 +206,7 @@ export default function Schedule({ profile, onNav, role = "student" }: {
         </section>
 
         {/* Reused, not redesigned. */}
-        <JourneySnapshotCard onNav={onNav} />
+        <JourneySnapshotCard profile={profile} onNav={onNav} />
       </aside>
 
       {/* ── Modals ── */}

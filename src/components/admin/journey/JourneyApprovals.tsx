@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CircleCheck, Eye, Inbox, RotateCcw, XCircle } from "lucide-react";
+import { CircleCheck, Eye, Inbox, RotateCcw, XCircle, MessageCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Loader, Pill } from "@/components/ds";
-import { subscribeJourney, type DbStep, type Plan } from "@/lib/journeyDb";
+import { stepApproveOnly, stepIsSupport, subscribeJourney, type DbStep, type Plan } from "@/lib/journeyDb";
+import { whatsappLink } from "@/lib/whatsapp";
+import { deriveStudy } from "@/lib/studyApplication";
 import { JrButton } from "@/components/student/workspace/journey/parts";
 import { ReviewModal, type ReviewTarget } from "./ReviewModal";
 import { ReplyDialog, type ReplyAction } from "./ReplyDialog";
@@ -23,6 +25,16 @@ import { notifyReview } from "@/lib/journeyNotify";
 type PendingStep = {
   id: string; user_id: string; step_id: string;
   step_title: string; stage_title: string; student: string;
+  /**
+   * A support request rather than a piece of work to judge.
+   *
+   * Stage 5's first step is the student asking for help after they land. There
+   * is nothing to reject — the answer is a conversation — so the row offers
+   * WhatsApp and Approve, and the queue does not pretend otherwise.
+   */
+  supportRequest: boolean;
+  approveOnly: boolean;
+  university: string;
   /** Everything the review modal needs, so opening it costs no extra query. */
   target: ReviewTarget;
 };
@@ -70,11 +82,12 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
     // One lookup for every student mentioned in the queue.
     const userIds = [...new Set([...progress.map((p) => p.user_id), ...approvals.map((a) => a.user_id)])];
     const { data: people } = userIds.length
-      ? await supabase.from("profiles").select("id, full_name, email, whatsapp_country_code, whatsapp_number").in("id", userIds)
+      ? await supabase.from("profiles").select("id, full_name, email, whatsapp_country_code, whatsapp_number, country_flow_answers, destination_country").in("id", userIds)
       : { data: [] };
     const person = new Map(((people ?? []) as {
       id: string; full_name: string | null; email: string | null;
       whatsapp_country_code: string | null; whatsapp_number: string | null;
+      country_flow_answers: Record<string, unknown> | null; destination_country: string | null;
     }[]).map((p) => [p.id, p]));
     const name = new Map([...person].map(([id, p]) => [id, p.full_name || p.email || "Student"]));
 
@@ -86,6 +99,14 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
       return [{
         id: p.id, user_id: p.user_id, step_id: p.step_id,
         step_title: step.title, stage_title, student,
+        supportRequest: stepIsSupport(step),
+        approveOnly: stepApproveOnly(step) || stepIsSupport(step),
+        university: (() => {
+          /* Derived, not stored: the university lives in the onboarding answers,
+             through the same helper the student workspace uses. */
+          const who = person.get(p.user_id);
+          return deriveStudy(who?.country_flow_answers ?? null, who?.destination_country ?? null)?.university ?? "";
+        })(),
         target: {
           progressId: p.id, userId: p.user_id, student,
           studentEmail: person.get(p.user_id)?.email ?? "",
@@ -192,21 +213,56 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
           ))}
 
           {steps.map((row) => (
-            <div key={row.id} className="jm-review">
-              <Pill tone="indigo" className="jm-review-tag">Step</Pill>
+            <div key={row.id} className={`jm-review${row.supportRequest ? " support" : ""}`}>
+              <Pill tone={row.supportRequest ? "amber" : "indigo"} className="jm-review-tag">
+                {row.supportRequest ? "Support" : "Step"}
+              </Pill>
               <div className="jm-review-body">
                 <div className="jm-review-title">{row.step_title}</div>
-                <div className="jm-review-sub">{row.student} · {row.stage_title}</div>
+                <div className="jm-review-sub">
+                  {row.student} · {row.stage_title}
+                  {/* The Excel asks the request to carry who is asking, from
+                      where, and on what number, so the reply needs no lookup. */}
+                  {row.supportRequest && row.university && ` · ${row.university}`}
+                  {row.supportRequest && row.target.whatsapp && ` · ${row.target.whatsapp}`}
+                </div>
               </div>
+
               <JrButton tone="outline" icon={<Eye size={14} />} onClick={() => setReview(row.target)}>
                 View Details
               </JrButton>
-              <JrButton icon={<RotateCcw size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "changes" })}>
-                Request Changes
-              </JrButton>
-              <JrButton tone="danger" icon={<XCircle size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "reject" })}>
-                Reject
-              </JrButton>
+
+              {row.supportRequest && (
+                <JrButton
+                  icon={<MessageCircle size={14} />}
+                  disabled={!row.target.whatsapp}
+                  title={row.target.whatsapp ? undefined : "This student has no WhatsApp number on file."}
+                  onClick={() => row.target.whatsapp && window.open(
+                    whatsappLink(
+                      row.target.whatsapp,
+                      `Hello ${row.student}, welcome to Lithuania! This is the AfaqWay support team. How can we help you settle in?`,
+                    ),
+                    "_blank", "noopener,noreferrer",
+                  )}
+                >
+                  Chat with Student
+                </JrButton>
+              )}
+
+              {/* "Do NOT display a Reject button." A request for help is not
+                  work that can fail review, so neither refusal nor a request
+                  for changes is offered on one. */}
+              {!row.approveOnly && (
+                <>
+                  <JrButton icon={<RotateCcw size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "changes" })}>
+                    Request Changes
+                  </JrButton>
+                  <JrButton tone="danger" icon={<XCircle size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "reject" })}>
+                    Reject
+                  </JrButton>
+                </>
+              )}
+
               <JrButton tone="success" icon={<CircleCheck size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "approve" })}>
                 Approve
               </JrButton>

@@ -83,9 +83,30 @@ a {
 
 .af-marquee:hover .af-marquee-track { animation-play-state: paused; }
 
-/* Decorative hero widgets, shown on wide screens only, never cause horizontal scroll */
-.af-hero-widgets { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+/* Decorative hero widgets, shown on wide screens only, never cause horizontal scroll.
+   --hw-scale keeps the widgets large on a wide display but steps them down on
+   narrower desktops, where full size would run into the centre headline. */
+.af-hero-widgets { position: absolute; inset: 0; z-index: 2; pointer-events: none; --hw-scale: 1; }
 .af-hero-widgets > * { pointer-events: auto; }
+@media (max-width: 1699px) { .af-hero-widgets { --hw-scale: .86; } }
+@media (max-width: 1479px) { .af-hero-widgets { --hw-scale: .72; } }
+/* One elevation for every floating widget, matching the hero's buttons and
+   cards, so the six renders sit on the same surface language rather than each
+   carrying only its own baked shadow.
+
+   The supplied artwork has a flat opaque white card baked in, which read as
+   harsh next to the hero's frosted panels. `multiply` drops pure white to
+   fully transparent while leaving text and coloured marks intact, so the grid
+   behind shows through and the card reads as translucent glass, the way the
+   previous liquid-glass widgets did. The panel underneath supplies the frost
+   and the soft white rim the blend cannot. */
+.af-hero-widget { position: relative; z-index: 1; mix-blend-mode: multiply; opacity: .88; }
+.af-hero-widget-frame { position: relative; border-radius: 22px;
+  background: rgba(255,255,255,0.5);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow: 0 10px 30px rgba(23,35,58,.12), inset 0 1px 0 rgba(255,255,255,.75); }
 @media (max-width: 1279px) {
   .af-hero-widgets { display: none; }
 }
@@ -213,9 +234,39 @@ a {
 @media (max-width: 768px) { .dash-advice { display: block; } }
 
 /* Student chat: soft grey background scattered with small faint AfaqWay marks */
+/* Chat background: a white field carrying two quiet layers — a very faint
+   brand-blue wash so the panel is not flat paper, and one large brand mark
+   centred in it, blurred and low-opacity, breathing slowly. A watermark, not a
+   pattern. Replaces the tiled grey chevron texture. */
 .stu-chat-texture {
-  background-color: #E7EAF0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='%23162E8C' stroke-width='3' stroke-linecap='square' opacity='0.06'%3E%3Cpath d='M20 30 34 43 48 30'/%3E%3Cpath d='M20 44 34 57 48 44'/%3E%3Cpath d='M108 96 122 109 136 96'/%3E%3Cpath d='M108 110 122 123 136 110'/%3E%3C/g%3E%3Cg fill='%23162E8C' opacity='0.05'%3E%3Ccircle cx='120' cy='34' r='4'/%3E%3Ccircle cx='44' cy='106' r='3'/%3E%3Ccircle cx='82' cy='72' r='2.5'/%3E%3C/g%3E%3C/svg%3E");
+  position: relative;
+  background-color: var(--card);
+  background-image: linear-gradient(rgba(22, 46, 140, .028), rgba(22, 46, 140, .028));
+  --chat-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23162E8C' stroke-width='13' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M29 28 48 45 67 28'/%3E%3Cpath d='M29 54 48 71 67 54'/%3E%3C/g%3E%3C/svg%3E");
+}
+.stu-chat-texture::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(320px, 55%);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: var(--chat-watermark) center / contain no-repeat;
+  filter: blur(3px);
+  opacity: .07;
+  pointer-events: none;
+  z-index: 0;
+  animation: afChatMark 9s ease-in-out infinite;
+}
+@keyframes afChatMark {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: .07; }
+  50%      { transform: translate(-50%, -50%) scale(1.06); opacity: .1; }
+}
+/* Messages must always sit above the watermark. */
+.stu-chat-texture > * { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .stu-chat-texture::before { animation: none; }
 }
 /* phone-only chrome: hidden on desktop */
 .af-onboard-mobilebar, .af-onboard-mobilesteps { display: none; }
@@ -282,14 +333,22 @@ a {
    Rounded floating modules, blurred logo canvas, soft elevation, whitespace.
    ========================================================================== */
 /* Admin workspace always renders 10% larger than the browser zoom (100% browser = 110% here) */
-.adm-root { zoom: 1.1; min-height: 100vh; position: relative; background: #EBEEF4; overflow-x: hidden; }
+/* Neutral zoom: the console renders at its true size.
+
+   `zoom` does NOT rescale viewport units — inside a zoomed element 100vh stays
+   100% of the *unzoomed* viewport, so any zoom other than 1 leaves every
+   full-height panel short of the fold. Admin heights are therefore expressed
+   as --adm-vh (viewport height ÷ zoom factor), which lands on exactly one
+   screen at whatever zoom is set here. Change both values together. */
+.adm-root { --adm-zoom: 1; --adm-vh: 100vh; zoom: var(--adm-zoom);
+  min-height: var(--adm-vh); position: relative; background: #EBEEF4; overflow-x: hidden; }
 .adm-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; }
 .adm-bg > span { width: 80vmin; height: 80vmin; filter: blur(7px); opacity: .18; display: block; transform: translate(4%, 6%); }
 .adm-bg svg { width: 100%; height: 100%; }
 
-.adm-shell { position: relative; z-index: 1; max-width: 100%; width: 100%; margin: 0; padding: 22px; display: flex; gap: 20px; align-items: flex-start; min-height: 100vh; }
+.adm-shell { position: relative; z-index: 1; max-width: 100%; width: 100%; margin: 0; padding: 22px; display: flex; gap: 20px; align-items: flex-start; min-height: var(--adm-vh); }
 
-.adm-sidebar { position: sticky; top: 22px; align-self: flex-start; height: calc(100vh - 44px); flex: none; display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,.8); backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; box-shadow: 0 20px 54px rgba(23,35,58,.12); padding: 14px; transition: width 180ms cubic-bezier(.4,0,.2,1); overflow: hidden; }
+.adm-sidebar { position: sticky; top: 22px; align-self: flex-start; height: calc(var(--adm-vh) - 44px); flex: none; display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,.8); backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; box-shadow: 0 20px 54px rgba(23,35,58,.12); padding: 14px; transition: width 180ms cubic-bezier(.4,0,.2,1); overflow: hidden; }
 .adm-sidebar > * { position: relative; z-index: 1; }
 .adm-sidebar > .adm-sidebar-logo { position: absolute; z-index: 0; bottom: 100px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; opacity: .12; filter: blur(3px); pointer-events: none; }
 .adm-sidebar-logo svg { width: 100%; height: 100%; }
@@ -320,7 +379,7 @@ a {
 
 @media (max-width: 860px) {
   .adm-shell { padding: 12px; gap: 12px; }
-  .adm-sidebar { top: 12px; height: calc(100vh - 24px); }
+  .adm-sidebar { top: 12px; height: calc(var(--adm-vh) - 24px); }
   .adm-main { padding: 2px 2px 24px; }
 }
 
@@ -380,9 +439,13 @@ a {
    ──────────────────────────────────────────────────────────────────────────── */
 /* Fixed application shell: full viewport, sidebar + top fixed, only content scrolls.
    Page = very subtle light surface; cards (.sw-tile) are the solid white surfaces. */
-.sw-root { height: 100dvh; position: relative; background: linear-gradient(135deg, #E7ECF7 0%, #EDF1F9 52%, #E8EEF9 100%); overflow: hidden; }
-.sw-root::before { content: ""; position: fixed; width: 46vw; height: 46vw; left: -9vw; top: -12vw; border-radius: 50%; background: radial-gradient(circle, rgba(22,46,140,.10), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
-.sw-root::after { content: ""; position: fixed; width: 42vw; height: 42vw; right: -7vw; bottom: -14vw; border-radius: 50%; background: radial-gradient(circle, rgba(61,99,180,.08), transparent 62%); filter: blur(64px); pointer-events: none; z-index: 0; }
+/* v2: the workspace field is matte and flat — it disappears behind content,
+   rather than competing with it. The 135° blue gradient and the two ambient
+   indigo blobs are retired; --sw-gradient and --blob-1/2 now carry the v2
+   values, so the surface follows the token contract instead of hardcoded hex. */
+.sw-root { height: 100dvh; position: relative; background: var(--sw-gradient); overflow: hidden; }
+.sw-root::before { content: ""; position: fixed; width: 46vw; height: 46vw; left: -9vw; top: -12vw; border-radius: 50%; background: var(--blob-1); filter: blur(64px); pointer-events: none; z-index: 0; }
+.sw-root::after { content: ""; position: fixed; width: 42vw; height: 42vw; right: -7vw; bottom: -14vw; border-radius: 50%; background: var(--blob-2); filter: blur(64px); pointer-events: none; z-index: 0; }
 .sw-shell { position: relative; z-index: 1; display: flex; gap: 18px; padding: 18px; align-items: stretch; height: 100dvh; }
 /* ── Sidebar (shadcn "sidebar" variant geometry, AfaqWay tokens) ──────────
    Expanded 256px / icon-only 60px, 32px menu rows, 8px radius, flat accent
@@ -966,15 +1029,17 @@ body {
 
 /* ══ Journey roadmap — floating glass, iOS-inspired ═══════════════════════ */
 .jr-root { display: flex; flex-direction: column; gap: 16px; }
-.jr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 0 2px; }
+.jr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px 20px; border-radius: 24px; }
 .jr-title { margin: 0; font: 800 23px/29px var(--font-sans); color: var(--ink); letter-spacing: -.3px; }
 .jr-sub { margin: 5px 0 0; font: 400 12.5px/19px var(--font-sans); color: var(--ink-soft); max-width: 560px; }
 .jr-overall { text-align: right; flex: none; }
 .jr-overall-pct { display: block; font: 800 24px/28px var(--font-sans); color: var(--indigo-600); }
 .jr-overall-label { font: 400 11px/15px var(--font-sans); color: var(--ink-faint); }
 
-/* Shared glass surface. */
-.jr-nav, .jr-stage {
+/* Shared glass surface. The header joins the same family as the navigator and
+   the stage frames below it, so the module reads as one stack of frames rather
+   than loose text above a set of cards. */
+.jr-nav, .jr-stage, .jr-head {
   background: rgba(255,255,255,.62);
   backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -1249,6 +1314,183 @@ body {
 .jr-step-main { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
 .jr-step-acts { display: flex; align-items: center; gap: 7px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
 .jr-step-block { margin: 6px 0 0; font: 600 11.5px/16px var(--font-sans); color: var(--amber); }
+.jr-step-note { margin: 6px 0 0; font: 500 11.5px/16px var(--font-sans); color: var(--green); }
+
+/* ══ Optional modules ══════════════════════════════════════════════════════
+   Steps a student switches on. The offer card and the container both reuse the
+   stage card's frame, radius and type scale; only the tint and the watermark
+   icon are new, so an optional module reads as part of the roadmap. */
+
+/* The offer, before it is enabled. */
+.jr-optional { position: relative; overflow: hidden; display: flex; align-items: center; gap: 18px;
+  flex-wrap: wrap; padding: 20px 22px; border-radius: 18px; background: var(--indigo-tint);
+  border: 1px dashed var(--indigo-line); }
+.jr-optional-art { position: absolute; right: -22px; bottom: -30px; color: var(--indigo-600);
+  opacity: .09; pointer-events: none; }
+.jr-optional-main { position: relative; flex: 1; min-width: 240px; }
+.jr-optional-tag { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 7px;
+  padding: 3px 9px; border-radius: 999px; background: var(--card); color: var(--indigo-600);
+  font: 700 10px/15px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; }
+.jr-optional-title { margin: 0 0 5px; font: 700 16px/23px var(--font-sans); color: var(--ink); }
+.jr-optional-desc { margin: 0; max-width: 60ch; font: 400 13px/21px var(--font-sans); color: var(--ink-soft); }
+.jr-optional-acts { position: relative; flex: none; }
+
+/* Enabled: a container that expands, matching the stage card. */
+.jr-modstep { border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; }
+.jr-modstep-head { display: flex; align-items: center; gap: 4px; padding-right: 10px; }
+.jr-modstep-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 14px 6px 14px 16px; background: none; border: none; cursor: pointer; text-align: left; }
+.jr-modstep-ico { width: 32px; height: 32px; flex: none; border-radius: 10px; display: flex;
+  align-items: center; justify-content: center; background: var(--indigo-tint); color: var(--indigo-600); }
+.jr-modstep-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.jr-modstep-tag { font: 700 9.5px/14px var(--font-sans); letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-faint); }
+.jr-modstep-title { font: 700 14px/20px var(--font-sans); color: var(--ink); }
+.jr-modstep-count { flex: none; font: 600 12px/17px var(--font-sans); color: var(--ink-faint); }
+.jr-modstep-chev { flex: none; color: var(--ink-faint); transition: transform .18s ease; }
+.jr-modstep.open .jr-modstep-chev { transform: rotate(180deg); }
+.jr-modstep-steps { margin: 0; padding: 0 16px 8px; border-top: 1px solid var(--line-soft); }
+
+/* The three-dot menu, shared by anything in the journey that needs one. */
+.jr-menu { position: relative; flex: none; }
+.jr-menu-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+  border-radius: 9px; border: none; background: none; color: var(--ink-faint); cursor: pointer; }
+.jr-menu-btn:hover { background: var(--subtle); color: var(--ink); }
+.jr-menu-pop { position: absolute; top: 34px; right: 0; z-index: 60; min-width: 214px; padding: 6px;
+  border-radius: 14px; border: 1px solid var(--line); background: var(--card);
+  box-shadow: 0 16px 40px rgba(23, 35, 58, .2); }
+.jr-menu-item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 11px;
+  border: none; border-radius: 10px; background: none; cursor: pointer; text-align: left;
+  font: 500 12.5px/18px var(--font-sans); color: var(--ink); }
+.jr-menu-item:hover { background: var(--subtle); }
+.jr-menu-item.danger { color: var(--red); }
+.jr-menu-item.danger:hover { background: var(--red-tint); }
+
+/* Tester access: an amber strip, so an unlocked roadmap is never mistaken for
+   earned progress or for a bug. */
+.jr-testerbar { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; padding: 9px 12px;
+  border: 1px solid var(--amber-line); border-radius: 12px; background: var(--amber-tint);
+  font: 400 12px/18px var(--font-sans); color: var(--ink); max-width: 640px; }
+.jr-testerbar svg { flex: none; margin-top: 2px; color: var(--amber); }
+.jr-testerbar b { color: var(--amber); }
+
+/* "Display a checklist showing any incomplete prerequisites." */
+.jr-prereq { margin: 8px 0 0; padding: 9px 12px; border-radius: 11px; background: var(--subtle); }
+.jr-prereq-head { display: block; font: 700 10px/15px var(--font-sans); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 4px; }
+.jr-prereq ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+.jr-prereq li { font: 500 12px/18px var(--font-sans); color: var(--ink-soft); }
+
+/* A support request in the review queue reads differently from work to judge. */
+.jm-review.support { border-left: 2px solid var(--amber-line); }
+
+/* ══ A stage the student's plan does not include ══════════════════════════
+   The header stays perfectly readable — the point is that they can see what
+   Stage 5 covers — and only the step list behind the message is blurred. */
+.jr-stage.plan-locked { position: relative; }
+.jr-stage-head.as-static { display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 15px 18px; background: none; border: none; text-align: left; }
+.jr-planlock { position: relative; padding: 0 18px 18px; }
+.jr-planlock-ghost { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;
+  filter: blur(4px); opacity: .5; user-select: none; pointer-events: none; }
+.jr-planlock-ghost li { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px;
+  border-radius: 13px; background: var(--subtle); }
+.jr-planlock-ghost-title { font: 600 13.5px/19px var(--font-sans); color: var(--ink); }
+.jr-planlock-ghost-desc { font: 400 12px/18px var(--font-sans); color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jr-planlock-card { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 7px; text-align: center; padding: 18px; }
+.jr-planlock-ico { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px;
+  border-radius: 50%; background: var(--card); color: var(--ink-soft); box-shadow: 0 6px 18px rgba(23,35,58,.12); }
+.jr-planlock-title { margin: 4px 0 0; font: 700 14.5px/21px var(--font-sans); color: var(--ink); }
+.jr-planlock-text { margin: 0 0 8px; max-width: 420px; font: 400 12.5px/19px var(--font-sans); color: var(--ink-soft); }
+
+/* ══ Learn modules (Markdown) ═════════════════════════════════════════════
+   Stage 5's content. Reuses the Learn page's type scale so a Markdown module
+   sits beside a hand-built block without looking like a different product. */
+.lrn-module { display: flex; flex-direction: column; gap: 4px; }
+.lrn-module-title { margin: 0; font: 700 16px/23px var(--font-sans); color: var(--ink); }
+.lrn-module-sum { margin: 0 0 6px; font: 400 13px/20px var(--font-sans); color: var(--ink-soft); }
+.lrn-md { display: flex; flex-direction: column; gap: 11px; }
+.lrn-md > div { display: flex; flex-direction: column; gap: 11px; }
+.lrn-md p { margin: 0; font: 400 13.5px/22px var(--font-sans); color: var(--ink-soft); }
+.lrn-md a { color: var(--indigo-600); text-decoration: none; }
+.lrn-md a:hover { text-decoration: underline; }
+.lrn-md strong { color: var(--ink); font-weight: 700; }
+.lrn-md .md-h { margin: 6px 0 0; color: var(--ink); }
+.lrn-md .md-h2 { font: 700 15px/22px var(--font-sans); }
+.lrn-md .md-h3 { font: 700 13.5px/20px var(--font-sans); }
+.lrn-md .md-h4, .lrn-md .md-h5, .lrn-md .md-h6 { font: 700 12.5px/19px var(--font-sans); }
+.lrn-md .md-ul, .lrn-md .md-ol { margin: 0; padding-left: 19px; display: flex; flex-direction: column; gap: 5px; }
+.lrn-md .md-ul li, .lrn-md .md-ol li { font: 400 13.5px/21px var(--font-sans); color: var(--ink-soft); }
+.lrn-md .md-check { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.lrn-md .md-check li { display: flex; align-items: flex-start; gap: 9px; font: 400 13.5px/21px var(--font-sans); color: var(--ink-soft); }
+.lrn-md .md-check input { margin-top: 3px; flex: none; accent-color: var(--indigo-600); }
+.lrn-md .md-tablewrap { overflow-x: auto; }
+.lrn-md .md-table { width: 100%; border-collapse: collapse; font: 400 12.5px/19px var(--font-sans); }
+.lrn-md .md-table th { text-align: left; padding: 8px 11px; border-bottom: 1px solid var(--line);
+  font: 600 11px/16px var(--font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.lrn-md .md-table td { padding: 8px 11px; border-bottom: 1px solid var(--line-soft); color: var(--ink-soft); }
+.lrn-md .md-quote { margin: 0; padding-left: 13px; border-left: 2px solid var(--line); }
+.lrn-md .md-callout { margin: 2px 0; }
+.lrn-md .md-hr { border: none; border-top: 1px solid var(--line-soft); margin: 4px 0; }
+.lrn-md .md-pre { margin: 0; padding: 11px 13px; border-radius: 12px; background: var(--subtle);
+  overflow-x: auto; font: 400 12px/19px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.lrn-md code { padding: 1px 5px; border-radius: 5px; background: var(--subtle);
+  font: 400 12px/18px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.lrn-md .md-pre code { padding: 0; background: none; }
+.lrn-md img { max-width: 100%; height: auto; border-radius: 12px; display: block; }
+/* The Markdown editor wants a monospace field: alignment is meaningful there. */
+textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 320px; }
+
+/* The per-student automated message queue, in the admin user details. */
+.jm-outbox { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.jm-outbox-row { display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-top: 1px solid var(--line-soft); flex-wrap: wrap; }
+.jm-outbox-row:first-child { border-top: none; }
+.jm-outbox-ico { display: flex; flex: none; color: var(--ink-faint); }
+.jm-outbox-main { flex: 1; min-width: 170px; display: flex; flex-direction: column; gap: 1px; }
+.jm-outbox-title { font: 600 12.5px/18px var(--font-sans); color: var(--ink); }
+.jm-outbox-body { font: 400 11.5px/17px var(--font-sans); color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jm-outbox-meta { font: 400 10.5px/15px var(--font-sans); color: var(--ink-faint); }
+
+/* The checklist that gates a self-completed step. */
+.jr-gate { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.jr-gate li { font: 400 13px/20px var(--font-sans); color: var(--ink); }
+
+/* Two side-by-side fields inside a dialog card. */
+.jr-field2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .jr-field2 { grid-template-columns: 1fr; } }
+
+/* The residence permit outcome: two large, unmistakably different choices. */
+.jr-choices { display: grid; gap: 10px; }
+.jr-choice { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 2px 11px;
+  align-items: start; text-align: left; padding: 14px 16px; border-radius: 14px; cursor: pointer;
+  background: var(--card); border: 1.5px solid var(--line); transition: border-color .15s, background .15s; }
+.jr-choice svg { grid-row: 1 / span 2; align-self: center; }
+.jr-choice-label { font: 700 13.5px/20px var(--font-sans); color: var(--ink); }
+.jr-choice-sub { font: 400 12px/18px var(--font-sans); color: var(--ink-soft); }
+.jr-choice.green svg { color: var(--green); }
+.jr-choice.red svg { color: var(--red); }
+.jr-choice:hover { border-color: var(--ink-faint); }
+.jr-choice.green.on { border-color: var(--green); background: var(--green-tint); }
+.jr-choice.red.on { border-color: var(--red); background: var(--red-tint); }
+
+/* The full-screen celebration when a residence permit is approved. */
+.jr-cheer { position: fixed; inset: 0; z-index: 1400; display: grid; place-items: center; padding: 24px;
+  background: rgba(23, 35, 58, .55); backdrop-filter: blur(6px); animation: jr-cheer-in .28s ease both; }
+@keyframes jr-cheer-in { from { opacity: 0; } to { opacity: 1; } }
+.jr-cheer-confetti { position: absolute; top: 0; left: 50%; transform: translateX(-50%); pointer-events: none; }
+.jr-cheer-body { position: relative; max-width: 520px; width: 100%; text-align: center; padding: 30px 28px 26px;
+  border-radius: 24px; background: var(--card); box-shadow: 0 30px 80px rgba(23, 35, 58, .3); }
+.jr-cheer-art { width: min(300px, 70%); height: auto; display: block; margin: 0 auto 6px; }
+.jr-cheer-title { margin: 0; font: 800 24px/32px var(--font-sans); color: var(--ink); }
+.jr-cheer-lead { margin: 8px 0 0; font: 600 14.5px/22px var(--font-sans); color: var(--green); }
+.jr-cheer-text { margin: 8px 0 18px; font: 400 13.5px/21px var(--font-sans); color: var(--ink-soft); }
+.jr-cheer-acts { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.jr-cheer-note { margin: 12px 0 0; font: 400 11.5px/17px var(--font-sans); color: var(--ink-faint); }
+@media (prefers-reduced-motion: reduce) { .jr-cheer { animation: none; } }
 .jr-step.locked { opacity: .55; }
 .jr-step.completed .jr-step-title { color: var(--ink-soft); }
 
@@ -1360,6 +1602,7 @@ body {
 .lrn-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .lrn-linkrow { display: flex; flex-direction: column; gap: 2px; margin: 0; }
 .lrn-linklabel { font: 600 13px/20px var(--font-sans); color: var(--ink); }
+.lrn-linknote { font: 400 11.5px/17px var(--font-sans); color: var(--ink-faint); }
 .lrn-link { display: inline-flex; align-items: center; gap: 5px; border: none; background: none; padding: 0; cursor: pointer;
   font: 400 12.5px/19px var(--font-sans); color: var(--indigo-600); text-decoration: none; word-break: break-all; text-align: left; }
 .lrn-link:hover { text-decoration: underline; }
@@ -1376,6 +1619,41 @@ body {
 .lrn-note-tip { border-color: var(--green-line); } .lrn-note-tip .lrn-note-title { color: var(--green); }
 .lrn-note-warning { border-color: var(--amber-line); } .lrn-note-warning .lrn-note-title { color: var(--amber); }
 .lrn-note-mistake { border-color: var(--red-line); } .lrn-note-mistake .lrn-note-title { color: var(--red); }
+.lrn-note-main { min-width: 0; }
+.lrn-note .lrn-ul { margin: 4px 0 0; }
+
+/* "Important" is the one callout drawn as a filled card. The Excel asks for the
+   €190 and the extra passport photocopy to be impossible to miss, and a 2px rule
+   in the margin is exactly what a reader skims past. */
+.lrn-note-important { display: flex; gap: 10px; align-items: flex-start; border-left: none; padding: 13px 15px;
+  border: 1px solid var(--red-line); border-radius: 14px; background: var(--red-tint); }
+.lrn-note-important .lrn-note-ico { flex: none; margin-top: 1px; color: var(--red); }
+.lrn-note-important .lrn-note-title { color: var(--red); }
+.lrn-note-important p, .lrn-note-important li { color: var(--ink); }
+
+/* The preparation banner: the same red language, sized as a section header
+   because it stands above everything else in the step. */
+.lrn-banner { padding: 15px 17px; border: 1px solid var(--red-line); border-radius: 16px; background: var(--red-tint); }
+.lrn-banner-head { display: flex; align-items: center; gap: 8px; font: 700 13.5px/20px var(--font-sans); color: var(--red); }
+.lrn-banner-head svg { flex: none; }
+.lrn-banner-text { margin: 7px 0 0; font: 400 13px/21px var(--font-sans); color: var(--ink); }
+.lrn-banner-list { margin: 9px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+.lrn-banner-list li { font: 400 13px/20px var(--font-sans); color: var(--ink); }
+
+/* "Application Under Review", with the spinner the Excel asks for. */
+.lrn-review { display: flex; align-items: center; gap: 13px; padding: 15px 17px;
+  border: 1px solid var(--indigo-line); border-radius: 16px; background: var(--indigo-tint); }
+.lrn-review-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lrn-review-title { font: 700 13.5px/20px var(--font-sans); color: var(--indigo-600); }
+.lrn-review-text { font: 400 12.5px/19px var(--font-sans); color: var(--ink-soft); }
+
+/* The optional Example section an administrator can enable per step. */
+.lrn-example { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px;
+  border: 1px dashed var(--line); border-radius: 16px; background: var(--subtle); }
+.lrn-example-tag { align-self: flex-start; font: 700 10px/15px var(--font-sans); letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-faint); }
+.lrn-example-img { width: 100%; height: auto; border-radius: 12px; display: block; }
+
 .lrn-reminder { display: flex; align-items: flex-start; gap: 7px; margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--line-soft); font: 400 12px/18px var(--font-sans); color: var(--ink-faint); }
 .lrn-reminder svg { flex: none; margin-top: 2px; color: var(--amber); }
 .lrn-reminder b { color: var(--ink); }
@@ -1795,6 +2073,9 @@ body {
 .pgm-fee dt { font: 600 9.5px/14px var(--font-sans); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint); }
 .pgm-fee dd { margin: 0; font: 700 14px/20px var(--font-sans); color: var(--ink); }
 .pgm-fee div:first-child dd { color: var(--indigo-600); }
+/* The dirham figure is indicative, and says so in type small enough not to
+   compete with the amount itself. */
+.pgm-fee-note { margin: 6px 0 0; font: 400 11.5px/17px var(--font-sans); color: var(--ink-faint); }
 
 /* Stages that came from the Excel importer, editable but overwritten on re-import. */
 .jm-src { flex: none; cursor: help; }
@@ -1807,7 +2088,7 @@ body {
 /* Admin sidebar: pinned to the viewport, only its own nav scrolls, and it can
    be dragged wider. --adm-side-w is set by the drag handle. */
 .adm-shell { align-items: stretch; }
-.adm-sidebar { position: sticky; top: 22px; height: calc(100vh - 44px); max-height: calc(100vh - 44px); gap: 10px; }
+.adm-sidebar { position: sticky; top: 22px; height: calc(var(--adm-vh) - 44px); max-height: calc(var(--adm-vh) - 44px); gap: 10px; }
 .adm-nav { gap: 2px; overscroll-behavior: contain; }
 .adm-nav .sw-navitem, .adm-nav .adm-navitem { margin-bottom: 0; }
 .adm-side-grip { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 3; }
@@ -1941,8 +2222,8 @@ body {
 /* Callouts keep their tone colour; only the geometry softens. */
 .jr-info { box-shadow: none; }
 
-/* Stage and navigator cards join the same family. */
-.jr-stage { border-radius: var(--radius-card); box-shadow: var(--elev-1); }
+/* Header, stage and navigator cards join the same family. */
+.jr-stage, .jr-head { border-radius: var(--radius-card); box-shadow: var(--elev-1); }
 .jr-navcard { border-radius: 20px; }
 
 /* Dialogs are the top elevation level, and slightly rounder than a card. */
@@ -2094,12 +2375,21 @@ body {
 /* ── Admin desktop: sidebar and header fixed, only content scrolls ────────── */
 @media (min-width: 1024px) {
   /* The page itself never scrolls; the main column owns the scrollbar. */
-  .adm-shell { height: 100vh; max-height: 100vh; overflow: hidden; }
-  .adm-sidebar { position: sticky; top: 22px; height: calc(100vh - 44px); overflow: hidden; }
+  .adm-shell { height: var(--adm-vh); max-height: var(--adm-vh); overflow: hidden; }
+  .adm-sidebar { position: sticky; top: 22px; height: calc(var(--adm-vh) - 44px); overflow: hidden; }
   /* The nav scrolls inside the sidebar only if navigation outgrows the screen. */
   .adm-nav { flex: 1; min-height: 0; overflow-y: auto; }
   .adm-main { height: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  /* Messages fills the main column instead of guessing at the chrome above it.
+     It previously used calc(100vh - 172px), which both hardcoded the offset and
+     ignored the console's zoom, so all three panels stopped short of the fold.
+     Growing with the flex column is what the student chat already does. */
+  .adm-chat-fill { flex: 1; min-height: 0; }
+  .adm-main:has(> .adm-chat-fill) { overflow: hidden; }
 }
+/* Below the desktop breakpoint the main column has no definite height, so the
+   chat falls back to a usable fixed height rather than collapsing. */
+.adm-chat-fill { min-height: 520px; }
 
 /* Unread badge on a sidebar item: pending review requests, live. */
 .adm-badge {

@@ -130,7 +130,7 @@ export default function StudentChat({ userId, full, onNav }: {
               When a different advisor replies, only this header changes —
               every earlier message stays as it was sent. */}
           <header className="chat-header">
-            <span className="chat-brand-avatar"><BrandLogo size={26} /></span>
+            <span className="chat-brand-avatar"><BrandLogo variant="app" size={40} /></span>
             <span style={{ minWidth: 0, flex: 1 }}>
               <span className="chat-header-name">
                 AfaqWay Advisor
@@ -150,8 +150,10 @@ export default function StudentChat({ userId, full, onNav }: {
 
           <div ref={threadRef} className="chat-thread stu-chat-texture">
             <div className="chat-row">
-              <div className="chat-bubble">
-                <div className="chat-text">{full ? "Welcome. Your dedicated advisor answers here, send any document or question." : "Welcome. Send a document or a question and our team will reply here."}</div>
+              <div className="chat-msgcol">
+                <div className="chat-bubble">
+                  <div className="chat-text">{full ? "Welcome. Your dedicated advisor answers here, send any document or question." : "Welcome. Send a document or a question and our team will reply here."}</div>
+                </div>
               </div>
             </div>
             {msgs.map((m) => (

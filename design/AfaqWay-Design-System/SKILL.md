@@ -1,15 +1,13 @@
 ---
 name: afaqway-design
-description: Use this skill to generate well-branded interfaces and assets for AfaqWay (study-abroad platform), either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for prototyping.
+description: Use this skill to generate well-branded interfaces and assets for AfaqWay — the guided study-abroad platform — either for production or throwaway prototypes/mocks. Contains the essential design guidelines, colours, type, fonts, assets, and UI-kit components for prototyping.
 user-invocable: true
 ---
 
-Read the README.md file within this skill, and explore the other available files.
-If creating visual artifacts (slides, mocks, throwaway prototypes, etc), copy assets out and create static HTML files for the user to view. If working on production code, you can copy assets and read the rules here to become an expert in designing with this brand.
-If the user invokes this skill without any other guidance, ask them what they want to build or design, ask some questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.
+Read the `readme.md` file within this skill, and explore the other available files.
 
-Key rules (full spec in `uploads/design-system.md`):
-- Poppins only; indigo #162E8C is the sole accent; cool paper #ECEFF3 background, white cards, hairline borders.
-- Status is a closed five-word/five-colour set: Not started · Applied · Under review · Needs changes · Approved — each with text/tint/line trio and a circle-housed icon.
-- Icons: outline, 1.75px stroke, rounded caps, from `assets/icons/` only.
-- Radii: 8/12/16/999 only. Never introduce a new colour, font, or component style.
+If creating visual artifacts (slides, mocks, throwaway prototypes, social posts, etc), copy assets out of `assets/` and create static HTML files for the user to view — link `styles.css` for the real tokens and match the brand foundations in the readme. If working on production code, copy assets and read the rules here to become an expert in designing with the AfaqWay brand: calm, credible, quietly institutional; Poppins; indigo `#162E8C`; floating white cards on a pale blue-grey field; Lucide outline icons; the status word always renders.
+
+Key files: `styles.css` (link this), `tokens/*` (colours, type, spacing), `base.css` (component classes), `components/*` (React primitives — Button, Pill, Status, Card, Cards, Controls, MetricCard, Accordion, Loader, Divider), `ui_kits/*` (workspace + marketing recreations), `assets/*` (logos, illustrations, imagery).
+
+If the user invokes this skill without any other guidance, ask them what they want to build or design, ask a few focused questions, and act as an expert designer who outputs HTML artifacts _or_ production code, depending on the need.

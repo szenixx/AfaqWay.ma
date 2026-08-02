@@ -316,6 +316,52 @@ function AttachmentEditor({ block, patch, onPickFile, uploading }: {
 
 /* ── Dispatcher ───────────────────────────────────────────────────────────── */
 
+/**
+ * Which service plan sees a block.
+ *
+ * Available on EVERY kind, not just programme details. The Excel replaces the
+ * Learn text of many steps for Full Service ("replace the default Learn Section
+ * with a message informing the student that our team will…"), and the importer
+ * writes that as a plan tag on the paragraph. Without this control an
+ * administrator could see a block in the list, edit it, and never understand why
+ * only half of their students ever saw it.
+ */
+export function PlanPicker({ block, patch }: { block: DbBlock; patch: Patch }) {
+  return (
+    <Labelled label="Show to">
+      <Select
+        value={String((block.data as { plan?: string })?.plan ?? "")}
+        onChange={(v) => {
+          const data = { ...(block.data ?? {}) } as Record<string, unknown>;
+          if (v) data.plan = v; else delete data.plan;
+          patch({ data });
+        }}
+        options={[
+          { value: "", label: "Every student" },
+          { value: "self_service", label: "Self Service only" },
+          { value: "full_service", label: "Full Service only" },
+        ]}
+      />
+    </Labelled>
+  );
+}
+
+/** "Display an Important Preparation Banner above the Learn section." */
+function BannerEditor({ block, patch }: { block: DbBlock; patch: Patch }) {
+  return (
+    <>
+      <Labelled label="Banner heading">
+        <Input value={block.title ?? ""} placeholder="🔴 Before You Travel" onChange={(e) => patch({ title: e.target.value })} />
+      </Labelled>
+      <Labelled label="Intro (optional)">
+        <TextArea rows={2} value={block.body ?? ""} placeholder="One sentence above the list" onChange={(e) => patch({ body: e.target.value })} />
+      </Labelled>
+      <TextListEditor block={block} patch={patch} ordered={false} />
+      <p className="be-hint">Shown above everything else in the step, and hidden once the student completes it.</p>
+    </>
+  );
+}
+
 export function BlockEditor({ kind, block, patch, onPickFile, uploading }: {
   kind: BlockKind;
   block: DbBlock;
@@ -323,6 +369,87 @@ export function BlockEditor({ kind, block, patch, onPickFile, uploading }: {
   onPickFile: () => void;
   uploading: boolean;
 }) {
+  switch (kind) {
+    /* A Learn module is edited as Markdown, on purpose: the brief asks that a
+       future update require "only Markdown editing". One field holds the whole
+       module, so rewriting it is a paste rather than a tour of twelve blocks. */
+    case "module":
+      return (
+        <>
+          <Labelled label="Module title">
+            <Input value={block.title ?? ""} placeholder="Avoiding Rental Scams" onChange={(e) => patch({ title: e.target.value })} />
+          </Labelled>
+          <Labelled label="Short description">
+            <Input
+              value={String((block.data as { summary?: string })?.summary ?? "")}
+              placeholder="One line explaining what the student will learn."
+              onChange={(e) => patch({ data: { ...block.data, summary: e.target.value } })}
+            />
+          </Labelled>
+          <Labelled label="Content (Markdown)">
+            <TextArea
+              rows={18} value={block.body ?? ""} className="be-md"
+              placeholder={"## Heading\n\nText.\n\n- Bullet\n- Bullet\n\n> [!WARNING] Something to avoid.\n\n### Checklist\n- [ ] First task"}
+              onChange={(e) => patch({ body: e.target.value })}
+            />
+          </Labelled>
+          <p className="be-hint">
+            Headings, lists, tables, links, images, <b>bold</b>, code and checklists (<code>- [ ] task</code>).
+            Callouts: <code>&gt; [!TIP]</code>, <code>[!WARNING]</code>, <code>[!IMPORTANT]</code>, <code>[!MISTAKE]</code>, <code>[!NOTE]</code>.
+            A YouTube or Vimeo address alone on its own line becomes a video player.
+          </p>
+        </>
+      );
+
+    case "banner":
+      return <BannerEditor block={block} patch={patch} />;
+
+    case "review_status":
+      return (
+        <>
+          <Labelled label="Heading">
+            <Input value={block.title ?? ""} placeholder="Application Under Review" onChange={(e) => patch({ title: e.target.value })} />
+          </Labelled>
+          <Labelled label="Message (optional)">
+            <TextArea rows={2} value={block.body ?? ""} placeholder="Leave empty to use the default wording" onChange={(e) => patch({ body: e.target.value })} />
+          </Labelled>
+          <p className="be-hint">A blue status card with a loading indicator, for a step the student is waiting on.</p>
+        </>
+      );
+
+    /* "Add an optional Example section that the admin can enable, edit, or hide
+       for each step. The Example section can include text, images, files,
+       videos, or external links." Every field is optional; whatever is filled in
+       is what the student sees. */
+    case "example":
+      return (
+        <>
+          <Labelled label="Label"><Input value={block.title ?? ""} placeholder="Example" onChange={(e) => patch({ title: e.target.value })} /></Labelled>
+          <Labelled label="Text"><RichText value={block.body ?? ""} onChange={(html) => patch({ body: html })} /></Labelled>
+          <Labelled label="Image URL (optional)">
+            <Input
+              value={String((block.data as { url?: string })?.url ?? "")} placeholder="https://…"
+              onChange={(e) => patch({ data: { ...block.data, url: e.target.value } })}
+            />
+          </Labelled>
+          <Labelled label="Video URL (optional)">
+            <Input
+              value={String((block.data as { videoUrl?: string })?.videoUrl ?? "")} placeholder="YouTube or Vimeo link"
+              onChange={(e) => patch({ data: { ...block.data, videoUrl: e.target.value } })}
+            />
+          </Labelled>
+          <Labelled label="External link (optional)">
+            <Input
+              value={String((block.data as { linkUrl?: string })?.linkUrl ?? "")} placeholder="https://…"
+              onChange={(e) => patch({ data: { ...block.data, linkUrl: e.target.value } })}
+            />
+          </Labelled>
+          <AttachmentEditor block={block} patch={patch} onPickFile={onPickFile} uploading={uploading} />
+          <p className="be-hint">Switch the block off with the toggle above to hide the Example without deleting it.</p>
+        </>
+      );
+  }
+
   switch (kind) {
     case "heading":
       return <Labelled label="Heading text"><Input value={block.title ?? ""} placeholder="How to complete this step" onChange={(e) => patch({ title: e.target.value })} /></Labelled>;
@@ -385,20 +512,10 @@ export function BlockEditor({ kind, block, patch, onPickFile, uploading }: {
               onChange={(v) => patch({ data: { ...block.data, field: v } })}
               options={[
                 { value: "url", label: "Programme page link" },
+                { value: "apply", label: "Apply now link" },
                 { value: "english", label: "Accepted English certificates" },
                 { value: "app_fee", label: "Application fee" },
                 { value: "tuition", label: "Tuition fee" },
-              ]}
-            />
-          </Labelled>
-          <Labelled label="Show to">
-            <Select
-              value={String((block.data as { plan?: string })?.plan ?? "")}
-              onChange={(v) => patch({ data: { ...block.data, plan: v } })}
-              options={[
-                { value: "", label: "Every student" },
-                { value: "self_service", label: "Self Service only" },
-                { value: "full_service", label: "Full Service only" },
               ]}
             />
           </Labelled>
@@ -407,11 +524,14 @@ export function BlockEditor({ kind, block, patch, onPickFile, uploading }: {
       );
 
     default:
-      // Callouts: a short label and one sentence.
+      /* Callouts: a short label, one sentence, and optionally a few bullets —
+         the Excel writes a "Tips & Advice" card as four bullet points and a
+         warning as one paragraph, and both are the same block. */
       return (
         <>
           <Labelled label="Label (optional)"><Input value={block.title ?? ""} placeholder="Leave empty to use the default" onChange={(e) => patch({ title: e.target.value })} /></Labelled>
           <Labelled label="Message"><TextArea rows={2} value={block.body ?? ""} placeholder="One clear sentence" onChange={(e) => patch({ body: e.target.value })} /></Labelled>
+          <TextListEditor block={block} patch={patch} ordered={false} />
         </>
       );
   }

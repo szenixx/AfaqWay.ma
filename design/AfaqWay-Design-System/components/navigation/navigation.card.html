@@ -1,0 +1,39 @@
+<!-- @dsCard group="Components" viewport="700x320" name="Navigation — MegaMenu, FloatingToolbar" subtitle="Top-bar nav with expandable panels; floating formatting toolbar" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;font-family:var(--font-sans);background:var(--paper);padding:24px}</style></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { MegaMenu, FloatingToolbar } = window.AfaqWayDesignSystem_898d90;
+const Bold = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4h8a4 4 0 0 1 0 8H6zM6 12h9a4 4 0 0 1 0 8H6z"/></svg>;
+const Italic = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg>;
+const Underline = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4v6a6 6 0 0 0 12 0V4M4 20h16"/></svg>;
+const LinkI = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 1 1 0 10h-2M8 12h8"/></svg>;
+const Doc = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>;
+const Map = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/></svg>;
+const items = [
+  { label: "Product", sections: [{ heading: "Platform", links: [
+    { label: "Roadmap", href: "#", description: "Application to arrival", icon: <Map/> },
+    { label: "Documents", href: "#", description: "Upload & track", icon: <Doc/> },
+  ]}]},
+  { label: "Resources", sections: [{ links: [
+    { label: "Guides", href: "#", description: "How AfaqWay works", icon: <Doc/> },
+  ]}]},
+  { label: "Pricing", href: "#" },
+];
+function App(){return (<div style={{display:"flex",flexDirection:"column",gap:64}}>
+  <MegaMenu items={items}/>
+  <div style={{display:"flex",justifyContent:"center"}}>
+    <FloatingToolbar open actions={[
+      { icon:<Bold/>, label:"Bold", active:true },
+      { icon:<Italic/>, label:"Italic" },
+      { icon:<Underline/>, label:"Underline" },
+      { icon:<LinkI/>, label:"Link" },
+    ]}/>
+  </div>
+</div>);}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script></body></html>

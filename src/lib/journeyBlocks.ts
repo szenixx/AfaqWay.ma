@@ -16,6 +16,28 @@ export type BlockKind =
   | "heading" | "paragraph" | "list" | "numbered" | "checklist" | "accordion"
   | "table" | "image" | "video" | "link" | "attachment"
   | "note" | "info" | "tip" | "warning" | "mistake"
+  /* Red, and unmissable. The Excel asks for "two prominent red warning cards at
+     the top of the Learn section" and for the €190 and the extra passport
+     photocopy to be "visually emphasized with red warning cards and warning
+     icons". `mistake` is also red but means "a common mistake", so a separate
+     kind keeps both meanings intact. */
+  | "important"
+  /* "Display an Important Preparation Banner above the Learn section … Keep the
+     banner visible until the student marks the step as completed." */
+  | "banner"
+  /* "Display a blue Application Under Review status card at the top of the page
+     with an animated loading indicator." */
+  | "review_status"
+  /* "Add an optional Example section that the admin can enable, edit, or hide
+     for each step. The Example section can include text, images, files, videos,
+     or external links." */
+  | "example"
+  /* A Learn module: one title, one short description, and a Markdown body.
+     Stage 5's content is written this way because the brief asks for Markdown
+     storage and for administrators to edit, hide, reorder, publish and
+     unpublish each module independently — all of which a block already does,
+     so a module is a block rather than a new table. */
+  | "module"
   /* Resolved at read time from the student's own programme, so the Excel never
      has to repeat a fee or a URL that already lives in the programme engine. */
   | "program";
@@ -37,18 +59,33 @@ export const BLOCK_KINDS: { value: BlockKind; label: string; group: "text" | "me
   { value: "tip",        label: "Tip",            group: "callout" },
   { value: "warning",    label: "Warning",        group: "callout" },
   { value: "mistake",    label: "Common mistake", group: "callout" },
+  { value: "important",  label: "Important (red)", group: "callout" },
+  { value: "banner",     label: "Preparation banner", group: "callout" },
+  { value: "review_status", label: "Under review card", group: "callout" },
+  { value: "example",    label: "Example section", group: "media" },
+  { value: "module",     label: "Learn module (Markdown)", group: "text" },
   { value: "program",    label: "Programme detail", group: "media" },
 ];
 
 /** Which fact a "program" block pulls from the student's programme record. */
-export type ProgramField = "url" | "english" | "app_fee" | "tuition";
+export type ProgramField = "url" | "apply" | "english" | "app_fee" | "tuition";
 
 export const PROGRAM_FIELD_LABEL: Record<ProgramField, string> = {
   url: "Programme page",
+  /* Same address as `url`, presented as the action rather than the reference:
+     "Self Service: display the Apply Now button/link that takes the student
+     directly to the university application page." The programme catalogue
+     stores one URL per programme, which is the page that carries the apply
+     route, so this is a different label rather than a different field. */
+  apply: "Apply now",
   english: "Accepted English certificates",
   app_fee: "Application fee",
   tuition: "Tuition fee",
 };
+
+/** The one-line description shown under a Learn module's title. */
+export const moduleSummary = (block: Pick<DbBlock, "data">): string =>
+  String((block.data as { summary?: string })?.summary ?? "");
 
 export const programField = (block: Pick<DbBlock, "data">): ProgramField =>
   ((block.data as { field?: string })?.field as ProgramField) ?? "url";
@@ -58,7 +95,11 @@ export const blockPlan = (block: Pick<DbBlock, "data">): string =>
   String((block.data as { plan?: string })?.plan ?? "");
 
 export const KIND_LABEL = new Map(BLOCK_KINDS.map((k) => [k.value, k.label]));
-export const CALLOUT_KINDS = new Set<BlockKind>(["note", "info", "tip", "warning", "mistake"]);
+
+/* Callouts share one shape: a coloured label, a sentence, and optionally a
+   short list. The Excel's four colours map onto them directly —
+   red = important · yellow = warning · blue = note/info · green = tip. */
+export const CALLOUT_KINDS = new Set<BlockKind>(["note", "info", "tip", "warning", "mistake", "important"]);
 
 /** Kinds that no longer exist; anything stored as one renders as a paragraph. */
 const RETIRED = new Set(["faq", "success"]);
@@ -171,6 +212,8 @@ export function embedUrl(input: string): string | null {
 /** The data a freshly added block starts with, so no kind is ever born empty. */
 export function starterData(kind: BlockKind): Record<string, unknown> {
   switch (kind) {
+    case "banner":     return { entries: ["First thing to do before you travel"] };
+    case "module":     return { summary: "" };
     case "list":
     case "numbered":   return { entries: ["First item"] };
     case "checklist":  return { entries: [{ text: "First task", checked: false }] };
@@ -223,6 +266,20 @@ export function isEmptyBlock(block: Pick<DbBlock, "kind" | "title" | "body" | "d
     case "link":       return !linkData(block).url;
     case "attachment": return !attachmentData(block).path;
     case "program":    return false;   // always resolvable from the programme
+    /* Draws its own content, so it is never empty even with no title or body.
+       Leaving it to the default would have skipped the "Application Under
+       Review" card entirely, since the Excel gives it neither. */
+    case "review_status": return false;
+    /* A module is its Markdown; an empty body is genuinely nothing to show. */
+    case "module":     return !(block.body ?? "").trim();
+    case "banner":     return !hasText && listItemsForDisplay(block).length === 0;
+    /* A callout may carry its detail as a list instead of a sentence. */
+    case "important":
+    case "note":
+    case "info":
+    case "tip":
+    case "warning":
+    case "mistake":    return !hasText && listItemsForDisplay(block).length === 0;
     default:           return !hasText;
   }
 }

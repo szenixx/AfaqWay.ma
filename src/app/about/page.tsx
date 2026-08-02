@@ -109,7 +109,7 @@ export default function AboutPage() {
           </Block>
 
           <div style={{ display: "flex", justifyContent: "center", marginTop: 44 }}>
-            <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 50, padding: "0 28px", borderRadius: 999, font: "600 15px/1 var(--font-sans)" }}>
+            <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 50, padding: "0 28px", borderRadius: "var(--radius-control)", font: "600 15px/1 var(--font-sans)" }}>
               Start your roadmap <IconArrow size={16} />
             </Link>
           </div>

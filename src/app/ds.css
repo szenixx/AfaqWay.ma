@@ -1,69 +1,327 @@
 /* AfaqWay Design System, tokens + base classes.
-   Source of truth: design/AfaqWay-Design-System/tokens/{colors,typography,spacing,base}.css
-   Copied VERBATIM. Never invent colours, fonts, radii, or spacing, add them to the
-   design system first. This file is the app's binding style contract. */
+   Source of truth: design/AfaqWay-Design-System/ — tokens/*.css, copied VERBATIM
+   below. Never invent colours, fonts, radii, or spacing: add them to the design
+   system first. This file is the app's binding style contract.
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+   v2 of the system. Against v1 this changes the surface field (matte neutral,
+   no blue cast), softens every border and shadow, introduces --radius-control
+   for buttons, and flattens the workspace background. Component classes below
+   the token block are the app's own and are unchanged. */
+
+/* Poppins 800 is loaded on top of the system's 400-700: the design system sets
+   800 on the hero H1 and roadmap title, and without the real cut the browser
+   was synthesising a fake bold. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
 /* ── tokens/colors.css ─────────────────────────────────────────────── */
+/* AfaqWay colour system — copied verbatim from src/app/ds.css (the token contract).
+   Never invent a colour: add it here first, then use it. RGB given in design.md. */
 :root{
---paper:#ECEFF3; --card:#FFFFFF; --subtle:#F3F5F9;
---ink:#17233A; --ink-soft:#5A6B85; --ink-faint:#8695AB;
---line:#DCE2EA; --line-soft:#E7ECF1;
---shadow-card:0 2px 10px rgba(23,35,58,.04);
---indigo-700:#0F256F; --indigo-600:#162E8C; --indigo-500:#1230A6; --indigo-100:#E8EEFF;
---grey:#8695AB; --grey-tint:#F1F4F7; --grey-line:#DCE2EA;
---indigo-text:#162E8C; --indigo-tint:#E8EEFF; --indigo-line:#C4CEEE;
-/* Brand extras from the palette: the palest surface and the focus ring. */
---indigo-50:#F6F8FF; --focus-ring:rgba(22,46,140,.25);
---amber:#8A5A0C; --amber-tint:#FBF0DA; --amber-line:#E7C583;
---red:#B23B27; --red-tint:#FBE7E2; --red-line:#EDB3A6;
---green:#256B49; --green-tint:#E3F0E9; --green-line:#9CCBB2;
-/* Softened status colours, for secondary icons and graph strokes only. Each
-   clears 3.6:1 on every surface, the AA threshold for graphics and UI parts.
-   Text keeps the darker values above, which clear 5.3:1. */
---green-soft:#3F8C63; --amber-soft:#A8741B; --red-soft:#C25A44;
-/* semantic aliases */
---text-body:var(--ink); --text-secondary:var(--ink-soft); --text-hint:var(--ink-faint);
---surface-page:var(--paper); --surface-card:var(--card); --surface-input:var(--subtle);
---border-default:var(--line); --border-divider:var(--line-soft);
---accent:var(--indigo-600); --accent-hover:var(--indigo-500); --accent-pressed:var(--indigo-700); --accent-tint:var(--indigo-100);
+  /* ── Surfaces ── */
+  --paper:#F5F6F8;      /* page base — v2: matte neutral, no blue cast */
+  --card:#FFFFFF;       /* every card, input, menu, bubble */
+  --subtle:#F7F8F9;     /* recessed rows, disabled fields, code blocks — v2: softer, lower contrast */
+  --divider:#F1F5F9;    /* in-card row separation */
+
+  /* ── Text ── */
+  --ink:#17233A;        /* headings, primary body, values */
+  --ink-soft:#5A6B85;   /* secondary body, descriptions */
+  --ink-faint:#8695AB;  /* labels, placeholders, metadata */
+
+  /* ── Borders ── */
+  --line:#E8E9ED;       /* default border — v2: near-invisible, structure only */
+  --line-soft:#EFF0F2;  /* dividers, internal separators — v2: barely-there */
+  --card-border:1px solid rgba(15,23,42,.045); /* @kind other */ /* the card hairline — should almost disappear */
+
+  /* ── Brand — Indigo (primary) ── */
+  --indigo-700:#0F256F; /* pressed */
+  --indigo-600:#162E8C; /* primary / default — buttons, links, active icons */
+  --indigo-500:#1230A6; /* hover */
+  --indigo-100:#E8EEFF; /* focus glow, ghost hover */
+  --indigo-50:#F6F8FF;  /* palest surface */
+  --indigo-text:#162E8C;/* text on indigo tint */
+  --indigo-tint:#E8EEFF;/* pill / callout background */
+  --indigo-line:#C4CEEE;/* pill / callout border, hover border */
+  --focus-ring:rgba(22,46,140,.25);
+
+  /* ── Status: text · tint · line per family ── */
+  --green:#256B49;  --green-tint:#E3F0E9;  --green-line:#9CCBB2;  /* success, approved, paid, online */
+  --amber:#8A5A0C;  --amber-tint:#FBF0DA;  --amber-line:#E7C583;  /* pending, waiting, away */
+  --red:#B23B27;    --red-tint:#FBE7E2;    --red-line:#EDB3A6;    /* rejected, failed, destructive */
+  --grey:#8695AB;   --grey-tint:#F1F4F7;   --grey-line:#DCE2EA;   /* draft, cancelled, offline */
+
+  /* Softened status — graphics/UI only (≥3.6:1), never text (text uses the darker values above). */
+  --green-soft:#3F8C63; --amber-soft:#A8741B; --red-soft:#C25A44;
+
+  /* ── Overlays & shadow hues ── */
+  --scrim:rgba(23,35,58,.42);          /* modal scrim (+ blur 6px) */
+  --scrim-strong:rgba(23,35,58,.55);   /* celebration scrim */
+  --shadow-ink:rgba(23,35,58,1);       /* the single shadow hue */
+  --shadow-brand:rgba(22,46,140,1);    /* hover lift on indigo elements */
+
+  /* ── Semantic aliases ── */
+  --text-body:var(--ink); --text-secondary:var(--ink-soft); --text-hint:var(--ink-faint);
+  --surface-page:var(--paper); --surface-card:var(--card); --surface-input:var(--subtle);
+  --border-default:var(--line); --border-divider:var(--line-soft);
+  --accent:var(--indigo-600); --accent-hover:var(--indigo-500); --accent-pressed:var(--indigo-700); --accent-tint:var(--indigo-100);
+
+  /* ── Workspace background (v2: flat matte — no gradient, no colour blobs) ── */
+  --sw-gradient:#F5F6F8; /* @kind other */ /* was a 135° indigo gradient; v2 background is matte and disappears behind content */
+  --blob-1:transparent;  /* v2: no ambient colour blobs */
+  --blob-2:transparent;
+
+  /* ══ Expanded 50–950 scales ══════════════════════════════════════════════
+     For SaaS-grade foundations work (dense tables, charts, hover ramps). The
+     single-value tokens above remain the ones components actually render
+     with — 600/700 here are IDENTICAL to --indigo-600/700, so nothing already
+     built shifts colour. Never hand-pick a new hex outside this ramp. */
+
+  /* Primary — Indigo (same hue as --indigo-*, extended both directions). */
+  --primary-50:#EEF1FB; --primary-100:#D6DDF4; --primary-200:#ADBAE8; --primary-300:#7C90D8;
+  --primary-400:#4C63C4; --primary-500:#2A45AC; --primary-600:#162E8C; --primary-700:#0F256F;
+  --primary-800:#0B1D57; --primary-900:#081540; --primary-950:#050D2B;
+
+  /* Secondary — a desaturated slate-blue for quiet secondary actions (never a new brand hue). */
+  --secondary-50:#F2F4F9; --secondary-100:#E4E8F1; --secondary-200:#C9D0E1; --secondary-300:#A9B3CB;
+  --secondary-400:#8089AA; --secondary-500:#5F6890; --secondary-600:#4A5175; --secondary-700:#393F5C;
+  --secondary-800:#2A2F45; --secondary-900:#1C1F30; --secondary-950:#10121C;
+
+  /* Neutral — surfaces & ink, one ramp for both. */
+  --neutral-50:#F7F8FA; --neutral-100:#EEEFF4; --neutral-200:#E1E3EA; --neutral-300:#C4C6D1;
+  --neutral-400:#9FA2AF; --neutral-500:#7A7D8C; --neutral-600:#595C6B; --neutral-700:#3A3C49;
+  --neutral-800:#24252E; --neutral-900:#15161D; --neutral-950:#0B0B10;
+
+  /* Success — green. */
+  --success-50:#E3F0E9; --success-100:#C9E4D4; --success-200:#9CCBB2; --success-300:#7BBE9C;
+  --success-400:#3F8C63; --success-500:#2E7A53; --success-600:#256B49; --success-700:#1D5A3D;
+  --success-800:#164630; --success-900:#0F3322; --success-950:#081D13;
+
+  /* Warning — amber. */
+  --warning-50:#FBF0DA; --warning-100:#F5E0B8; --warning-200:#E7C583; --warning-300:#D9AC57;
+  --warning-400:#A8741B; --warning-500:#96650F; --warning-600:#8A5A0C; --warning-700:#714908;
+  --warning-800:#593906; --warning-900:#402A04; --warning-950:#241802;
+
+  /* Danger — red. */
+  --danger-50:#FBE7E2; --danger-100:#F6CFC5; --danger-200:#EDB3A6; --danger-300:#DA8A76;
+  --danger-400:#C25A44; --danger-500:#BC4A34; --danger-600:#B23B27; --danger-700:#8F2F1F;
+  --danger-800:#6E2417; --danger-900:#4C190F; --danger-950:#2C0E08;
+
+  /* Info — reuses the Primary ramp (one indigo, two roles: brand + info). */
+  --info-50:var(--primary-50); --info-100:var(--primary-100); --info-200:var(--primary-200);
+  --info-500:var(--primary-500); --info-600:var(--primary-600); --info-700:var(--primary-700);
+
+  /* Accent aliases Primary — the system deliberately has one brand hue, not two. */
+  --accent-50:var(--primary-50); --accent-500:var(--primary-500); --accent-600:var(--primary-600); --accent-700:var(--primary-700);
 }
 
-/* ── tokens/typography.css ─────────────────────────────────────────── */
+/* ── tokens/surfaces.css ─────────────────────────────────────────────── */
+/* AfaqWay layered surface system — every background is one named layer, never
+   a raw colour. Values point back to the base tokens in colors.css. */
 :root{
---font-sans:'Poppins', system-ui, sans-serif;
---text-page-title:700 27px/34px var(--font-sans);
---text-section-title:600 18px/24px var(--font-sans);
---text-body-md:400 15px/24px var(--font-sans);
---text-label:500 13px/20px var(--font-sans);
---text-eyebrow:600 11.5px/16px var(--font-sans);
---text-section-eyebrow:600 10.5px/14px var(--font-sans);
---text-button:600 14.5px/20px var(--font-sans);
---text-pill:600 10.5px/1 var(--font-sans);
---text-hint-sm:400 12px/17px var(--font-sans);
---text-micro:600 10px/14px var(--font-sans);
+  --surface-0:var(--paper);           /* page background */
+  --surface-1:var(--card);            /* the floating card — the default surface */
+  --surface-2:var(--subtle);          /* recessed rows, disabled fields */
+  --surface-3:var(--neutral-100);     /* deeper recess (nested panels) */
+  --surface-floating:var(--card);     /* card + --elev-hover on lift; same paint, different shadow */
+  --surface-modal:var(--card);
+  --surface-popover:var(--card);
+  --surface-dropdown:var(--card);
+  --surface-sidebar:rgba(255,255,255,.8); /* glass — pair with --blur-lg + saturate(1.5) */
+  --surface-header:var(--card);
+  --surface-footer:var(--paper);
+  --surface-card:var(--card);         /* alias, kept from colors.css */
+  --surface-recessed:var(--subtle);
+  --surface-highlight:var(--indigo-tint);
 }
 
-/* ── tokens/spacing.css ────────────────────────────────────────────── */
+/* ── tokens/typography.css ─────────────────────────────────────────────── */
+/* AfaqWay typography — Poppins, composite `font` shorthand tokens.
+   weight size/line-height family. Verbatim from ds.css. */
 :root{
---space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
---radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
-/* Floating card system: cards are large, soft and almost borderless, and
-   hierarchy comes from elevation rather than lines. Brand colour, typography
-   and every layout rule are unchanged. */
---radius-card:28px;
---card-border:1px solid rgba(23,35,58,.05);
---elev-1:0 6px 20px rgba(23,35,58,.04);
---elev-2:0 10px 30px rgba(23,35,58,.05);
---elev-3:0 20px 60px rgba(23,35,58,.08);
---elev-hover:0 20px 45px rgba(23,35,58,.08);
-/* Row separation inside cards: spacing first, a whisper of a line second. */
---divider:#F1F5F9;
---ease:cubic-bezier(.4,0,.2,1);
---dur-fast:120ms;
---dur-slow:200ms;
+  --font-sans:'Poppins', system-ui, sans-serif;
+
+  --text-page-title:700 27px/34px var(--font-sans);      /* page H1 */
+  --text-section-title:600 18px/24px var(--font-sans);   /* section H2 */
+  --text-body-md:400 15px/24px var(--font-sans);         /* body copy */
+  --text-label:500 13px/20px var(--font-sans);           /* field & row labels */
+  --text-eyebrow:600 11.5px/16px var(--font-sans);       /* above a title */
+  --text-section-eyebrow:600 10.5px/14px var(--font-sans);/* small section kicker */
+  --text-button:600 14.5px/20px var(--font-sans);        /* buttons */
+  --text-pill:600 10.5px/1 var(--font-sans);             /* pills (+ .05em, uppercase) */
+  --text-hint-sm:400 12px/17px var(--font-sans);         /* helper text */
+  --text-micro:600 10px/14px var(--font-sans);           /* micro labels */
+
+  /* ── Full display/heading/body ladder (SaaS-grade foundations) ──
+     page-title/section-title/body-md/eyebrow/hint-sm above are the tokens
+     components actually render with; these fill out the rest of the scale
+     and alias back to them wherever a role already exists, so nothing
+     already built changes size. */
+  --font-mono:ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* no brand mono supplied — system stack */
+
+  --text-display-xl:800 56px/60px var(--font-sans);
+  --text-display:800 44px/50px var(--font-sans);
+  --text-h1:var(--text-page-title);
+  --text-h2:700 28px/34px var(--font-sans);
+  --text-h3:600 22px/28px var(--font-sans);
+  --text-h4:var(--text-section-title);
+  --text-h5:600 16px/22px var(--font-sans);
+  --text-h6:600 14px/20px var(--font-sans);
+  --text-title:700 17px/23px var(--font-sans);
+  --text-subtitle:500 14px/20px var(--font-sans);
+  --text-body-lg:400 16px/26px var(--font-sans);
+  --text-body:var(--text-body-md);
+  --text-body-sm:400 13px/20px var(--font-sans);
+  --text-caption:400 11.5px/16px var(--font-sans);
+  --text-overline:var(--text-eyebrow);
+  --text-helper:var(--text-hint-sm);
+  --text-code:400 13px/20px var(--font-mono);
 }
+
+/* ── tokens/spacing.css ─────────────────────────────────────────────── */
+/* AfaqWay spacing scale + layout widths — verbatim from ds.css. Radius,
+   shadow and motion tokens live in radius.css / shadows.css / effects.css. */
+:root{
+  /* ── Spacing scale (4px base) ── */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
+  /* Extended scale for denser SaaS layouts; the values above remain what
+     components actually use. */
+  --space-12:48px; --space-14:56px; --space-16:64px; --space-18:72px;
+  --space-20:80px; --space-24:96px; --space-30:120px; --space-40:160px;
+
+  /* ── Layout widths ── */
+  --sw-side:256px;       /* sidebar expanded */
+  --sw-side-icon:60px;   /* sidebar collapsed */
+  --sw-head:56px;        /* mobile header height */
+
+  /* ── Grid ── */
+  --container-max:1280px;
+  --gutter:24px;
+  --margin-desktop:32px;
+  --margin-tablet:24px;
+  --margin-mobile:16px;
+
+  /* ── Breakpoints (documented as custom properties; media queries can't read
+       them, but every screen in this system uses these exact widths). ── */
+  --bp-mobile:480px; --bp-tablet:768px; --bp-laptop:1024px; --bp-desktop:1280px; --bp-wide:1536px;
+}
+
+/* ── tokens/radius.css ─────────────────────────────────────────────── */
+/* AfaqWay radius — one system. Controls are capsules; surfaces are 12–28px.
+   sm/md/lg/pill/card are the ones components render with; xs/xl/2xl/3xl/circle
+   fill out the SaaS-grade scale without displacing them. */
+:root{
+  --radius-xs:4px;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-xl:20px;
+  --radius-2xl:24px;
+  --radius-3xl:28px;
+  --radius-card:var(--radius-3xl);  /* 28px — the floating card */
+  --radius-dialog:32px;              /* dialogs, floating panels — one step past the card */
+  --radius-pill:999px;               /* v2: reserved for search bars, segmented tracks, FAB, chips/status — not generic buttons */
+  --radius-control:18px;             /* v2: the default button radius — rounder rect, not a full capsule */
+  --radius-circle:50%;
+}
+
+/* ── tokens/shadows.css ─────────────────────────────────────────────── */
+/* AfaqWay shadows — one ink hue (rgba(23,35,58,…)); the one exception is
+   brand-hued hover on interactive indigo elements. shadow-card/elev-1..3/
+   elev-hover/shadow-brand-hover are what components render with; the
+   xs–xl + floating/modal/popover/hover/pressed scale documents the full
+   ladder without changing any of them. */
+:root{
+  /* v2 — atmospheric shadow system: larger blur, lower opacity, no hard edge.
+     Depth reads as "gently lifted," never dramatically floating or glossy. */
+  --shadow-none:none;
+  --shadow-card:0 1px 2px rgba(15,23,42,.03);            /* flattest resting card */
+  --elev-1:0 8px 24px -10px rgba(15,23,42,.06);          /* subtle lift */
+  --elev-2:0 16px 40px -14px rgba(15,23,42,.07);         /* default card */
+  --elev-3:0 28px 64px -18px rgba(15,23,42,.10);         /* prominent */
+  --elev-hover:0 22px 48px -16px rgba(15,23,42,.09);     /* card hover */
+  --shadow-brand-hover:0 16px 36px -18px rgba(22,46,140,.35); /* hover on brand elements — softened */
+
+  --shadow-xs:var(--shadow-card);
+  --shadow-sm:var(--elev-1);
+  --shadow-md:var(--elev-2);
+  --shadow-lg:var(--elev-3);
+  --shadow-xl:0 30px 80px rgba(23,35,58,.16);
+  --shadow-floating:var(--elev-hover);
+  --shadow-modal:0 30px 80px rgba(23,35,58,.3);
+  --shadow-dialog:var(--shadow-modal); /* alias — "dialog" and "modal" are the same elevation here */
+  --shadow-popover:0 18px 44px rgba(23,35,58,.16);
+  --shadow-hover:var(--shadow-brand-hover);
+  --shadow-pressed:inset 0 1px 3px rgba(23,35,58,.12);
+  /* small/medium/large aliases, matching generic naming some specs expect */
+  --shadow-small:var(--shadow-sm); --shadow-medium:var(--shadow-md); --shadow-large:var(--shadow-lg);
+}
+
+/* ── tokens/effects.css ─────────────────────────────────────────────── */
+/* AfaqWay borders, opacity, blur & motion — the rest of the effects layer.
+   --ease/--dur-fast/--dur-slow are what components render with; the rest
+   fills out the full system for foundations documentation. */
+:root{
+  /* ── Borders ── */
+  --border-hairline:var(--card-border);           /* 1px rgba(23,35,58,.05) — the card edge */
+  --border-thin:1px solid var(--line-soft);
+  --border-default-w:1px solid var(--line);       /* (border-default already aliases --line itself) */
+  --border-strong:1.5px solid var(--ink-faint);
+  --border-focus:2.5px solid var(--indigo-600);
+  --border-dashed:1px dashed var(--indigo-line);
+  --border-dropzone:2px dashed var(--indigo-line);
+
+  /* ── Opacity ── */
+  --opacity-disabled:.5; /* @kind other */
+  --opacity-disabled-field:.7; /* @kind other */
+  --opacity-hover:.85; /* @kind other */
+  --opacity-pressed:.7; /* @kind other */
+  --opacity-overlay:.42; /* @kind other */
+  --opacity-overlay-strong:.55; /* @kind other */
+  --opacity-watermark:.06; /* @kind other */
+  --opacity-faint:.09; /* @kind other */
+
+  /* ── Blur ── */
+  --blur-sm:6px;   /* modal scrim */
+  --blur-md:10px;  /* animated-modal scrim */
+  --blur-lg:22px;  /* sidebar glass */
+  --blur-xl:32px;  /* background blobs */
+
+  /* ── Motion ── */
+  --ease:cubic-bezier(.4,0,.2,1); /* @kind other */
+  --dur-fast:120ms; /* @kind other */
+  --dur-slow:200ms; /* @kind other */
+  --motion-hover:140ms var(--ease); /* @kind other */
+  --motion-press:120ms var(--ease); /* @kind other */
+  --motion-open:220ms var(--ease); /* @kind other */
+  --motion-close:180ms var(--ease); /* @kind other */
+  --motion-page:260ms var(--ease); /* @kind other */
+  --motion-toast:260ms var(--ease); /* @kind other */
+
+  /* ── Z-index ── */
+  --z-base:1; /* @kind other */
+  --z-sticky:90; /* @kind other */
+  --z-dropdown:70; /* @kind other */
+  --z-popover:220; /* @kind other */
+  --z-modal:240; /* @kind other */
+  --z-select-menu:1200; /* @kind other */
+  --z-fullscreen:1300; /* @kind other */
+  --z-celebration:1400; /* @kind other */
+  --z-toast:9999; /* @kind other */
+}
+
+/* ── tokens/icons.css ─────────────────────────────────────────────── */
+/* AfaqWay icon system — Lucide outline, one stroke family. Sizes are
+   contextual; containers wrap an icon in a circle/rounded-square/pill. */
+:root{
+  --icon-2xs:16px; --icon-xs:18px; --icon-sm:20px; --icon-md:24px; --icon-lg:28px; --icon-xl:32px;
+
+  --icon-container-sm:32px;
+  --icon-container-md:40px;
+  --icon-container-lg:48px;
+  --icon-container-xl:56px;
+}
+
 
 /* ── tokens/base.css ───────────────────────────────────────────────── */
 .card{background:var(--card);border:var(--card-border);border-radius:var(--radius-card);box-shadow:var(--elev-2);padding:24px;
@@ -217,19 +475,39 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-header-name{font:700 14.5px/20px var(--font-sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .chat-header-sub{display:flex;align-items:center;gap:5px;font:400 11.5px/16px var(--font-sans);color:var(--ink-faint);margin-top:1px;}
 
-/* ── Thread ── */
-.chat-thread{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;padding:18px;display:flex;flex-direction:column;gap:12px;}
-.chat-row{display:flex;align-items:flex-end;gap:6px;max-width:min(78%,560px);animation:afBubbleIn 260ms var(--ease) both;}
-.chat-row.mine{flex-direction:row-reverse;align-self:flex-end;}
+/* ── Thread ──────────────────────────────────────────────────────────────
+   The Bubble / Message family from the design system
+   (design/AfaqWay-Design-System/components/communication/*, base.css). The
+   bubble is a rounded-dialog fill carrying only the message; the sender and
+   the timestamp sit OUTSIDE it as header/footer meta, which is what stops a
+   long thread reading as a wall of boxed metadata. Incoming is the `outline`
+   variant (card + hairline), the student's own is `default` (indigo). */
+.chat-thread{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;padding:18px;display:flex;flex-direction:column;gap:14px;}
+
+.chat-row{display:flex;width:100%;min-width:0;gap:8px;align-items:flex-end;
+  font:400 13.5px/20px var(--font-sans);animation:afBubbleIn 260ms var(--ease) both;}
+.chat-row.mine{flex-direction:row-reverse;}
 @keyframes afBubbleIn{from{opacity:0;transform:translateY(10px) scale(.965);}to{opacity:1;transform:none;}}
-.chat-bubble{min-width:0;padding:10px 14px;border-radius:20px;background:var(--card);border:1px solid var(--line);box-shadow:0 2px 10px rgba(23,35,58,.05);transition:box-shadow 160ms var(--ease);}
-.chat-row:hover .chat-bubble{box-shadow:0 6px 18px rgba(23,35,58,.09);}
-.chat-row.mine .chat-bubble{background:var(--indigo-600);border-color:var(--indigo-600);color:#fff;}
+
+/* Content column: bubble + its meta, aligned to the sender's side.
+   Named -msgcol, not -col: `.chat-col` is already the chat layout's panel
+   column (list | thread | side panel), and reusing it here shrank every chat
+   frame to the bubble's 78% max-width. */
+.chat-msgcol{display:flex;min-width:0;max-width:min(78%,560px);flex-direction:column;gap:6px;align-items:flex-start;}
+.chat-row.mine .chat-msgcol{align-items:flex-end;}
+
+.chat-bubble{width:fit-content;max-width:100%;min-width:0;overflow:hidden;padding:10px 14px;
+  border-radius:var(--radius-dialog);background:var(--card);border:1px solid var(--line);
+  box-shadow:var(--shadow-card);word-break:break-word;transition:box-shadow 160ms var(--ease);}
+.chat-row:hover .chat-bubble{box-shadow:var(--elev-1);}
+.chat-row.mine .chat-bubble{background:var(--indigo-600);border-color:transparent;color:#fff;}
 .chat-row.mine .chat-bubble .chat-text{color:#fff;}
-.chat-row.mine .chat-time{color:rgba(255,255,255,.72);}
 .chat-bubble.pinned{box-shadow:0 0 0 2px var(--indigo-line);}
 .chat-text{font:400 13.5px/20px var(--font-sans);color:var(--ink);white-space:pre-wrap;word-break:break-word;}
-.chat-time{display:flex;align-items:center;gap:8px;margin-top:5px;font:400 10.5px/14px var(--font-sans);color:var(--ink-faint);}
+
+/* Meta outside the bubble — the design system's msg-footer. */
+.chat-time{display:flex;max-width:100%;min-width:0;align-items:center;gap:8px;padding:0 3px;
+  font:400 10.5px/14px var(--font-sans);color:var(--ink-faint);}
 /* Row actions fade in on hover. */
 .chat-acts{display:flex;flex-direction:column;gap:4px;flex:none;opacity:0;transition:opacity 160ms var(--ease);}
 .chat-row:hover .chat-acts,.chat-row:focus-within .chat-acts{opacity:1;}
@@ -420,6 +698,80 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .af-shimmer::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.42),transparent);transform:skewX(-18deg);animation:afShimmer 2.8s cubic-bezier(.4,0,.2,1) infinite;pointer-events:none;}
 @keyframes afShimmer{0%{left:-60%;}55%,100%{left:120%;}}
 
+/* ══ Top-nav links ═════════════════════════════════════════════════════════
+   Every top-bar destination is set in a heavier weight so the bar reads as
+   strong, deliberate navigation. The brand mark is excluded — it is the
+   identity, not a nav item, and keeps its own weight. */
+.af-navstroke{position:relative;display:inline-flex;align-items:center;padding:8px 12px;
+  border-radius:999px;background:transparent;font-weight:800;letter-spacing:-.01em;
+  transition:color 160ms var(--ease);}
+
+/* ══ Scroll timeline (godui scroll-timeline motion) ════════════════════════
+   A muted rail with an accent overlay that grows as the reader scrolls. The
+   date column sticks beside its entry on desktop and folds into the entry on
+   narrow screens. */
+.af-tl-row{display:flex;justify-content:flex-start;padding-top:40px;gap:40px;}
+.af-tl-side{position:sticky;top:24px;z-index:0;display:flex;align-self:flex-start;
+  max-width:320px;width:176px;flex:none;align-items:flex-start;}
+.af-tl-node{position:absolute;left:12px;display:flex;width:32px;height:32px;align-items:center;
+  justify-content:center;border-radius:999px;background:var(--paper);}
+.af-tl-dot{width:12px;height:12px;border-radius:999px;background:var(--indigo-tint);
+  border:1px solid var(--indigo-line);}
+.af-tl-date{padding-left:64px;}
+.af-tl-body{position:relative;width:100%;padding-right:16px;padding-left:16px;}
+.af-tl-date-inline{display:none;}
+.af-tl-rail{position:absolute;top:0;left:28px;width:1px;overflow:hidden;background:var(--line);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 10%,#000 90%,transparent 100%);
+  mask-image:linear-gradient(to bottom,transparent 0%,#000 10%,#000 90%,transparent 100%);}
+.af-tl-rail-fill{position:absolute;inset:0;width:1px;transform-origin:top;border-radius:999px;
+  background:linear-gradient(to top,var(--indigo-600),rgba(22,46,140,0));}
+@media (max-width:820px){
+  .af-tl-row{gap:0;padding-top:28px;}
+  .af-tl-side{width:auto;}
+  .af-tl-date{display:none;}
+  .af-tl-body{padding-left:64px;}
+  .af-tl-date-inline{display:block;margin-bottom:10px;font:700 17px/22px var(--font-sans);color:var(--ink);}
+}
+
+/* ══ Spotlight card (godui spotlight-card effect) ══════════════════════════
+   A low-opacity primary-blue glow tracks the pointer, with a matching ring on
+   the border. Both layers only fade in on hover, so a resting card is exactly
+   the card the design system already defines. */
+.af-spotlight{position:relative;isolation:isolate;}
+.af-spotlight-glow,.af-spotlight-ring{position:absolute;inset:0;pointer-events:none;opacity:0;
+  transition:opacity 400ms var(--ease);border-radius:inherit;}
+.af-spotlight-glow{background:radial-gradient(var(--spot-radius,350px) circle at var(--sx,50%) var(--sy,50%),var(--spot-color),transparent 65%);}
+.af-spotlight-ring{padding:1px;
+  background:radial-gradient(var(--spot-radius,350px) circle at var(--sx,50%) var(--sy,50%),var(--spot-border),transparent 65%);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  mask-composite:exclude;}
+.af-spotlight:hover .af-spotlight-glow,.af-spotlight:hover .af-spotlight-ring{opacity:1;}
+.af-spotlight-content{position:relative;z-index:1;height:100%;}
+@media (prefers-reduced-motion:reduce){
+  .af-spotlight-glow,.af-spotlight-ring{transition:none;}
+}
+
+/* ══ Lamp (godui lamp: two conic cones + a glowing bar, lit on scroll) ══════ */
+.af-lamp{position:relative;isolation:isolate;overflow:hidden;}
+.af-lamp-rig{position:absolute;top:0;left:0;right:0;height:224px;display:flex;align-items:center;
+  justify-content:center;transform:scaleY(1.25);pointer-events:none;}
+.af-lamp-cone{position:absolute;height:224px;width:60%;
+  -webkit-mask-image:linear-gradient(to top,transparent,#fff);mask-image:linear-gradient(to top,transparent,#fff);}
+.af-lamp-cone.left{right:50%;transform-origin:right;
+  background-image:conic-gradient(from 70deg at center top,rgba(22,46,140,.30),transparent,transparent);}
+.af-lamp-cone.right{left:50%;transform-origin:left;
+  background-image:conic-gradient(from 290deg at center top,transparent,transparent,rgba(22,46,140,.30));}
+.af-lamp-bar{position:absolute;top:50%;height:2px;width:50%;border-radius:999px;filter:blur(4px);
+  transform:translateY(-56px);background:var(--indigo-600);}
+.af-lamp-halo{position:absolute;top:50%;height:144px;width:100%;transform:translateY(-96px);
+  background:radial-gradient(ellipse at center top,rgba(22,46,140,.16),transparent 60%);}
+
+/* ══ Jelly press (godui jelly-button motion: squash on press, spring back) ══ */
+.af-jelly{transform-origin:bottom center;will-change:transform;transition:scale 300ms cubic-bezier(.3,.7,.4,1.5);}
+.af-jelly:hover{scale:1.04;}
+.af-jelly:active{scale:1.13 .87;transition:scale 120ms cubic-bezier(.3,.7,.4,1);}
+
 /* ══ Animated grid pattern (hero background) ═══════════════════════════════ */
 .af-grid{position:absolute;inset:0;pointer-events:none;overflow:hidden;
   background-image:linear-gradient(to right,rgba(22,46,140,.08) 1px,transparent 1px),linear-gradient(to bottom,rgba(22,46,140,.08) 1px,transparent 1px);
@@ -438,13 +790,15 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
   .af-loader-arc{animation:afLoaderFade 1.4s ease-in-out infinite;stroke-dasharray:400,400;}
   @keyframes afLoaderFade{0%,100%{opacity:.35;}50%{opacity:1;}}
   .af-shimmer::after,.af-grid-cell{animation:none;}
+  .af-jelly{transition:none;}
+  .af-jelly:hover,.af-jelly:active{scale:1;}
 }
 
 /* Decision messages: a thin bar across the top says what happened. The card
    keeps the platform's own background, border and shadow; only the bar changes
    colour, and the action sits bottom-right. */
 .chat-bubble.decision{position:relative;padding-top:14px;overflow:hidden;}
-.chat-decision-bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0;background:var(--decision,var(--indigo-600));}
+.chat-decision-bar{position:absolute;top:0;left:0;right:0;height:3px;background:var(--decision,var(--indigo-600));}
 .chat-bubble.decision.tone-green{--decision:var(--green);}
 .chat-bubble.decision.tone-red{--decision:var(--red);}
 .chat-bubble.decision.tone-amber{--decision:var(--amber);}
@@ -575,21 +929,20 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 }
 
 /* ══ Toast ═════════════════════════════════════════════════════════════════
-   Top-centre stack, above everything, one column. */
-.ds-toaster{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;
+   Top-centre stack, above everything.
+
+   Cards are absolutely anchored to a single fixed origin and separated by
+   depth (translate + scale, driven by framer-motion), not by document flow.
+   The front card therefore never moves when another arrives or is dismissed —
+   the previous flex column re-flowed on every change and shunted whatever the
+   reader was part-way through. Hovering fans the stack into a readable list
+   and holds every auto-dismiss timer. */
+.ds-toaster{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:var(--z-toast);
   display:flex;flex-direction:column;align-items:center;gap:10px;
   width:min(420px,calc(100vw - 24px));pointer-events:none;}
-.ds-toast{pointer-events:auto;width:100%;background:var(--card);border:1px solid var(--indigo-line);
-  border-radius:var(--radius-lg);box-shadow:0 18px 44px -18px rgba(23,35,58,.34),0 2px 6px rgba(23,35,58,.06);
-  padding:12px 14px;animation:dsToastIn 260ms var(--ease) both;}
-/* Slide down and fade in; the exit reverses it and is shorter, so a dismissed
-   toast is gone before the eye follows it. */
-@keyframes dsToastIn{from{opacity:0;transform:translateY(-14px) scale(.97);}to{opacity:1;transform:none;}}
-.ds-toast.leaving{animation:dsToastOut 220ms var(--ease) both;}
-@keyframes dsToastOut{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(-10px) scale(.97);}}
-@media (prefers-reduced-motion:reduce){
-  .ds-toast,.ds-toast.leaving{animation-duration:1ms;}
-}
+.ds-toaster > *{pointer-events:auto;}
+.ds-toast{width:100%;box-sizing:border-box;background:var(--card);border:1px solid var(--indigo-line);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-popover);padding:12px 14px;}
 .ds-toast-head{display:flex;align-items:center;gap:8px;}
 .ds-toast-brand{display:flex;flex:none;line-height:0;}
 .ds-toast-kind{display:flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;
@@ -632,8 +985,12 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 
 /* The advisor's identity in a student's conversation: the platform mark in
    place of a person's photo, and a typing indicator in place of the address. */
-.chat-brand-avatar{flex:none;width:40px;height:40px;border-radius:var(--radius-pill);background:var(--indigo-tint);
-  display:flex;align-items:center;justify-content:center;}
+/* The advisor avatar is the app icon itself, which carries its own blue field —
+   so no tint circle behind it. Clipped to a circle to match every other
+   profile avatar in the platform. */
+.chat-brand-avatar{flex:none;width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-pill);overflow:hidden;}
+.chat-brand-avatar img{border-radius:var(--radius-pill);}
 .chat-typing{display:inline-flex;align-items:center;gap:3px;color:var(--indigo-600);font-weight:600;}
 .chat-typing i{width:4px;height:4px;border-radius:var(--radius-pill);background:currentColor;
   animation:dsTyping 1.2s var(--ease) infinite;}

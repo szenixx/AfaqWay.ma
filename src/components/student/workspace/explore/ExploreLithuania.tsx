@@ -8,12 +8,13 @@ import {
 } from "lucide-react";
 import {
   BANKING, CITIES, COSTS, HEALTHCARE, HERO_STATS, HOUSING, HOUSING_SCAMS, MARQUEE_SOURCES,
-  PHOTOS, QUOTES, SOURCES, STUDENT_LIFE, TIPS, TIP_CALLOUTS, TRANSPORT, UNI_INTRO,
+  PHOTOS, QUOTES, SOURCES, STUDENT_LIFE, TIPS, TIP_CALLOUTS, TRANSPORT, UNI_INTRO, YEAR_TIMELINE,
   type Callout, type Item,
 } from "./content";
 import { UNIVERSITIES } from "@/lib/universities";
 import { hasLogo } from "@/lib/universityAssets";
 import { UniversityBrand } from "@/components/ds";
+import { ScrollTimeline } from "@/components/ds/ScrollTimeline";
 
 /* Explore Lithuania — an editorial guide inside the workspace. Uses the
    platform's cards, radii, shadows, motion and palette only; the accent is the
@@ -29,6 +30,7 @@ const SECTIONS = [
   { id: "banking", label: "Banking", icon: <Banknote size={15} /> },
   { id: "life", label: "Student life", icon: <Sparkles size={15} /> },
   { id: "tips", label: "Before you move", icon: <Info size={15} /> },
+  { id: "timeline", label: "Your year", icon: <Clock size={15} /> },
 ];
 
 /* Icon per quick statistic, from the same family as the rest of the guide. */
@@ -393,6 +395,19 @@ export default function ExploreLithuania() {
               {TIP_CALLOUTS.map((c) => <CalloutCard key={c.title} c={c} />)}
             </div>
             <ExpandableList items={TIPS} />
+          </section>
+
+          {/* ── 10. The academic year, as a scroll timeline ── */}
+          <section className="ex-section" id="sec-timeline">
+            <SectionHead id="timeline" state={stateOf(9)} icon={SECTIONS[9].icon} title="Your year"
+              sub="How an application becomes a semester, in the order it actually happens." />
+            <ScrollTimeline
+              data={YEAR_TIMELINE.map((s) => ({
+                date: s.date,
+                title: s.title,
+                content: <p style={{ margin: 0, font: "400 13.5px/21px var(--font-sans)", color: "var(--ink-soft)" }}>{s.body}</p>,
+              }))}
+            />
           </section>
 
           {/* ── Sources ── */}

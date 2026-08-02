@@ -1,0 +1,23 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>doc-page:not(:defined){visibility:hidden}</style>
+<helmet><script src="./doc-page.js"></script></helmet>
+<style>
+body{margin:0}
+.row{display:flex;gap:12px;width:700px}
+.sw{flex:1;border-radius:var(--radius-md);height:96px;display:flex;flex-direction:column;justify-content:flex-end;padding:10px;box-sizing:border-box;font-family:var(--font-sans)}
+.n{font:600 11px/14px var(--font-sans);color:var(--ink)}
+.h{font:500 10px/13px var(--font-sans);color:var(--ink-faint)}
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+* { animation-delay: -99s !important; animation-duration: .001s !important; animation-iteration-count: 1 !important; animation-fill-mode: both !important; animation-play-state: running !important; transition-duration: 0s !important; }
+</style></head>
+<body>
+<doc-page size="letter" content-width="700px" content-height="160px">
+<div class="row" style="background:var(--paper);padding:20px;box-sizing:border-box">
+<div class="sw" style="background:var(--paper);border:1px solid var(--line)"><span class="n">paper</span><span class="h">#ECEFF3 · page</span></div>
+<div class="sw" style="background:var(--card);box-shadow:var(--elev-2)"><span class="n">card</span><span class="h">#FFFFFF</span></div>
+<div class="sw" style="background:var(--subtle);border:1px solid var(--line)"><span class="n">subtle</span><span class="h">#F3F5F9 · recessed</span></div>
+<div class="sw" style="background:var(--card);border:1px solid var(--line)"><span class="n">line</span><span class="h">#DCE2EA · border</span></div>
+<div class="sw" style="background:var(--card);border:1px solid var(--line-soft)"><span class="n">line-soft</span><span class="h">#E7ECF1 · divider</span></div>
+</div>
+</doc-page>
+</body></html>

@@ -9,6 +9,8 @@ import { AnimatedModal, Input, Loader, Select, UserAvatar, ImageZoom, Status } f
 import { fileUrl } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
 import { assembleRoadmap, roadmapProgress, type JourneyStage, DOC_STATUS, STATE_BADGE, STATE_STATUS } from "@/lib/journey";
+import { TrpStatusCard } from "@/components/admin/journey/TrpStatusCard";
+import { OutboxCard, outboxPhone } from "@/components/admin/journey/OutboxCard";
 import {
   fetchApprovals, fetchDocuments, fetchEvents, fetchProgress, fetchStages, fetchSteps,
   stepRequirements, subscribeJourney,
@@ -205,6 +207,15 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
                 <Clock3 size={14} />Current step: <b style={{ marginLeft: 4 }}>{currentStep.title}</b>
               </p>
             )}
+
+            {/* The Full Service half of the final decision: for those students
+                the Excel gives the outcome entirely to an administrator. */}
+            <TrpStatusCard userId={user.id} plan={user.plan ?? null} degree={user.target_degree} />
+
+            {/* What the journey has said, or is queued to say, on every channel.
+                The WhatsApp rows have no sender yet, so they are sent by hand
+                from here rather than sitting in a table nobody looks at. */}
+            <OutboxCard userId={user.id} phone={outboxPhone(user)} />
 
             <h4 className="lrn-sub">Journey timeline</h4>
             {stages.length === 0 ? (

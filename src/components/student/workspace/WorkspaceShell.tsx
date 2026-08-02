@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
 import { nextScheduleEvent } from "@/lib/schedule";
 import { UserAvatar, BrandLogo, Toaster } from "@/components/ds";
+import { GeometricBackground } from "@/components/ds/Backgrounds";
 import SidebarCarousel from "./SidebarCarousel";
 import {
   Overview, Journey, Documents, Explore, Notifications, Support,
@@ -159,6 +160,9 @@ export default function WorkspaceShell({
 
   return (
     <div className="sw-root">
+      {/* Canvas: grid ruling plus two corner blooms, sitting behind every
+          module's frames and cards. Blue, from the platform tokens. */}
+      <GeometricBackground />
       {/* One stack for the whole workspace; every module raises toasts into it. */}
       <Toaster />
       <div className="sw-shell">

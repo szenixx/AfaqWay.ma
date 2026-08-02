@@ -250,3 +250,92 @@ the real table — so the two disagreed and nobody noticed.
 Rule: when placeholder data is replaced by a real source, grep for every
 importer of the placeholder and delete the export. Leaving it exported is what
 lets a second component keep rendering fiction next to the truth.
+
+## A spreadsheet has more than one header (Journey import, 28 Jul 2026)
+`buildModel` read `rows[0]` as THE header. The Excel actually carries three, one
+per section of the journey, and they do not agree: the Stage 3 header swaps the
+`learn` and `upload req` columns. The importer therefore read Stage 3's prose as
+a yes/no upload flag, dropped the 21 continuation rows that list each step's
+required documents, and turned the two repeated header rows into phantom stages
+called "Stage" containing a step called "Steps". Result: 16 steps imported out
+of 36, and a whole stage published empty.
+- Detect header rows anywhere in the sheet, not just at the top, and re-map the
+  columns from each one.
+- Do not trust the header alone. Classify each row by its own CONTENT — a cell
+  matching `yes|no|required documents|no upload required` IS the upload column,
+  whichever position it sits in. Two Stage 3 rows ignore their own section
+  header and revert to the original order; only the content reveals that.
+- A row with no title in the key column is usually a CONTINUATION of the row
+  above, not a blank to skip. Skipping them is silent data loss: nothing errors,
+  the import just quietly carries less.
+- Print a per-step summary with counts on every run. "36 steps · 32 documents"
+  is what catches this; "wrote the file" is not.
+
+## Decode numeric XML entities, not just the one you saw (28 Jul 2026)
+The xlsx reader handled `&#10;` but the file writes newlines as the HEX form
+`&#xA;`. The entity survived decoding, so a URL regex ran straight through it
+into the next line and produced a dead link:
+`…watch?v=…&t=35s&#xA;Apply:`. It looked like a valid URL in the JSON and only
+failed when clicked.
+- Decode `&#\d+;` and `&#x[0-9a-f]+;` generically, and `&amp;` LAST so an
+  escaped entity cannot become a live one.
+- A Python `xml.etree` dump showed the newline correctly while the hand-rolled
+  reader did not. When two parsers disagree about the same file, the hand-rolled
+  one is wrong.
+
+## Generate data, not statements (28 Jul 2026)
+The generated migration emitted an INSERT/UPDATE pair per step and one INSERT
+per block. The same rules payload appeared twice per step, the file was 112KB
+for ~50KB of content, and there were four places for an edit to reach three of.
+Emitting the journey as ONE jsonb document and looping over it in PL/pgSQL
+halved the file and left one copy of every value.
+- Idempotency belongs in the loop (`select … if null then insert else update`),
+  not in repeated text.
+- Same rule as components: if the generator writes it twice, extract it.
+
+## "Who may complete this" is data, and needs enforcing twice (28 Jul 2026)
+The engine's rule was "a student never completes their own step", enforced by
+`journey_progress_guard`. The Excel names exceptions — "Display a prominent Mark
+as Completed button … Do not require admin approval" — because nobody but the
+student can know whether they attended their VFS appointment.
+- Do not special-case titles in the UI. Put the mode on the step
+  (`rules.completion` = review | self | decision) and read it in both places.
+- The guard must read the same rule. A UI that hides a button is not a
+  permission; the trigger is. It also stamps `completed_at` itself, so a client
+  can never back-date a completion.
+- `decision` additionally checks the caller's PLAN inside the trigger, because
+  the Excel gives the outcome to Self Service students and to administrators
+  only — that is authorisation, so it cannot live in a component.
+
+## Queue the message even when nothing can send it (28 Jul 2026)
+WhatsApp has no transport yet, and the temptation was to leave those events out
+until it does. Instead every channel writes a row to `journey_outbox`; the sweep
+delivers platform and chat, and parks whatsapp/email as `state = 'ready'`.
+- Switching a channel on later is then draining a queue, not finding every
+  caller. Nothing is lost and nothing is silently dropped.
+- The caller names an EVENT, never a message. `journey_emit` is SECURITY DEFINER
+  and reads the wording from `journey_templates`, so a student's browser can
+  schedule its own reminders without being able to choose the words — and
+  without a client-side "send a chat message as admin" hole.
+- Reminders must fire with nobody looking, so the sweep is a pg_cron job. A
+  client-side sweep would never send the 7-day reminder to the student who does
+  not log in that week — exactly the student who needs it.
+
+## Placeholder data, second occurrence (28 Jul 2026)
+After the notification badge, the same class again: `JourneySnapshotCard` and
+`DocumentsOverviewCard` read the `JOURNEY` / `REQUIRED_DOCS` demo constants, so
+the sidebar quoted an invented 62% beside a Journey page showing the truth, and
+the Overview showed a real percentage in a tile and a fake one in the panel
+directly below it.
+- When a real source lands, grep every importer of the placeholder and DELETE
+  the export in the same change. Leaving it exported is what lets the next
+  component render fiction.
+- Deleting by line index is how a file gets corrupted; `git checkout` and cut on
+  verified boundaries instead.
+
+## Ask before building, when the source is silent (28 Jul 2026)
+Stage 4 of the Excel says "Unlock Stage 5" four times. There are no Stage 5 rows
+anywhere in the file. Inventing them would have been worse than the gap.
+- Stopping to ask cost one question and settled three decisions at once.
+- The answer became a DRAFT stage with no steps: the roadmap has somewhere to
+  unlock into, and a student never reaches a blank page.

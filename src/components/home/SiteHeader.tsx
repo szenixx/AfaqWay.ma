@@ -1,15 +1,69 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X, ChevronRight } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useId, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Menu, X, ChevronRight, MapPin, CreditCard, BookOpen, Sparkles } from "lucide-react";
+import { MegaMenu } from "@/components/ds/MegaMenu";
 
 const navLink = { font: "600 14px/20px var(--font-sans)" };
 const MOBILE_LINKS: { label: string; href: string }[] = [
   { label: "Home", href: "/" },
   { label: "Our service", href: "/our-service" },
   { label: "About us", href: "/about" },
+  { label: "Destinations", href: "/destinations" },
+  { label: "Pricing", href: "/pricing" },
 ];
+
+/* "Explore" mega menu: real, already-built pages only, except "Student
+   stories" — nothing exists there yet, so it routes to /soon (a clearly
+   marked placeholder) rather than a dead link, per the platform's no-dead-
+   button rule. */
+const EXPLORE_SECTIONS = [
+  {
+    heading: "Get started",
+    links: [
+      { label: "Destinations", href: "/destinations", description: "Where AfaqWay can take you", icon: <MapPin size={15} /> },
+      { label: "Pricing", href: "/pricing", description: "Self-service or full-service", icon: <CreditCard size={15} /> },
+    ],
+  },
+  {
+    heading: "Learn",
+    links: [
+      { label: "How it works", href: "/how-it-works", description: "The roadmap, step by step", icon: <BookOpen size={15} /> },
+      { label: "Student stories", href: "/soon", description: "Coming soon", icon: <Sparkles size={15} /> },
+    ],
+  },
+];
+
+/** Desktop nav links with a sliding highlight pill (godui tab-bar motion) that
+ *  follows the hovered link, and rests under whichever page is current. */
+function NavLinks() {
+  const pathname = usePathname();
+  const pillId = useId();
+  const reduceMotion = useReducedMotion();
+  const [hovered, setHovered] = useState<string | null>(null);
+  const spring = reduceMotion ? { duration: 0 } : ({ type: "spring", stiffness: 520, damping: 32 } as const);
+  const links = [
+    { label: "Our service", href: "/our-service" },
+    { label: "About us", href: "/about" },
+  ];
+  return (
+    <nav style={{ display: "inline-flex", alignItems: "center", gap: 8 }} onMouseLeave={() => setHovered(null)}>
+      {links.map((l) => {
+        const isHot = (hovered ?? pathname) === l.href;
+        return (
+          <Link key={l.href} className="af-navlink af-navstroke" href={l.href} style={{ ...navLink }} onMouseEnter={() => setHovered(l.href)}>
+            {isHot && <motion.span layoutId={pillId} transition={spring} style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--subtle)", zIndex: 0 }} />}
+            <span style={{ position: "relative", zIndex: 1 }}>{l.label}</span>
+          </Link>
+        );
+      })}
+      <MegaMenu items={[{ label: "Explore", sections: EXPLORE_SECTIONS }]} />
+    </nav>
+  );
+}
 
 export default function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -43,11 +97,8 @@ export default function SiteHeader() {
 
         {/* Desktop nav */}
         <div className="af-nav-desktop" style={{ alignItems: "center", gap: 28 }}>
-          <nav style={{ display: "inline-flex", alignItems: "center", gap: 24 }}>
-            <Link className="af-navlink" href="/our-service" style={navLink}>Our service</Link>
-            <Link className="af-navlink" href="/about" style={navLink}>About us</Link>
-          </nav>
-          <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 36, padding: "0 18px", borderRadius: 999, font: "600 14px/1 var(--font-sans)" }}>
+          <NavLinks />
+          <Link className="af-btn-primary af-shimmer af-jelly" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 36, padding: "0 18px", borderRadius: "var(--radius-control)", font: "600 14px/1 var(--font-sans)" }}>
             Sign up
           </Link>
         </div>
@@ -94,7 +145,7 @@ export default function SiteHeader() {
               </Link>
             ))}
             <Link
-              className="af-btn-primary"
+              className="af-btn-primary af-shimmer af-jelly"
               href="/signup"
               onClick={() => setOpen(false)}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 44, borderRadius: 12, marginTop: 12, font: "600 15px/1 var(--font-sans)" }}

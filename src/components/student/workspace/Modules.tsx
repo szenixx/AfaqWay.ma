@@ -5,7 +5,7 @@
    data comes from ./data. Presentational pieces come from ./parts. */
 
 import { useState, useRef } from "react";
-import { DOC_STATUS } from "@/lib/journey";
+import { DOC_STATUS, STATE_BADGE, STATE_STATUS } from "@/lib/journey";
 import { supabase } from "@/lib/supabase/client";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
@@ -13,6 +13,9 @@ import { removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
 import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
 import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel, Pill, Status, ContributionGraph } from "@/components/ds";
+import { MorphingDialog, MorphingDialogTrigger, MorphingDialogContent, MorphingDialogClose } from "@/components/ds/MorphingDialog";
+import { SpotlightCard } from "@/components/ds/SpotlightCard";
+import { DecorativeBackground } from "@/components/ds/Backgrounds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import { useActivity } from "@/lib/activity";
 import { useJourneySummary } from "@/lib/useJourneySummary";
@@ -27,10 +30,7 @@ import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import { PAY_METHODS } from "@/lib/plans";
 import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
-import {
-  JOURNEY, REQUIRED_DOCS, RECENT_ACTIVITY,
-  UPCOMING_TASKS, FAQ,
-} from "./data";
+import { RECENT_ACTIVITY, UPCOMING_TASKS, FAQ } from "./data";
 import {
   Panel, CardTitle, StatTile, ProgressLine, EmptyState,
   BtnPrimary, BtnGhost, StatusGlyph, IconChip, CompactCard,
@@ -54,18 +54,17 @@ export type WsProfile = {
   gender: string | null; avatarSeed: string | null; avatarStyle: string | null; avatarType: string | null;
   /* Active paid subscription — shows the badge on the avatar everywhere. */
   verified: boolean; payment: WsPayment | null;
+  /* Granted by an administrator: opens every stage and step for READING, so the
+     journey can be reviewed without walking an account through it. Writes are
+     unaffected — the database guards apply to a tester exactly as to anyone. */
+  tester: boolean;
 };
-
-const totalTasks = JOURNEY.reduce((s, st) => s + st.tasks.length, 0);
-const doneTasks = JOURNEY.reduce((s, st) => s + st.tasks.filter((t) => t.done).length, 0);
-const journeyPct = Math.round((doneTasks / totalTasks) * 100);
-const activeStageIdx = Math.max(0, JOURNEY.findIndex((s) => s.status === "active"));
 
 /* ── Overview ─────────────────────────────────────────────────────────────── */
 export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
   const full = profile.plan === "full_service";
   // Live counters, shared with the Journey and Documents modules.
-  const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree);
+  const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree, profile.tester);
   // The student's real notifications, so the tile and the badge agree.
   const { items: notifs, unread } = useNotifications(profile.userId);
   return (
@@ -81,19 +80,25 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16 }} className="sw-2col">
         {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* The tiles above already read the real journey; this panel used to
+              read the JOURNEY demo constant, so one card said 62% while the tile
+              beside it said the truth. Both come from the same hook now. */}
           <Panel>
-            <CardTitle title="Your journey" sub={`${doneTasks} of ${totalTasks} steps done`} action={<BtnGhost onClick={() => onNav("journey")} style={{ height: 34 }}>Open<ArrowRight size={15} /></BtnGhost>} />
+            <CardTitle title="Your journey" sub={j.stepsTotal ? `${j.stepsDone} of ${j.stepsTotal} steps done` : "Your roadmap is being prepared"} action={<BtnGhost onClick={() => onNav("journey")} style={{ height: 34 }}>Open<ArrowRight size={15} /></BtnGhost>} />
             <div style={{ display: "flex", justifyContent: "space-between", font: "600 12px/16px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 7 }}>
-              <span>{JOURNEY[activeStageIdx].title}</span><span>{journeyPct}%</span>
+              <span>{j.stageTitle || "Not started"}</span><span>{j.pct}%</span>
             </div>
-            <ProgressLine pct={journeyPct} />
+            <ProgressLine pct={j.pct} />
             <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-              {JOURNEY.map((s, i) => (
-                <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 11px", borderRadius: 12, background: i === activeStageIdx ? "var(--indigo-tint)" : "var(--subtle)", border: i === activeStageIdx ? "1px solid var(--indigo-line)" : "1px solid transparent" }}>
-                  <StatusGlyph status={s.status} size={15} />
-                  <span style={{ font: "600 11.5px/15px var(--font-sans)", color: i === activeStageIdx ? "var(--indigo-text)" : "var(--ink-soft)" }}>{s.title}</span>
-                </div>
-              ))}
+              {j.stages.map((s) => {
+                const active = s.state === "current" || s.state === "waiting_approval";
+                return (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 11px", borderRadius: 12, background: active ? "var(--indigo-tint)" : "var(--subtle)", border: active ? "1px solid var(--indigo-line)" : "1px solid transparent" }}>
+                    <Status state={STATE_STATUS[s.state]} label={STATE_BADGE[s.state].label} dotOnly />
+                    <span style={{ font: "600 11.5px/15px var(--font-sans)", color: active ? "var(--indigo-text)" : "var(--ink-soft)" }}>{s.title}</span>
+                  </div>
+                );
+              })}
             </div>
           </Panel>
 
@@ -101,11 +106,23 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
             <CardTitle title="Upcoming tasks" sub={full ? "What our team is working on next" : "What to do next"} />
             <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
               {UPCOMING_TASKS.map((t) => (
-                <div key={t.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 14, background: "var(--subtle)" }}>
-                  <span style={{ width: 30, height: 30, borderRadius: 10, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 10px rgba(23,35,58,.08)" }}><Calendar size={15} /></span>
-                  <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{t.label}</div><div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{t.due}</div></div>
-                  <Pill tone={t.tone}>{t.due.includes("2 days") ? "Soon" : "Planned"}</Pill>
-                </div>
+                <MorphingDialog key={t.label}>
+                  <MorphingDialogTrigger style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 14, background: "var(--subtle)" }}>
+                    <span style={{ width: 30, height: 30, borderRadius: 10, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 10px rgba(23,35,58,.08)" }}><Calendar size={15} /></span>
+                    <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{t.label}</div><div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)" }}>{t.due}</div></div>
+                    <Pill tone={t.tone}>{t.due.includes("2 days") ? "Soon" : "Planned"}</Pill>
+                  </MorphingDialogTrigger>
+                  <MorphingDialogContent style={{ width: "min(420px, calc(100vw - 48px))", padding: 24 }}>
+                    <MorphingDialogClose />
+                    <span style={{ width: 42, height: 42, borderRadius: 12, background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}><Calendar size={19} /></span>
+                    <div style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)" }}>{t.label}</div>
+                    <div style={{ marginTop: 6 }}><Pill tone={t.tone}>{t.due}</Pill></div>
+                    <p style={{ font: "400 13.5px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "14px 0 0" }}>
+                      {full ? "Your advisor is handling this — open your journey step for the current status." : "Open your journey step to complete this, or check what's needed."}
+                    </p>
+                    <div style={{ marginTop: 18 }}><BtnPrimary onClick={() => onNav("journey")} style={{ width: "100%", justifyContent: "center" }}>Open journey<ArrowRight size={15} /></BtnPrimary></div>
+                  </MorphingDialogContent>
+                </MorphingDialog>
               ))}
             </div>
           </Panel>
@@ -113,10 +130,14 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
           <Panel>
             <CardTitle title="Recent documents" sub="Latest uploads & reviews" action={<BtnGhost onClick={() => onNav("documents")} style={{ height: 34 }}>All<ArrowRight size={15} /></BtnGhost>} />
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {REQUIRED_DOCS.slice(0, 4).map((d) => (
-                <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 4px", borderBottom: "1px solid var(--line-soft)" }}>
+              {j.recentDocs.length === 0 ? (
+                <p style={{ margin: 0, font: "400 12.5px/19px var(--font-sans)", color: "var(--ink-faint)" }}>
+                  Nothing uploaded yet. Your required documents are listed on each journey step.
+                </p>
+              ) : j.recentDocs.map((d) => (
+                <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 4px", borderBottom: "1px solid var(--line-soft)" }}>
                   <span style={{ width: 30, height: 30, borderRadius: 9, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><FileText size={15} /></span>
-                  <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13px/17px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div><div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{d.updated}</div></div>
+                  <div style={{ flex: 1, minWidth: 0 }}><div style={{ font: "600 13px/17px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div><div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)" }}>{new Date(d.updatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</div></div>
                   <Status state={DOC_STATUS[d.status].state} label={DOC_STATUS[d.status].label} />
                 </div>
               ))}
@@ -325,7 +346,7 @@ export function Subscription({ profile }: { profile: WsProfile }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">
         {/* Current plan, in the same language as the admin payment cards:
             gradient surface, oversized plan glyph behind, badges on top. */}
-        <div className="plan-card">
+        <SpotlightCard className="plan-card">
           <span aria-hidden className="plan-glyph"><Wallet size={190} /></span>
           <div className="plan-body">
             <div className="plan-badges">
@@ -354,7 +375,7 @@ export function Subscription({ profile }: { profile: WsProfile }) {
             </div>
             {invoiceErr && <InlineNote tone="red">{invoiceErr}</InlineNote>}
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Service information — the decorative logo sits behind the content. */}
         <Panel style={{ position: "relative", overflow: "hidden" }}>
@@ -408,7 +429,7 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
   /* Real activity, from the rows the platform already writes. Never generated:
      an empty square means nothing happened that day. */
   const activity = useActivity(profile.userId);
-  const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree);
+  const j = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree, profile.tester);
 
   const rows = [
     { label: "Full name", value: profile.fullName || "—", icon: <UserRound size={15} /> },
@@ -436,6 +457,7 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
             Not editable, deliberately — the profile is a record, not a page to
             decorate. */}
         <div className="pf-cover" aria-hidden>
+          <DecorativeBackground />
           <span className="pf-cover-mark"><LogoMark size={260} /></span>
         </div>
 

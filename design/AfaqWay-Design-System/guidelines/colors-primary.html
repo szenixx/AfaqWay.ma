@@ -1,0 +1,61 @@
+<!-- @dsCard group="Colors" viewport="700x230" name="Full colour scales" subtitle="Primary · Secondary · Neutral · Success · Warning · Danger — 50→950" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;font-family:var(--font-sans);background:var(--card);padding:18px}
+.tabs{display:inline-flex;gap:4px;padding:4px;background:var(--subtle);border:1px solid var(--line);border-radius:999px;margin-bottom:14px;flex-wrap:wrap}
+.tab{border:none;background:transparent;padding:6px 12px;border-radius:999px;font:600 10.5px/1 var(--font-sans);color:var(--ink-soft);cursor:pointer}
+.tab.active{background:var(--card);color:var(--indigo-text);box-shadow:0 2px 8px rgba(23,35,58,.10)}
+.row{display:flex;gap:6px}
+.sw{flex:1;min-width:0;border-radius:var(--radius-md);height:90px;display:flex;flex-direction:column;justify-content:flex-end;padding:7px;box-sizing:border-box;border:1px solid rgba(23,35,58,.06)}
+.n{font:600 10px/13px var(--font-sans)}
+.h{font:500 8.5px/11px var(--font-sans);opacity:.85}
+.pane{display:none}
+.pane.active{display:block}
+</style></head>
+<body>
+<div class="tabs" id="tabs"></div>
+<div id="panes"></div>
+<script>
+const SCALES = {
+  primary:["50","100","200","300","400","500","600","700","800","900","950"],
+  secondary:["50","100","200","300","400","500","600","700","800","900","950"],
+  neutral:["50","100","200","300","400","500","600","700","800","900","950"],
+  success:["50","100","200","300","400","500","600","700","800","900","950"],
+  warning:["50","100","200","300","400","500","600","700","800","900","950"],
+  danger:["50","100","200","300","400","500","600","700","800","900","950"],
+};
+const style = getComputedStyle(document.documentElement);
+const tabsEl = document.getElementById("tabs");
+const panesEl = document.getElementById("panes");
+Object.keys(SCALES).forEach((name, i) => {
+  const tab = document.createElement("button");
+  tab.className = "tab" + (i === 0 ? " active" : "");
+  tab.textContent = name[0].toUpperCase() + name.slice(1);
+  tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("pane-" + name).classList.add("active");
+  };
+  tabsEl.appendChild(tab);
+
+  const pane = document.createElement("div");
+  pane.className = "pane" + (i === 0 ? " active" : "");
+  pane.id = "pane-" + name;
+  const row = document.createElement("div");
+  row.className = "row";
+  SCALES[name].forEach(step => {
+    const varName = `--${name}-${step}`;
+    const hex = style.getPropertyValue(varName).trim();
+    const light = ["50","100","200","300"].includes(step);
+    const sw = document.createElement("div");
+    sw.className = "sw";
+    sw.style.background = `var(${varName})`;
+    sw.style.color = light ? "var(--ink)" : "#fff";
+    sw.innerHTML = `<span class="n">${step}</span><span class="h">${hex}</span>`;
+    row.appendChild(sw);
+  });
+  pane.appendChild(row);
+  panesEl.appendChild(pane);
+});
+</script>
+</body></html>

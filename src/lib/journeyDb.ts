@@ -71,6 +71,143 @@ export function stepRequirements(step: Pick<DbStep, "rules">): DocRequirement[] 
 /** True when the administrator allows this step to be skipped. */
 export const stepAllowsSkip = (step: Pick<DbStep, "rules">) => Boolean((step.rules as { allowSkip?: boolean })?.allowSkip);
 
+/* ── Step behaviour ───────────────────────────────────────────────────────────
+   The Excel does not treat every step the same way. Most are submitted and
+   approved by an advisor, but Stage 4 says plainly of several of them: "Display
+   a prominent Mark as Completed button … Do not require admin approval." One
+   step is decided by neither — an administrator records the residence permit
+   outcome, or a Self Service student reports it in a modal.
+
+   Which is which is data, stored on the step by the importer, so the roadmap
+   asks the step rather than carrying a list of titles. The database enforces
+   the same rule in journey_progress_guard: a student cannot complete a reviewed
+   step by calling the API directly. */
+
+export type CompletionMode =
+  /** The student submits; an advisor's approval is what completes it. */
+  | "review"
+  /** The Excel gives this one to the student outright. */
+  | "self"
+  /** The TRP outcome decides it: Self Service reports, Full Service waits. */
+  | "decision";
+
+/** Wording of the confirmation dialog a self-completed step opens first. */
+export type ConfirmSpec = { title: string; question: string; confirmLabel: string };
+
+/** A one-shot message raised when this step's stage unlocks. */
+export type AnnounceSpec = { event: string; followUpEvent?: string; followUpHours?: number };
+
+type StepRules = {
+  completion?: string;
+  confirm?: ConfirmSpec;
+  capture?: string;
+  decision?: string;
+  gate?: string[];
+  requiresSteps?: boolean;
+  example?: boolean;
+  announce?: AnnounceSpec;
+  cta?: string;
+  support?: boolean;
+  approveOnly?: boolean;
+  unlockedBy?: string;
+  module?: string;
+  moduleOf?: string;
+  dialogs?: unknown;
+  icon?: string;
+};
+
+const rulesOf = (step: Pick<DbStep, "rules">) => (step.rules ?? {}) as StepRules;
+
+const MODES = new Set<CompletionMode>(["review", "self", "decision"]);
+
+export function stepCompletion(step: Pick<DbStep, "rules">): CompletionMode {
+  const mode = rulesOf(step).completion as CompletionMode | undefined;
+  return mode && MODES.has(mode) ? mode : "review";
+}
+
+export const stepConfirm = (step: Pick<DbStep, "rules">): ConfirmSpec | null => rulesOf(step).confirm ?? null;
+
+/** A form whose answers are saved before the step completes, e.g. "vfs_appointment". */
+export const stepCapture = (step: Pick<DbStep, "rules">): string => rulesOf(step).capture ?? "";
+
+/** The outcome this step records, e.g. "trp". */
+export const stepDecision = (step: Pick<DbStep, "rules">): string => rulesOf(step).decision ?? "";
+
+/** A checklist every item of which must be ticked before completing. */
+export const stepGate = (step: Pick<DbStep, "rules">): string[] => {
+  const gate = rulesOf(step).gate;
+  return Array.isArray(gate) ? gate.filter((g) => typeof g === "string" && g.trim()) : [];
+};
+
+/** "This step must remain locked … until every previous step has been completed." */
+export const stepRequiresSteps = (step: Pick<DbStep, "rules">): boolean => Boolean(rulesOf(step).requiresSteps);
+
+export const stepAnnounce = (step: Pick<DbStep, "rules">): AnnounceSpec | null => {
+  const a = rulesOf(step).announce;
+  return a && typeof a.event === "string" && a.event ? a : null;
+};
+
+/** How a stage opens: on an advisor's approval, or on its own last step. */
+export const stageUnlock = (stage: Pick<DbStage, "rules">): "approval" | "auto" =>
+  (stage.rules as { unlock?: string })?.unlock === "auto" ? "auto" : "approval";
+
+/** The label on a step's action button, when the Excel names one. */
+export const stepCta = (step: Pick<DbStep, "rules">): string => rulesOf(step).cta ?? "";
+
+/**
+ * True when pressing the button opens a support request rather than completing
+ * the step. Stage 5's first step works this way: the student asks for help, an
+ * administrator answers on WhatsApp and approves, and only then does the rest
+ * of the stage open.
+ */
+export const stepIsSupport = (step: Pick<DbStep, "rules">): boolean => Boolean(rulesOf(step).support);
+
+/** True when the reviewer may only approve — Stage 5's support step has no "no". */
+export const stepApproveOnly = (step: Pick<DbStep, "rules">): boolean => Boolean(rulesOf(step).approveOnly);
+
+/** The title of the step that has to be settled before this one opens. */
+export const stepUnlockedBy = (step: Pick<DbStep, "rules">): string => rulesOf(step).unlockedBy ?? "";
+
+/* ── Optional modules ─────────────────────────────────────────────────────────
+   A group of steps a student switches on. Most students never need a financial
+   sponsor, so showing everyone four sponsor uploads would be noise; the steps
+   exist in the database but stay hidden, uncounted and inert until enabled.
+
+   Two rules describe the relationship. The container carries `module`, each of
+   its steps carries `moduleOf` with the same key. Enablement is per student and
+   lives on the container's progress row, so switching it off is one write and
+   leaves every upload where it was. */
+
+/** Non-empty on the container step: the key its children point back at. */
+export const stepModule = (step: Pick<DbStep, "rules">): string => rulesOf(step).module ?? "";
+
+/** Non-empty on a child step: the module it belongs to. */
+export const stepModuleOf = (step: Pick<DbStep, "rules">): string => rulesOf(step).moduleOf ?? "";
+
+/** Wording for the enable, disable and reminder dialogs, from the container. */
+export type ModuleDialogs = {
+  enable?: { title: string; body: string; confirmLabel: string };
+  disable?: { title: string; body: string; confirmLabel: string };
+  remind?: { title: string; body: string; confirmLabel: string; dismissLabel: string };
+};
+
+export const stepModuleDialogs = (step: Pick<DbStep, "rules">): ModuleDialogs =>
+  (rulesOf(step).dialogs ?? {}) as ModuleDialogs;
+
+/** Name of the icon drawn behind the module card. */
+export const stepModuleIcon = (step: Pick<DbStep, "rules">): string => rulesOf(step).icon ?? "";
+
+/**
+ * A stage only this service plan may enter.
+ *
+ * Stage 5 is sold with Full Service, so a Self Service student sees the stage —
+ * its title, its position at the end of the roadmap — but can never open it,
+ * however far they get. That is a commercial rule, not a progress rule, so it
+ * is stored on the stage rather than inferred from anything the student does.
+ */
+export const stageRequiresPlan = (stage: Pick<DbStage, "rules">): string =>
+  String((stage.rules as { requiresPlan?: string })?.requiresPlan ?? "");
+
 export type DocStatus = "pending" | "uploaded" | "under_review" | "needs_changes" | "approved";
 
 export type DbDocument = {
@@ -94,6 +231,28 @@ export type DbProgress = {
   student_comment?: string;
   review_comment?: string;
   advisor_note?: string;
+  /** What the student answered on this step: the appointment they booked, the
+      checklist they ticked, the outcome they reported, when they first opened
+      it. Display and workflow state only — never authorisation. */
+  meta?: StepMeta;
+};
+
+export type StepMeta = {
+  /** "Save the appointment date, time, and timezone in the database." */
+  appointment?: { date: string; time: string; timezone: string; notes: string };
+  /** Which gate items the student has ticked. */
+  gate?: string[];
+  /** The residence permit outcome a Self Service student reported. */
+  decision?: "approved" | "rejected";
+  /** First time the step was opened; the 48-hour nudge is cancelled on it. */
+  openedAt?: string;
+  /** The schedule event this step created, so an edit moves it instead of adding. */
+  eventId?: string;
+  /* ── Optional modules, kept on the container step ── */
+  /** True once the student has switched the module on. */
+  moduleEnabled?: boolean;
+  /** "No Thanks" on the reminder: never offer it again. */
+  moduleReminderDismissed?: boolean;
 };
 export type DbApproval = { stage_id: string; state: "waiting" | "approved" | "rejected"; review_comment: string };
 
@@ -149,7 +308,7 @@ export async function fetchReminders(stepIds: string[]): Promise<DbReminder[]> {
 export async function fetchProgress(userId: string): Promise<Map<string, DbProgress>> {
   const { data, error } = await supabase
     .from("journey_progress")
-    .select("step_id, state, completed_at, submitted_at, reviewed_at, student_comment, review_comment, advisor_note")
+    .select("step_id, state, completed_at, submitted_at, reviewed_at, student_comment, review_comment, advisor_note, meta")
     .eq("user_id", userId);
   const map = new Map<string, DbProgress>();
   if (!error) (data as DbProgress[] ?? []).forEach((p) => map.set(p.step_id, p));
@@ -165,16 +324,38 @@ export async function fetchApprovals(userId: string): Promise<Map<string, DbAppr
 
 /* ── Student writes (own progress only; RLS enforces it) ──────────────────── */
 
-export async function setStepState(userId: string, stepId: string, state: DbProgress["state"], comment?: string): Promise<void> {
+export async function setStepState(
+  userId: string, stepId: string, state: DbProgress["state"],
+  comment?: string, meta?: StepMeta,
+): Promise<void> {
   const now = new Date().toISOString();
   await supabase.from("journey_progress").upsert(
     {
       user_id: userId, step_id: stepId, state,
-      completed_at: state === "completed" ? now : null,
+      /* completed_at is stamped by journey_progress_guard, never here: a client
+         that could choose it could back-date a completion. */
       submitted_at: state === "in_progress" ? now : null,
       ...(comment === undefined ? {} : { student_comment: comment }),
+      ...(meta === undefined ? {} : { meta }),
       updated_at: now,
     },
+    { onConflict: "user_id,step_id" },
+  );
+}
+
+/**
+ * Merges into a step's meta without touching its state.
+ *
+ * Read-modify-write rather than a jsonb patch because the whole object is small
+ * and the alternative needs a function per key. Missing rows are created, so
+ * recording "the student opened this step" works before they have done anything.
+ */
+export async function mergeStepMeta(userId: string, stepId: string, patch: StepMeta): Promise<void> {
+  const { data } = await supabase.from("journey_progress")
+    .select("meta").eq("user_id", userId).eq("step_id", stepId).maybeSingle();
+  const meta = { ...((data as { meta?: StepMeta } | null)?.meta ?? {}), ...patch };
+  await supabase.from("journey_progress").upsert(
+    { user_id: userId, step_id: stepId, meta, updated_at: new Date().toISOString() },
     { onConflict: "user_id,step_id" },
   );
 }

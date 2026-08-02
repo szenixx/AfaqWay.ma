@@ -1,15 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+/* AfaqWay typography — Poppins, composite `font` shorthand tokens.
+   weight size/line-height family. Verbatim from ds.css. */
 :root{
---font-sans:'Poppins', system-ui, sans-serif;
---text-page-title:700 27px/34px var(--font-sans);
---text-section-title:600 18px/24px var(--font-sans);
---text-body-md:400 15px/24px var(--font-sans);
---text-label:500 13px/20px var(--font-sans);
---text-eyebrow:600 11.5px/16px var(--font-sans);
---text-section-eyebrow:600 10.5px/14px var(--font-sans);
---text-button:600 14.5px/20px var(--font-sans);
---text-pill:600 10.5px/1 var(--font-sans);
---text-hint-sm:400 12px/17px var(--font-sans);
---text-micro:600 10px/14px var(--font-sans);
+  --font-sans:'Poppins', system-ui, sans-serif;
+
+  --text-page-title:700 27px/34px var(--font-sans);      /* page H1 */
+  --text-section-title:600 18px/24px var(--font-sans);   /* section H2 */
+  --text-body-md:400 15px/24px var(--font-sans);         /* body copy */
+  --text-label:500 13px/20px var(--font-sans);           /* field & row labels */
+  --text-eyebrow:600 11.5px/16px var(--font-sans);       /* above a title */
+  --text-section-eyebrow:600 10.5px/14px var(--font-sans);/* small section kicker */
+  --text-button:600 14.5px/20px var(--font-sans);        /* buttons */
+  --text-pill:600 10.5px/1 var(--font-sans);             /* pills (+ .05em, uppercase) */
+  --text-hint-sm:400 12px/17px var(--font-sans);         /* helper text */
+  --text-micro:600 10px/14px var(--font-sans);           /* micro labels */
+
+  /* ── Full display/heading/body ladder (SaaS-grade foundations) ──
+     page-title/section-title/body-md/eyebrow/hint-sm above are the tokens
+     components actually render with; these fill out the rest of the scale
+     and alias back to them wherever a role already exists, so nothing
+     already built changes size. */
+  --font-mono:ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* no brand mono supplied — system stack */
+
+  --text-display-xl:800 56px/60px var(--font-sans);
+  --text-display:800 44px/50px var(--font-sans);
+  --text-h1:var(--text-page-title);
+  --text-h2:700 28px/34px var(--font-sans);
+  --text-h3:600 22px/28px var(--font-sans);
+  --text-h4:var(--text-section-title);
+  --text-h5:600 16px/22px var(--font-sans);
+  --text-h6:600 14px/20px var(--font-sans);
+  --text-title:700 17px/23px var(--font-sans);
+  --text-subtitle:500 14px/20px var(--font-sans);
+  --text-body-lg:400 16px/26px var(--font-sans);
+  --text-body:var(--text-body-md);
+  --text-body-sm:400 13px/20px var(--font-sans);
+  --text-caption:400 11.5px/16px var(--font-sans);
+  --text-overline:var(--text-eyebrow);
+  --text-helper:var(--text-hint-sm);
+  --text-code:400 13px/20px var(--font-mono);
 }
-body{font-family:var(--font-sans);color:var(--ink);}

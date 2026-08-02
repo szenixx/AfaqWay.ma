@@ -6,7 +6,7 @@ import {
   Coins, FileText, Landmark, Languages, Route, TriangleAlert,
 } from "lucide-react";
 import { UniversityBrand, Status } from "@/components/ds";
-import { JOURNEY, JOURNEY_PCT, REQUIRED_DOCS } from "./data";
+import { useJourneySummary } from "@/lib/useJourneySummary";
 import type { WsProfile } from "./Modules";
 
 /* Reusable right panel for the workspace (Journey and Documents today, any
@@ -156,10 +156,15 @@ export function MiniCalendarCard({ event, onNav }: { event?: { title: string; at
 
 /* ── Card 3 — Journey snapshot ────────────────────────────────────────────── */
 
-export function JourneySnapshotCard({ onNav }: { onNav: (id: string) => void }) {
-  const activeIdx = Math.max(0, JOURNEY.findIndex((s) => s.status === "active"));
-  const stage = JOURNEY[activeIdx];
-  const nextStep = stage.tasks.find((t) => !t.done)?.label ?? JOURNEY[activeIdx + 1]?.title ?? "All steps complete";
+/* Both of the cards below read the live journey through useJourneySummary, the
+   same hook the Overview uses, so every screen quotes one set of numbers.
+
+   They used to read the JOURNEY / REQUIRED_DOCS demo constants, which meant the
+   sidebar showed the same invented "62%" and the same four sample documents to
+   every student on every account, beside a Journey page showing the truth. */
+
+export function JourneySnapshotCard({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
+  const journey = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree, profile.tester);
 
   return (
     <Card
@@ -169,19 +174,26 @@ export function JourneySnapshotCard({ onNav }: { onNav: (id: string) => void }) 
       <div className="rp-label">Current stage</div>
       {/* The dot is the status and comes from the shared component; the stage
           title beside it is content, so it keeps the card's own type. */}
-      <div className="rp-stage"><Status state="success" label="Current stage" dotOnly />{stage.title}</div>
+      <div className="rp-stage">
+        <Status state="success" label="Current stage" dotOnly />
+        {journey.loading ? "Loading…" : journey.stageTitle || "Not started yet"}
+      </div>
 
       <div className="rp-progress-row">
         <span className="rp-label">Progress</span>
-        <span className="rp-pct">{JOURNEY_PCT}%</span>
+        <span className="rp-pct">{journey.pct}%</span>
       </div>
-      <ProgressBar pct={JOURNEY_PCT} />
+      <ProgressBar pct={journey.pct} />
 
       <div className="rp-next">
         <span className="rp-next-ico"><ArrowRight size={14} /></span>
         <div style={{ minWidth: 0 }}>
-          <div className="rp-label">Next step</div>
-          <div className="rp-next-title">{nextStep}</div>
+          <div className="rp-label">Steps completed</div>
+          <div className="rp-next-title">
+            {journey.stepsTotal === 0
+              ? "Your roadmap is being prepared"
+              : `${journey.stepsDone} of ${journey.stepsTotal}${journey.stageCount ? ` · stage ${journey.stageIndex} of ${journey.stageCount}` : ""}`}
+          </div>
         </div>
       </div>
     </Card>
@@ -190,16 +202,17 @@ export function JourneySnapshotCard({ onNav }: { onNav: (id: string) => void }) 
 
 /* ── Card 4 — Documents overview ──────────────────────────────────────────── */
 
-export function DocumentsOverviewCard({ onNav }: { onNav: (id: string) => void }) {
-  const verified = REQUIRED_DOCS.filter((d) => d.status === "approved").length;
-  const pending = REQUIRED_DOCS.filter((d) => d.status === "under_review" || d.status === "pending").length;
-  const missing = REQUIRED_DOCS.filter((d) => d.status === "needs_changes").length;
-  const completion = Math.round((verified / REQUIRED_DOCS.length) * 100);
+export function DocumentsOverviewCard({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
+  const journey = useJourneySummary(profile.userId, profile.plan, profile.academic?.targetDegree, profile.tester);
+  const verified = journey.docsApproved;
+  const outstanding = journey.docsPending;
+  const total = journey.docsTotal;
+  const completion = total ? Math.round((verified / total) * 100) : 0;
 
   const stats: { label: string; value: number; tone: "green" | "amber" | "red"; up: boolean; icon: ReactNode }[] = [
     { label: "Verified", value: verified, tone: "green", up: true, icon: <CircleCheck size={13} /> },
-    { label: "Pending", value: pending, tone: "amber", up: true, icon: <Clock3 size={13} /> },
-    { label: "Missing", value: missing, tone: "red", up: false, icon: <TriangleAlert size={13} /> },
+    { label: "Outstanding", value: outstanding, tone: "amber", up: true, icon: <Clock3 size={13} /> },
+    { label: "Required", value: total, tone: "red", up: false, icon: <TriangleAlert size={13} /> },
   ];
 
   return (
@@ -223,7 +236,13 @@ export function DocumentsOverviewCard({ onNav }: { onNav: (id: string) => void }
       </div>
       <ProgressBar pct={completion} tone="green" />
 
-      <p className="rp-helper">Keep uploading your required documents to complete your application.</p>
+      <p className="rp-helper">
+        {total === 0
+          ? "Your required documents appear here once your roadmap is published."
+          : outstanding === 0
+            ? "Every required document has been verified."
+            : `${outstanding} document${outstanding === 1 ? "" : "s"} still to upload or verify.`}
+      </p>
     </Card>
   );
 }
@@ -241,8 +260,8 @@ export default function RightPanel({ profile, onNav, event, hide }: {
     <aside className="rp-panel">
       <UniversityCard profile={profile} onNav={onNav} />
       <MiniCalendarCard event={event} onNav={onNav} />
-      {hide !== "journey" && <JourneySnapshotCard onNav={onNav} />}
-      {hide !== "documents" && <DocumentsOverviewCard onNav={onNav} />}
+      {hide !== "journey" && <JourneySnapshotCard profile={profile} onNav={onNav} />}
+      {hide !== "documents" && <DocumentsOverviewCard profile={profile} onNav={onNav} />}
     </aside>
   );
 }

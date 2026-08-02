@@ -113,6 +113,7 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
     /* The id is on the row so the conversation can scroll straight to one
        message, e.g. the first unread when arriving from a notification. */
     <div className={`chat-row${mine ? " mine" : ""}`} data-msg={msg.id} onContextMenu={onContextMenu}>
+      <div className="chat-msgcol">
       <div className={`chat-bubble${msg.pinned ? " pinned" : ""}${decision ? ` decision tone-${DECISION_TONE[decision.outcome as string]}` : ""}`}>
         {/* A thin bar across the top, and nothing else about the card changes. */}
         {decision && <span className="chat-decision-bar" aria-hidden />}
@@ -151,12 +152,15 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
             </button>
           </div>
         )}
+      </div>
 
-        <div className="chat-time">
-          <span>{time(msg.created_at)}</span>
-          {msg.emailed && <span style={{ color: mine ? "rgba(255,255,255,.85)" : "var(--green)" }}>emailed</span>}
-          {footer}
-        </div>
+      {/* Meta sits outside the bubble, per the design system's Message family:
+          the fill carries the message, the row carries who and when. */}
+      <div className="chat-time">
+        <span>{time(msg.created_at)}</span>
+        {msg.emailed && <span style={{ color: "var(--green)" }}>emailed</span>}
+        {footer}
+      </div>
       </div>
 
       <div className="chat-acts">
@@ -176,9 +180,11 @@ const askOpt: CSSProperties = {
 export function UploadingBubble({ name }: { name: string }) {
   return (
     <div className="chat-row mine">
-      <div className="chat-bubble" style={{ display: "flex", alignItems: "center", gap: 9 }}>
-        <Loader size={16} onDark />
-        <span className="chat-text" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uploading {name}…</span>
+      <div className="chat-msgcol">
+        <div className="chat-bubble" style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <Loader size={16} onDark />
+          <span className="chat-text" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Uploading {name}…</span>
+        </div>
       </div>
     </div>
   );

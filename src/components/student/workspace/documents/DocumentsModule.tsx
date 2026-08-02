@@ -67,7 +67,9 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
     /* Only the stage the student is working on. Finished stages are history and
        future ones are not theirs to prepare yet, so both are hidden entirely.
        When the stage advances, this list follows on its own. */
-    const roadmap = assembleRoadmap(stages, steps, progress, approvals);
+    const roadmap = assembleRoadmap(stages, steps, progress, approvals, {
+      plan: profile.plan, tester: profile.tester,
+    });
     const active = roadmap.find((st) => st.state === "current" || st.state === "waiting_approval") ?? roadmap[0];
     const activeSteps = (steps as DbStep[]).filter((st) => st.stage_id === active?.id);
 
@@ -85,7 +87,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
     setRows(list);
     setStage(active ? { index: active.index, title: active.title } : null);
     setLoading(false);
-  }, [profile.plan, profile.userId, profile.academic?.targetDegree]);
+  }, [profile.plan, profile.userId, profile.tester, profile.academic?.targetDegree]);
   // Fetching from Supabase is the "subscribe to an external system" case; the
   // state set here is the query result, not derived render state.
   // eslint-disable-next-line react-hooks/set-state-in-effect

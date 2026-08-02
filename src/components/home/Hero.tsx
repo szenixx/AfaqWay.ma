@@ -1,73 +1,35 @@
 import Link from "next/link";
 import Image from "next/image";
 import SiteHeader from "./SiteHeader";
-import { StatusCircle, IconCheck, IconClock, IconArrow } from "./ui";
+import { IconArrow } from "./ui";
 import { AnimatedGridPattern } from "./AnimatedGridPattern";
+import { ElasticText } from "@/components/ds/ElasticText";
 
-const eyebrow = {
-  font: "600 10.5px/14px var(--font-sans)",
-  letterSpacing: ".08em",
-  textTransform: "uppercase" as const,
-  color: "var(--ink-faint)",
-};
-/* iOS-26 "liquid glass", translucent frosted panels for the hero widgets. */
-const glassCard = {
-  background: "rgba(255,255,255,0.5)",
-  backdropFilter: "blur(16px) saturate(1.6)",
-  WebkitBackdropFilter: "blur(16px) saturate(1.6)",
-  border: "1px solid rgba(255,255,255,0.65)",
-  boxShadow: "0 10px 30px rgba(23,35,58,.12), inset 0 1px 0 rgba(255,255,255,.75)",
-} as const;
-const glassAmber = {
-  background: "rgba(251,240,218,0.45)",
-  backdropFilter: "blur(16px) saturate(1.6)",
-  WebkitBackdropFilter: "blur(16px) saturate(1.6)",
-  border: "1px solid rgba(231,197,131,0.6)",
-  boxShadow: "0 10px 30px rgba(23,35,58,.12), inset 0 1px 0 rgba(255,255,255,.6)",
-} as const;
-
-/* iOS-style app-icon tile, crisp SVG, white squircle + soft shadow.
-   Style reference: floating productivity-app icons (white tile, coloured glyph). */
-function TileFrame({ size, radius, children }: { size: number; radius: number; children: React.ReactNode }) {
-  return (
-    <div style={{ width: size, height: size, borderRadius: radius, background: "#fff", boxShadow: "0 10px 28px rgba(23,35,58,.14)", border: "1px solid rgba(23,35,58,.05)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-      {children}
-    </div>
-  );
-}
-
-/* Generated iOS-style photo icon (Higgsfield), pre-cropped tight to the tile
-   (checkerboard removed at the source), so it sits pixel-crisp at native size.
-   The container rounds the square crop into an app-icon tile + float shadow. */
-function ImgTile({ src, size, radius }: { src: string; size: number; radius: number }) {
-  return (
-    <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", boxShadow: "0 10px 28px rgba(23,35,58,.16)", position: "relative", flex: "none" }}>
-      <Image src={src} alt="" fill sizes={`${size * 2}px`} style={{ objectFit: "cover" }} />
-    </div>
-  );
-}
-const TileSmall = ({ children }: { children: React.ReactNode }) => (
-  <TileFrame size={48} radius={13}>{children}</TileFrame>
-);
-const GlyphCap = () => (
-  <svg width="26" height="26" viewBox="0 0 40 40" fill="none" stroke="var(--indigo-600)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 10 34 16 20 22 6 16Z" fill="var(--indigo-600)" stroke="none" />
-    <path d="M11 18.5V26c0 2 4 3.6 9 3.6s9-1.6 9-3.6v-7.5" />
-    <path d="M34 16v7" />
-  </svg>
-);
-const GlyphPassport = () => (
-  <svg width="24" height="24" viewBox="0 0 40 40" fill="none" stroke="var(--indigo-600)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="9" y="6" width="22" height="28" rx="4" />
-    <circle cx="20" cy="17" r="4.6" />
-    <path d="M15.5 27h9" />
-  </svg>
-);
-const GlyphPlane = () => (
-  <svg width="26" height="26" viewBox="0 0 40 40" fill="var(--indigo-600)" stroke="none">
-    <path d="M35 6 5 18.5l11.7 4.2L21 34l4.9-9.2z" />
-  </svg>
-);
+/* The six hero widgets. `at` reuses the slots the previous tiles and glass
+   cards occupied, so all four corners and both mid-sides stay filled; `rotate`,
+   `dur` and `delay` are carried over from the item that held each slot, which
+   is what keeps the original drift. `ratio` is the artwork's own aspect. */
+/* `w` is kept at or below each render's native pixel width, so the artwork is
+   never upscaled — that upscaling was what made the widgets look soft. `nat`
+   is the source width, handed to next/image so it serves the full-resolution
+   file rather than a downscaled candidate. */
+/* Every widget is anchored from the TOP, never from the bottom. Mixing the two
+   made the vertical gaps depend on the viewport height, so the lower pair on
+   each side slid into the one above it on a short screen — the cards were
+   genuinely overlapping at ~900px tall. Anchoring one way makes each column a
+   fixed stack with ~55px of clear air between neighbours, which holds at every
+   height. Widths are trimmed slightly to keep both columns clear of the
+   centre headline. */
+const WIDGETS = [
+  // ── Left column ──
+  { src: "/hero/w2.webp", w: 240, nat: 358, ratio: 358 / 314, at: { left: 40, top: 110 }, rotate: -5, dur: 7, delay: 0 },
+  { src: "/hero/w5.webp", w: 265, nat: 414, ratio: 414 / 173, at: { left: 72, top: 379 }, rotate: -8, dur: 8, delay: 0.6 },
+  { src: "/hero/w4.webp", w: 262, nat: 398, ratio: 398 / 310, at: { left: 32, top: 544 }, rotate: 3, dur: 7.5, delay: 0.3 },
+  // ── Right column ──
+  { src: "/hero/w1.webp", w: 272, nat: 470, ratio: 470 / 318, at: { right: 56, top: 100 }, rotate: 6, dur: 8.5, delay: 0.9 },
+  { src: "/hero/w3.webp", w: 248, nat: 414, ratio: 414 / 326, at: { right: 28, top: 342 }, rotate: 4, dur: 7.2, delay: 0.45 },
+  { src: "/hero/w6.webp", w: 288, nat: 900, ratio: 620 / 430, at: { right: 36, top: 595 }, rotate: -3, dur: 7.8, delay: 1.1 },
+] as const;
 
 export default function Hero() {
   return (
@@ -93,94 +55,28 @@ export default function Hero() {
       {/* Top bar sits on the background */}
       <SiteHeader />
 
-      {/* ── Floating widgets (decorative; hidden on narrow screens) ── */}
+      {/* ── Floating widgets (decorative; hidden on narrow screens) ──
+          Six supplied widget renders, one per corner and mid-side, so the
+          frame is filled the way the old tiles and glass cards filled it.
+          Each keeps a previous item's slot, rotation, float duration and
+          delay, so the drift reads exactly as before — only the artwork
+          changed. The PNGs carry their own card, shadow and transparency, so
+          they are placed bare, with no wrapper card behind them. */}
       <div className="af-hero-widgets" aria-hidden>
-        <div style={{ position: "absolute", left: 120, top: 92, transform: "rotate(-6deg)" }}>
-          <div style={{ animation: "afFloatY 8.2s ease-in-out .2s infinite" }}>
-            <ImgTile src="/icons/ic-timer.png" size={64} radius={16} />
-          </div>
-        </div>
-        <div style={{ position: "absolute", right: 340, bottom: 320, transform: "rotate(5deg)" }}>
-          <div style={{ animation: "afFloatY 7.6s ease-in-out .8s infinite" }}>
-            <ImgTile src="/icons/ic-flag.png" size={64} radius={16} />
-          </div>
-        </div>
-        <div style={{ position: "absolute", left: 56, top: 150, transform: "rotate(-5deg)" }}>
-          <div style={{ width: 212, ...glassAmber, borderRadius: 12, padding: "14px 18px 16px", textAlign: "left", animation: "afFloatY 7s ease-in-out infinite" }}>
-            <div style={{ width: 10, height: 10, borderRadius: 999, background: "var(--red)", margin: "0 auto" }} />
-            <div style={{ font: "italic 500 13px/19px var(--font-sans)", color: "var(--amber)", marginTop: 8 }}>
-              Every document, deadline and step, tracked in one dossier.
+        {WIDGETS.map((w) => (
+          <div key={w.src} style={{ position: "absolute", ...w.at, transform: `rotate(${w.rotate}deg)` }}>
+            <div className="af-hero-widget-frame" style={{ animation: `afFloatY ${w.dur}s ease-in-out ${w.delay}s infinite` }}>
+              {/* unoptimized: these are already hand-tuned lossless WebP with
+                  alpha. Running them through the image optimizer re-encoded
+                  them lossily and softened the type. */}
+              <Image
+                className="af-hero-widget" unoptimized
+                src={w.src} alt="" width={w.nat} height={Math.round(w.nat / w.ratio)}
+                style={{ display: "block", width: `calc(${w.w}px * var(--hw-scale, 1))`, height: "auto" }}
+              />
             </div>
           </div>
-        </div>
-
-        <div style={{ position: "absolute", left: 150, top: 372, transform: "rotate(-8deg)" }}>
-          <div style={{ animation: "afFloatY 8s ease-in-out .6s infinite" }}>
-            <ImgTile src="/icons/ic-20.png" size={84} radius={20} />
-          </div>
-        </div>
-
-        <div style={{ position: "absolute", left: 48, bottom: 210, transform: "rotate(3deg)" }}>
-          <div style={{ width: 262, ...glassCard, borderRadius: 16, padding: "18px 20px", textAlign: "left", animation: "afFloatY 7.5s ease-in-out .3s infinite" }}>
-            <div style={eyebrow}>Your journey</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-              <StatusCircle size={28} tone="green"><IconCheck size={15} /></StatusCircle>
-              <span style={{ font: "500 13px/18px var(--font-sans)", color: "var(--ink)", flex: 1 }}>Passport</span>
-              <span style={{ font: "600 11px/14px var(--font-sans)", color: "var(--green)" }}>Approved</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line-soft)" }}>
-              <StatusCircle size={28} tone="amber"><IconClock size={15} /></StatusCircle>
-              <span style={{ font: "500 13px/18px var(--font-sans)", color: "var(--ink)", flex: 1 }}>Translated diploma</span>
-              <span style={{ font: "600 11px/14px var(--font-sans)", color: "var(--amber)" }}>Under review</span>
-            </div>
-            <div style={{ height: 6, borderRadius: 999, background: "var(--grey-tint)", marginTop: 14, overflow: "hidden" }}>
-              <div style={{ width: "62%", height: "100%", borderRadius: 999, background: "var(--indigo-600)" }} />
-            </div>
-            <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>8 of 13 steps done</div>
-          </div>
-        </div>
-
-        <div style={{ position: "absolute", right: 170, top: 128, transform: "rotate(6deg)" }}>
-          <div style={{ animation: "afFloatY 8.5s ease-in-out .9s infinite" }}>
-            <ImgTile src="/icons/ic-calendar.png" size={84} radius={20} />
-          </div>
-        </div>
-
-        <div style={{ position: "absolute", right: 44, top: 206, transform: "rotate(4deg)" }}>
-          <div style={{ width: 250, ...glassCard, borderRadius: 16, padding: "18px 20px", textAlign: "left", animation: "afFloatY 7.2s ease-in-out .45s infinite" }}>
-            <div style={eyebrow}>Timetable</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-              <span style={{ color: "var(--indigo-600)", display: "flex" }}>
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="14" height="13" rx="2" />
-                  <path d="M3 8h14M7 2.5v3M13 2.5v3" />
-                  <circle cx="10" cy="12.5" r="1.3" />
-                </svg>
-              </span>
-              <span style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>Visa appointment</span>
-            </div>
-            <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", marginTop: 4, marginLeft: 28 }}>
-              Embassy appointment · confirmed
-            </div>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "10px 0 0 28px", background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", color: "var(--indigo-text)", borderRadius: 999, padding: "3px 10px", font: "600 11.5px/16px var(--font-sans)" }}>
-              Thu · 09:30
-            </span>
-          </div>
-        </div>
-
-        <div style={{ position: "absolute", right: 52, bottom: 210, transform: "rotate(-3deg)" }}>
-          <div style={{ width: 240, ...glassCard, borderRadius: 16, padding: "18px 20px", textAlign: "left", animation: "afFloatY 7.8s ease-in-out 1.1s infinite" }}>
-            <div style={eyebrow}>10+ universities</div>
-            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <TileSmall><GlyphCap /></TileSmall>
-              <TileSmall><GlyphPassport /></TileSmall>
-              <TileSmall><GlyphPlane /></TileSmall>
-            </div>
-            <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 10 }}>
-              Universities across Europe
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* ── Center stack ── */}
@@ -193,17 +89,17 @@ export default function Hero() {
         </svg>
 
         <h1 style={{ font: "800 var(--font-sans)", fontSize: "clamp(30px, 5.5vw, 56px)", lineHeight: 1.12, letterSpacing: "-0.02em", color: "var(--ink)", maxWidth: 900, margin: "28px 0 0" }}>
-          Study abroad, guided every step of the way.
+          <ElasticText>Study abroad, guided every step of the way.</ElasticText>
         </h1>
         <p style={{ font: "400 var(--font-sans)", fontSize: "clamp(15px, 2.2vw, 17px)", lineHeight: 1.65, color: "var(--ink-soft)", maxWidth: 600, margin: "20px 0 0" }}>
           One clear plan from application to arrival, human-reviewed documents, a live tracker, and real people behind every step.
         </p>
 
         <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap", justifyContent: "center" }}>
-          <Link className="af-btn-primary af-shimmer" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: 999, font: "600 15px/1 var(--font-sans)" }}>
+          <Link className="af-btn-primary af-shimmer af-jelly" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 28px", borderRadius: "var(--radius-2xl)", font: "600 15px/1 var(--font-sans)" }}>
             Start your roadmap
           </Link>
-          <Link className="af-btn-ghost" href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 26px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>
+          <Link className="af-btn-ghost" href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 28px", borderRadius: "var(--radius-2xl)", border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>
             Talk to us
             <IconArrow size={16} />
           </Link>

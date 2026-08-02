@@ -56,10 +56,10 @@ export default function OurService() {
                 AfaqWay turns a confusing, stressful process into one clear, guided plan. From your first profile to the day you land on campus, you get a personalized roadmap, human-reviewed documents, a live progress tracker, and real people ready to help, all in one place and at a fraction of what an agency charges.
               </p>
               <div style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
-                <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: 999, font: "600 15px/1 var(--font-sans)" }}>
+                <Link className="af-btn-primary" href="/signup" style={{ display: "inline-flex", alignItems: "center", height: 48, padding: "0 26px", borderRadius: "var(--radius-control)", font: "600 15px/1 var(--font-sans)" }}>
                   Start your roadmap
                 </Link>
-                <Link className="af-btn-ghost" href="/how-it-works" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 24px", borderRadius: 999, border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>
+                <Link className="af-btn-ghost" href="/how-it-works" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 24px", borderRadius: "var(--radius-control)", border: "1.5px solid var(--indigo-600)", color: "var(--indigo-600)", font: "600 15px/1 var(--font-sans)", boxSizing: "border-box" }}>
                   See how it works
                   <IconArrow size={16} />
                 </Link>
@@ -161,7 +161,7 @@ export default function OurService() {
             <p style={{ font: "400 15px/24px var(--font-sans)", color: "rgba(255,255,255,.9)", maxWidth: 480, margin: "14px auto 0" }}>
               Build your profile, see your personalized plan, and take the first guided step toward your European campus.
             </p>
-            <Link href="/signup" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 50, padding: "0 30px", borderRadius: 999, background: "#fff", color: "var(--indigo-600)", font: "700 15px/1 var(--font-sans)", marginTop: 26 }}>
+            <Link href="/signup" style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 50, padding: "0 30px", borderRadius: "var(--radius-control)", background: "#fff", color: "var(--indigo-600)", font: "700 15px/1 var(--font-sans)", marginTop: 26 }}>
               Start your roadmap
               <IconArrow size={16} />
             </Link>

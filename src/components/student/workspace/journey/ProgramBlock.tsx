@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import { PROGRAMS } from "@/lib/programs/catalog";
 import { PROGRAM_FIELD_LABEL, type ProgramField } from "@/lib/journeyBlocks";
+import { EUR_TO_MAD, RATE_SET_ON, eurToMad, formatEur } from "@/config/pricing";
 import type { StudyApp } from "@/lib/studyApplication";
 
 /* Facts pulled from the student's own programme.
@@ -24,9 +25,6 @@ export function findProgram(study: StudyApp | null) {
   );
 }
 
-const euro = (value: number | null | undefined) =>
-  value === null || value === undefined || value === 0 ? "€0 (Free)" : `€${value.toLocaleString("en-US")}`;
-
 /** The English certificates this programme actually accepts, from its record. */
 function englishOptions(p: NonNullable<ReturnType<typeof findProgram>>): string[] {
   const out: string[] = [];
@@ -47,13 +45,21 @@ export function ProgramBlock({ field, study }: { field: ProgramField; study: Stu
     );
   }
 
-  if (field === "url") {
+  if (field === "url" || field === "apply") {
+    /* Same destination, two different jobs. "Explore Your Program" points at the
+       page to read; "Submit Your Application" points at the page to act on, and
+       the Excel shows that one only to Self Service students. */
+    const apply = field === "apply";
     return (
       <p className="lrn-linkrow">
         <span className="lrn-linklabel">{program.name} · {program.university}</span>
         <a className="lrn-link" href={program.url} target="_blank" rel="noopener noreferrer">
-          Open the official programme page<ExternalLink size={13} />
+          {apply ? "Apply Now on the university website" : "Open the official programme page"}
+          <ExternalLink size={13} />
         </a>
+        {apply && program.deadline && (
+          <span className="lrn-linknote">Application deadline: {program.deadline}</span>
+        )}
       </p>
     );
   }
@@ -70,23 +76,42 @@ export function ProgramBlock({ field, study }: { field: ProgramField; study: Stu
     );
   }
 
-  // Fees are stated above the written guidance, as the Excel asks.
+  /* Fees are stated above the written guidance, as the Excel asks, in euros and
+     again in dirhams: a student in Morocco cannot judge €4,000 at a glance. */
   const amount = field === "app_fee" ? program.app_fee_eur : program.tuition_eur;
+  const mad = eurToMad(amount);
   return (
-    <dl className="pgm-fee">
-      <div>
-        <dt>{field === "app_fee" ? "Application fee" : "Tuition fee"}</dt>
-        <dd>{euro(amount)}</dd>
-      </div>
-      <div>
-        <dt>Programme</dt>
-        <dd>{program.name}</dd>
-      </div>
-      <div>
-        <dt>University</dt>
-        <dd>{program.university}</dd>
-      </div>
-    </dl>
+    <>
+      <dl className="pgm-fee">
+        <div>
+          <dt>{field === "app_fee" ? "Application fee" : "Tuition fee"}</dt>
+          <dd>{formatEur(amount)}</dd>
+        </div>
+        {mad !== null && (
+          <div>
+            <dt>Approx. in MAD</dt>
+            <dd>{mad.toLocaleString("en-US")} MAD</dd>
+          </div>
+        )}
+        <div>
+          <dt>Programme</dt>
+          <dd>{program.name}</dd>
+        </div>
+        <div>
+          <dt>University</dt>
+          <dd>{program.university}</dd>
+        </div>
+      </dl>
+      {mad !== null && (
+        /* Never presented as the amount they will be charged: the rate is
+           indicative and dated, so an out-of-date figure is visible as one. */
+        <p className="pgm-fee-note">
+          Indicative only, at €1 = {EUR_TO_MAD} MAD as of{" "}
+          {new Date(RATE_SET_ON).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
+          Your bank sets the rate on the day you pay.
+        </p>
+      )}
+    </>
   );
 }
 

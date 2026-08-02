@@ -257,3 +257,17 @@ export const SOURCES: Source[] = [
 ];
 
 export const MARQUEE_SOURCES = SOURCES.map((s) => s.name);
+
+/* The academic year as a scroll timeline. Dates follow the Lithuanian
+   university calendar and the national migration timelines: two intakes
+   (September and February), a residence permit that must be applied for
+   before arrival, and a declaration of place of residence once here. */
+export type TimelineStop = { date: string; title: string; body: string };
+export const YEAR_TIMELINE: TimelineStop[] = [
+  { date: "Mar – Jun", title: "Apply", body: "Universities open applications for the September intake. Transcripts and diplomas are translated and legalised, which is the step that takes longest, so it starts first." },
+  { date: "Jun – Jul", title: "Acceptance", body: "Offers arrive and the place is confirmed with a tuition deposit. The university issues the acceptance documents the migration office will ask for." },
+  { date: "Jul – Aug", title: "Residence permit", body: "The national visa or temporary residence permit is applied for from your home country. Proof of funds, health insurance and accommodation are all part of the file." },
+  { date: "Late Aug", title: "Arrival", body: "Fly in, collect keys, and declare your place of residence at the municipality within the first weeks. The student card and a local bank account follow." },
+  { date: "Sep 1", title: "Semester starts", body: "Orientation week, then lectures. The autumn semester runs to late January, with the exam session in January." },
+  { date: "Feb", title: "Spring semester", body: "The second semester begins, and the February intake starts here instead. The academic year closes in June." },
+];

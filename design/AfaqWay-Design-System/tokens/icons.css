@@ -1,0 +1,10 @@
+/* AfaqWay icon system — Lucide outline, one stroke family. Sizes are
+   contextual; containers wrap an icon in a circle/rounded-square/pill. */
+:root{
+  --icon-2xs:16px; --icon-xs:18px; --icon-sm:20px; --icon-md:24px; --icon-lg:28px; --icon-xl:32px;
+
+  --icon-container-sm:32px;
+  --icon-container-md:40px;
+  --icon-container-lg:48px;
+  --icon-container-xl:56px;
+}

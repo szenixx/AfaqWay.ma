@@ -1,0 +1,18 @@
+/* AfaqWay layered surface system — every background is one named layer, never
+   a raw colour. Values point back to the base tokens in colors.css. */
+:root{
+  --surface-0:var(--paper);           /* page background */
+  --surface-1:var(--card);            /* the floating card — the default surface */
+  --surface-2:var(--subtle);          /* recessed rows, disabled fields */
+  --surface-3:var(--neutral-100);     /* deeper recess (nested panels) */
+  --surface-floating:var(--card);     /* card + --elev-hover on lift; same paint, different shadow */
+  --surface-modal:var(--card);
+  --surface-popover:var(--card);
+  --surface-dropdown:var(--card);
+  --surface-sidebar:rgba(255,255,255,.8); /* glass — pair with --blur-lg + saturate(1.5) */
+  --surface-header:var(--card);
+  --surface-footer:var(--paper);
+  --surface-card:var(--card);         /* alias, kept from colors.css */
+  --surface-recessed:var(--subtle);
+  --surface-highlight:var(--indigo-tint);
+}

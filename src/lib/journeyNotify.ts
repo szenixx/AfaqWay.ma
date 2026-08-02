@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { logEvent } from "@/lib/journeyDb";
 import { notify } from "@/lib/notifications";
+import { whatsappLink } from "@/lib/whatsapp";
 
 /* Review notifications.
 
@@ -48,11 +49,9 @@ export function reviewMessage(input: NotifyInput): string {
   return lines.join("\n");
 }
 
-/** A wa.me link, ready for the day WhatsApp sending is switched on. */
-export function whatsappLink(phone: string, body: string): string {
-  const digits = phone.replace(/[^\d]/g, "");
-  return `https://wa.me/${digits}?text=${encodeURIComponent(body)}`;
-}
+/* whatsappLink lives in lib/whatsapp, the module that owns the channel. It was
+   defined here too, which is how two copies of one rule start. */
+export { whatsappLink } from "@/lib/whatsapp";
 
 /**
  * Sends the decision to the student through the existing chat, records it on the

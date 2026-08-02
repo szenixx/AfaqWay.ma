@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import { AnimatedModal, Loader, Status } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
-import { fetchDocuments, subscribeJourney, type DbDocument } from "@/lib/journeyDb";
+import { fetchDocuments, mergeStepMeta, subscribeJourney, type DbDocument } from "@/lib/journeyDb";
+import { noteStepOpened } from "@/lib/journeyEvents";
 import { stepDocuments, type JourneyStage, type JourneyStep, DOC_STATUS } from "@/lib/journey";
 import type { StudyApp } from "@/lib/studyApplication";
 import { JrButton } from "./parts";
@@ -67,6 +68,18 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
   // An advisor verifying a document must show up here without a refresh.
   useEffect(() => subscribeJourney(() => { void load(); }), [load]);
 
+  /* "Pin the notification at the top of the Notifications page UNTIL the student
+     opens this Journey step", and "if the student has not opened the step within
+     48 hours, send one reminder". Opening it is therefore an event in its own
+     right: it unpins the warning and withdraws the nudge that is no longer true. */
+  useEffect(() => {
+    if (!open || step.meta.openedAt) return;
+    void (async () => {
+      await noteStepOpened(userId, step.id, step.meta);
+      await mergeStepMeta(userId, step.id, { ...step.meta, openedAt: new Date().toISOString() });
+    })();
+  }, [open, userId, step.id, step.meta]);
+
   return (
     <AnimatedModal open={open} onClose={onClose} className="jr-modal" ariaLabel={step.title}>
       <header className="stp-head">
@@ -100,11 +113,21 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
         )}
 
         {tab === "learn" ? (
-          <StepBlocks stepId={step.id} fallback="Your advisor has not added any guidance to this step yet." plan={plan} study={study} />
+          <StepBlocks
+            stepId={step.id} fallback="Your advisor has not added any guidance to this step yet."
+            plan={plan} study={study}
+            /* "Keep the banner visible until the student marks the step as
+               completed." Once it is done, the warning has served its purpose
+               and only adds noise to a step they are revisiting. */
+            hideBanner={step.state === "completed"}
+          />
         ) : loading ? (
           <Loader block />
         ) : docs.required === 0 ? (
-          <p className="stp-hint"><Info size={14} />This step has no documents to upload. Complete it by action.</p>
+          <p className="stp-hint">
+            <Info size={14} />
+            There are no document requirements for this step. Read the Learn section, then complete it.
+          </p>
         ) : (
           <>
             {/* Small inline reminder, no frame, no background. */}

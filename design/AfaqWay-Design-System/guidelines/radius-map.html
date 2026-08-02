@@ -1,0 +1,30 @@
+<!-- @dsCard group="Spacing" viewport="700x210" name="Radius map & icon containers" subtitle="Which radius each surface uses · icon container sizes" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;font-family:var(--font-sans);background:var(--card);padding:18px;display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 12px;border-radius:12px;background:var(--subtle);min-width:74px}
+.sw{background:var(--indigo-tint);border:1px solid var(--indigo-line)}
+.n{font:600 10px/13px var(--font-sans);color:var(--ink)}
+.px{font:400 8.5px/11px var(--font-sans);color:var(--ink-faint)}
+.icons{display:flex;gap:14px;align-items:flex-end}
+.ic{display:flex;align-items:center;justify-content:center;background:var(--indigo-tint);color:var(--indigo-600)}
+</style></head>
+<body>
+<div>
+<div class="row">
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-pill)"></span><span class="n">chip / pill</span><span class="px">999px</span></div>
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-control)"></span><span class="n">button</span><span class="px">18px · v2</span></div>
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-lg)"></span><span class="n">input</span><span class="px">16px</span></div>
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-xl)"></span><span class="n">small card</span><span class="px">20px</span></div>
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-2xl)"></span><span class="n">std card</span><span class="px">24px</span></div>
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-card)"></span><span class="n">large card</span><span class="px">28px</span></div>
+<div class="chip"><span class="sw" style="width:44px;height:32px;border-radius:var(--radius-dialog)"></span><span class="n">dialog</span><span class="px">32px</span></div>
+</div>
+</div>
+<div class="icons">
+<div class="ic" style="width:var(--icon-container-sm);height:var(--icon-container-sm);border-radius:var(--radius-circle)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<div class="ic" style="width:var(--icon-container-md);height:var(--icon-container-md);border-radius:var(--radius-lg)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<div class="ic" style="width:var(--icon-container-lg);height:var(--icon-container-lg);border-radius:var(--radius-xl)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+<div class="ic" style="width:var(--icon-container-xl);height:var(--icon-container-xl);border-radius:var(--radius-pill)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</div>
+</body></html>

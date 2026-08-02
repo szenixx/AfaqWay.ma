@@ -1,0 +1,51 @@
+/* AfaqWay borders, opacity, blur & motion — the rest of the effects layer.
+   --ease/--dur-fast/--dur-slow are what components render with; the rest
+   fills out the full system for foundations documentation. */
+:root{
+  /* ── Borders ── */
+  --border-hairline:var(--card-border);           /* 1px rgba(23,35,58,.05) — the card edge */
+  --border-thin:1px solid var(--line-soft);
+  --border-default-w:1px solid var(--line);       /* (border-default already aliases --line itself) */
+  --border-strong:1.5px solid var(--ink-faint);
+  --border-focus:2.5px solid var(--indigo-600);
+  --border-dashed:1px dashed var(--indigo-line);
+  --border-dropzone:2px dashed var(--indigo-line);
+
+  /* ── Opacity ── */
+  --opacity-disabled:.5; /* @kind other */
+  --opacity-disabled-field:.7; /* @kind other */
+  --opacity-hover:.85; /* @kind other */
+  --opacity-pressed:.7; /* @kind other */
+  --opacity-overlay:.42; /* @kind other */
+  --opacity-overlay-strong:.55; /* @kind other */
+  --opacity-watermark:.06; /* @kind other */
+  --opacity-faint:.09; /* @kind other */
+
+  /* ── Blur ── */
+  --blur-sm:6px;   /* modal scrim */
+  --blur-md:10px;  /* animated-modal scrim */
+  --blur-lg:22px;  /* sidebar glass */
+  --blur-xl:32px;  /* background blobs */
+
+  /* ── Motion ── */
+  --ease:cubic-bezier(.4,0,.2,1); /* @kind other */
+  --dur-fast:120ms; /* @kind other */
+  --dur-slow:200ms; /* @kind other */
+  --motion-hover:140ms var(--ease); /* @kind other */
+  --motion-press:120ms var(--ease); /* @kind other */
+  --motion-open:220ms var(--ease); /* @kind other */
+  --motion-close:180ms var(--ease); /* @kind other */
+  --motion-page:260ms var(--ease); /* @kind other */
+  --motion-toast:260ms var(--ease); /* @kind other */
+
+  /* ── Z-index ── */
+  --z-base:1; /* @kind other */
+  --z-sticky:90; /* @kind other */
+  --z-dropdown:70; /* @kind other */
+  --z-popover:220; /* @kind other */
+  --z-modal:240; /* @kind other */
+  --z-select-menu:1200; /* @kind other */
+  --z-fullscreen:1300; /* @kind other */
+  --z-celebration:1400; /* @kind other */
+  --z-toast:9999; /* @kind other */
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Bell, CheckCheck, CreditCard, FileText, MessageCircle, Megaphone,
@@ -65,8 +65,10 @@ const MAX = 4;
 
 export function toast(input: ToastInput): string {
   const id = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  const next: Toast = { at: new Date().toISOString(), duration: 7000, ...input, id };
-  items = [...items, next].slice(-MAX);
+  const next: Toast = { at: new Date().toISOString(), duration: 5000, ...input, id };
+  /* Newest first, so an arrival lands at the top of the column where the eye
+     already is, and older ones fall off the bottom. */
+  items = [next, ...items].slice(0, MAX);
   emit();
   if (!next.silent) playSoftChime();
   return id;
@@ -83,6 +85,11 @@ function subscribe(fn: (list: Toast[]) => void) {
   return () => { subscribers.delete(fn); };
 }
 
+/** Public subscribe, for alternate renderers of the same toast store (e.g. the
+ *  student workspace's gooey notification tray) that must not duplicate the
+ *  notification-fetch/store logic above. */
+export const subscribeToasts = subscribe;
+
 /* ── Rendering ─────────────────────────────────────────────────────────────── */
 
 const KIND: Record<ToastKind, { icon: ReactNode; tone: string }> = {
@@ -98,36 +105,29 @@ const KIND: Record<ToastKind, { icon: ReactNode; tone: string }> = {
 };
 
 function ToastCard({ item, onClose }: { item: Toast; onClose: () => void }) {
-  const [leaving, setLeaving] = useState(false);
   const meta = KIND[item.kind] ?? KIND.system;
   /* `at` is stamped by `toast()` the moment the notification is raised, so
      render never has to read the clock. */
   const when = new Date(item.at ?? 0);
 
-  /* Dismissal plays the exit animation first, so a toast never vanishes
-     mid-motion. The latest onClose is held in a ref, which keeps the auto
-     dismiss timer from restarting every time the parent re-renders. */
+  /* The latest onClose is held in a ref, so the auto-dismiss timer does not
+     restart every time the parent re-renders. */
   const latestClose = useRef(onClose);
   useEffect(() => { latestClose.current = onClose; }, [onClose]);
 
-  const close = useCallback(() => {
-    setLeaving(true);
-    window.setTimeout(() => latestClose.current(), 220);
-  }, []);
-
   useEffect(() => {
     if (!item.duration) return;
-    const t = window.setTimeout(close, item.duration);
+    const t = window.setTimeout(() => latestClose.current(), item.duration);
     return () => window.clearTimeout(t);
-  }, [item.duration, close]);
+  }, [item.duration]);
 
   return (
-    <div className={`ds-toast${leaving ? " leaving" : ""}`} role="status" aria-live="polite">
+    <div className="ds-toast" role="status" aria-live="polite">
       <div className="ds-toast-head">
         <span className="ds-toast-brand"><BrandLogo size={20} /></span>
         <span className={`ds-toast-kind ${meta.tone}`}>{meta.icon}</span>
         <span className="ds-toast-title">{item.title}</span>
-        <button type="button" className="ds-toast-x" onClick={close} aria-label="Dismiss"><X size={14} /></button>
+        <button type="button" className="ds-toast-x" onClick={() => latestClose.current()} aria-label="Dismiss"><X size={14} /></button>
       </div>
 
       {item.message && <p className="ds-toast-body">{item.message}</p>}
@@ -141,7 +141,7 @@ function ToastCard({ item, onClose }: { item: Toast; onClose: () => void }) {
         {item.onAction && (
           <button
             type="button" className="ds-toast-act"
-            onClick={() => { item.onAction?.(); close(); }}
+            onClick={() => { item.onAction?.(); latestClose.current(); }}
           >{item.actionLabel ?? "Click Here"}</button>
         )}
       </div>
@@ -153,6 +153,9 @@ function ToastCard({ item, onClose }: { item: Toast; onClose: () => void }) {
  * The single stack. Mount once, high in the tree; everything else calls
  * `toast()`. Rendered in a portal so no ancestor's overflow or stacking
  * context can clip it.
+ *
+ * A plain top-centre column: each notification appears, sits for its duration
+ * (5s by default) and goes. No stacking, depth, or expand-on-hover motion.
  */
 export function Toaster() {
   const [list, setList] = useState<Toast[]>([]);

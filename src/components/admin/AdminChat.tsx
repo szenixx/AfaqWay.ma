@@ -196,7 +196,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
   const optLbl: CSSProperties = { display: "inline-flex", alignItems: "center", gap: 5, font: "600 12px/1 var(--font-sans)", color: "var(--ink-soft)" };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 172px)", minHeight: 520 }}>
+    <div className="adm-chat-fill" style={{ display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flex: "none" }}>
         <h1 style={{ font: "700 22px/28px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Messages</h1>
         <Pill tone="grey">{countryByCode(country)?.name}</Pill>

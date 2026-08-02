@@ -8,7 +8,7 @@ export const metadata = {
   description: "Get in touch with AfaqWay by email or WhatsApp.",
 };
 
-const WHATSAPP_URL = "https://wa.me/212632501155";
+import { SUPPORT_WHATSAPP_URL as WHATSAPP_URL } from "@/config/support";
 
 export default function ContactPage() {
   return (

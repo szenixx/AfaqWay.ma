@@ -1,0 +1,22 @@
+<!-- @dsCard group="Spacing" viewport="700x210" name="Motion & effects" subtitle="Named durations, blur, opacity — one ease for all" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;font-family:var(--font-sans);background:var(--card);padding:20px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:22px;flex-wrap:wrap}
+.c{display:flex;flex-direction:column;align-items:center;gap:8px;width:78px}
+.dot{width:34px;height:34px;border-radius:999px;background:var(--indigo-600)}
+.n{font:600 10px/1 var(--font-sans);color:var(--ink)}
+.v{font:400 9.5px/1 var(--font-sans);color:var(--ink-faint)}
+.hover-demo{transition:var(--motion-hover);}
+.hover-demo:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+</style></head>
+<body>
+<div class="row">
+<div class="c"><span class="dot" style="animation:p 1.4s var(--ease) infinite"></span><span class="n">hover</span><span class="v">140ms</span></div>
+<div class="c"><span class="dot" style="opacity:.7"></span><span class="n">press</span><span class="v">120ms</span></div>
+<div class="c"><span class="dot" style="filter:blur(var(--blur-sm))"></span><span class="n">blur-sm</span><span class="v">6px</span></div>
+<div class="c"><span class="dot" style="filter:blur(var(--blur-lg))"></span><span class="n">blur-lg</span><span class="v">22px</span></div>
+<div class="c"><span class="dot" style="opacity:var(--opacity-disabled)"></span><span class="n">disabled</span><span class="v">.5</span></div>
+<div class="c"><span class="dot hover-demo"></span><span class="n">hover me</span><span class="v">shadow-hover</span></div>
+</div>
+<style>@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(.85)}}</style>
+</body></html>

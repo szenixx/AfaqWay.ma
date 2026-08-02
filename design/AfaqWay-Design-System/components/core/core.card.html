@@ -1,0 +1,46 @@
+<!-- @dsCard group="Components" viewport="700x620" name="Core — Button, Pill, Status, Cards, BentoGrid" subtitle="Capsule buttons incl. light tint, tone pills, status vocabulary, card roles, bento grid" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;font-family:var(--font-sans);background:var(--paper);padding:22px}.grp{margin-bottom:18px}.lbl{font:600 10px/1 var(--font-sans);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}</style></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { Button, Pill, Status, InfoCard, StatCard, ActionCard, BentoGrid, BentoCard } = window.AfaqWayDesignSystem_898d90;
+const Cap = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>;
+const Doc = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>;
+function App(){return (<div>
+  <div className="grp"><div className="lbl">Button</div><div className="row">
+    <Button variant="primary">Start roadmap</Button>
+    <Button variant="ghost" icon={<Cap/>}>Explore</Button>
+    <Button variant="neutral">Back</Button>
+    <Button variant="destructive">Delete</Button>
+    <Button variant="primary" loading>Saving</Button>
+    <Button variant="primary" disabled>Disabled</Button>
+    <Button variant="light">Light (indigo)</Button>
+    <Button variant="light" color="var(--green)">Light (green)</Button>
+    <Button variant="light" color="var(--red)">Light (red)</Button>
+  </div></div>
+  <div className="grp"><div className="lbl">Pill</div><div className="row">
+    <Pill tone="indigo">Submitted</Pill><Pill tone="green">Approved</Pill><Pill tone="amber">Pending</Pill><Pill tone="red">Rejected</Pill><Pill tone="grey">Draft</Pill>
+    <Pill tone="green" delta={12} deltaSuffix="%">Growth</Pill>
+  </div></div>
+  <div className="grp"><div className="lbl">Status</div><div className="row">
+    <Status state="online"/><Status state="typing"/><Status state="processing"/><Status state="approved"/><Status state="pending"/><Status state="rejected"/><Status state="draft"/>
+  </div></div>
+  <div className="grp"><div className="lbl">Card roles</div><div className="cards">
+    <InfoCard thumbnail={<Cap/>} title="Vytautas Magnus" supporting="Kaunas · public" meta={["Tuition €3,000","English"]} actionLabel="View"/>
+    <StatCard value="8/13" title="Journey steps" icon={<Doc/>} accent="var(--indigo-600)" trend={{value:"On track",up:true}}/>
+    <ActionCard icon={<Doc/>} title="Upload diploma" description="Your translated diploma is due Thursday." ctaLabel="Upload"/>
+  </div></div>
+  <div className="grp"><div className="lbl">BentoGrid</div>
+    <BentoGrid style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+      <BentoCard colSpan={2} icon={<span style={{display:"inline-flex",width:40,height:40,borderRadius:12,background:"var(--indigo-tint)",color:"var(--indigo-600)",alignItems:"center",justifyContent:"center"}}><Cap/></span>} title="Guided, not generic" description="Spring-tuned interactions and a live journey tracker, ready for every stage."/>
+      <BentoCard rowSpan={2} icon={<span style={{display:"inline-flex",width:40,height:40,borderRadius:12,background:"var(--green-tint)",color:"var(--green)",alignItems:"center",justifyContent:"center"}}><Doc/></span>} title="Document review" description="Every upload is checked by a real advisor before it counts as done."/>
+      <BentoCard icon={<span style={{display:"inline-flex",width:40,height:40,borderRadius:12,background:"var(--amber-tint)",color:"var(--amber)",alignItems:"center",justifyContent:"center"}}><Doc/></span>} title="94% first-pass" description="Approval rate across current students."/>
+    </BentoGrid>
+  </div>
+</div>);}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script></body></html>

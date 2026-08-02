@@ -36,6 +36,43 @@ export function formatPrice(amount: number, currency: string = CURRENCY_SHORT): 
   return `${amount.toLocaleString("en-US")} ${currency}`;
 }
 
+/* ── University fees, which are quoted in euros ────────────────────────────
+   What AfaqWay charges is in MAD, above. What a UNIVERSITY charges is in EUR,
+   and the Excel asks for both figures on the fee steps:
+
+     **Application Fee:** €XXX
+     **Approx. in MAD:** XXXX MAD
+
+   The rate is a stated constant, not a live lookup. A live rate would put a
+   third-party request on a page a student reads while deciding whether they can
+   afford a programme, and a silent failure there is worse than a number that is
+   openly approximate. The word "Approx." is the Excel's own, and the date below
+   is rendered beside the figure so it can never quietly go stale.
+
+   Update RATE_SET_ON whenever EUR_TO_MAD changes. */
+
+/** Middle-market EUR → MAD rate used for the indicative conversion. */
+export const EUR_TO_MAD = 10.9;
+/** When the rate above was last set, shown to the student beside the figure. */
+export const RATE_SET_ON = "2026-08-01";
+
+/** "€4,000" — a university fee, or "€0 (Free)" when there is none to pay. */
+export function formatEur(value: number | null | undefined): string {
+  return value === null || value === undefined || value === 0
+    ? "€0 (Free)"
+    : `€${value.toLocaleString("en-US")}`;
+}
+
+/**
+ * The indicative dirham value of a euro fee, rounded to whole dirhams.
+ * Returns null when there is nothing to convert, so the caller shows one line
+ * rather than "€0 (Free)" followed by "0 MAD".
+ */
+export function eurToMad(value: number | null | undefined): number | null {
+  if (value === null || value === undefined || value === 0) return null;
+  return Math.round(value * EUR_TO_MAD);
+}
+
 /** The plans a destination actually offers. Drives the dependent plan filter. */
 export function plansForCountry(code: string | null | undefined): PlanId[] {
   const table = PRICES[(code ?? "") as DestinationCode];

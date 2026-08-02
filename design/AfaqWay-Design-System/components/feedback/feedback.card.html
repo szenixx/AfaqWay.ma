@@ -1,0 +1,76 @@
+<!-- @dsCard group="Components" viewport="700x560" name="Feedback — MetricCard, Accordion, Loader, Dialogs, EmptyState, GooeyStack" subtitle="Statistics tiles, FAQ expander, spinner, dialogs, empty frame, notification stack" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{margin:0;font-family:var(--font-sans);background:var(--paper);padding:22px}.wrap{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}</style></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { MetricCard, Accordion, Loader, AlertDialog, AlertDialogMedia, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel, Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, EmptyState, GooeyStack, Button } = window.AfaqWayDesignSystem_898d90;
+const Inbox = () => <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/></svg>;
+const Bell = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>;
+const Users = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>;
+const Check = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>;
+const Trash = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>;
+function App(){
+  const [open,setOpen]=React.useState(false);
+  const [open2,setOpen2]=React.useState(false);
+  const [stackOpen,setStackOpen]=React.useState(false);
+  return (<div className="wrap">
+  <div className="tiles">
+    <MetricCard tone="blue" icon={<Users/>} watermark={<Users/>} value="1,284" title="Active students" subtitle="Across 6 programs" badge={{label:"+12% this month",up:true}}/>
+    <MetricCard tone="green" icon={<Check/>} watermark={<Check/>} value="94%" title="Docs approved" subtitle="First-pass rate" badge={{label:"+3 pts",up:true}}/>
+  </div>
+  <div>
+    <Accordion items={[
+      {question:"How long does the whole journey take?",answer:"Most students complete application to arrival in 4–6 months. Your live tracker shows exactly where you are and what is next."},
+      {question:"Do you review my documents?",answer:"Yes. Every document is checked by a real advisor before it counts as done — the platform never marks a step complete on its own."},
+      {question:"Is AfaqWay an agency?",answer:"No. AfaqWay is a guided platform built for students, not a commission-based agency."},
+    ]}/>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginTop:16,font:"var(--text-hint-sm)",color:"var(--ink-soft)"}}>
+      <Loader size={20}/> Checking your latest upload…
+    </div>
+    <button onClick={()=>setOpen(true)} style={{marginTop:16,height:38,padding:"0 16px",borderRadius:"var(--radius-control)",border:"1px solid var(--red-line)",background:"var(--red-tint)",color:"var(--red)",font:"600 13px/1 var(--font-sans)",cursor:"pointer"}}>Delete document…</button>
+    <button onClick={()=>setOpen2(true)} style={{marginTop:10,marginLeft:10,height:38,padding:"0 16px",borderRadius:"var(--radius-control)",border:"1px solid var(--line)",background:"var(--card)",color:"var(--ink)",font:"600 13px/1 var(--font-sans)",cursor:"pointer"}}>Edit profile…</button>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogMedia><Trash/></AlertDialogMedia>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete this document?</AlertDialogTitle>
+        <AlertDialogDescription>This can't be undone. Your advisor will be notified.</AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel/>
+        <AlertDialogAction variant="destructive" onClick={()=>setOpen(false)}>Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialog>
+    <Dialog open={open2} onOpenChange={setOpen2}>
+      <DialogHeader>
+        <DialogTitle>Edit profile</DialogTitle>
+        <DialogDescription>Update the details your advisor sees.</DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <DialogClose/>
+        <button onClick={()=>setOpen2(false)} style={{height:40,padding:"0 20px",borderRadius:"var(--radius-control)",border:"none",background:"var(--indigo-600)",color:"#fff",font:"600 14px/1 var(--font-sans)",cursor:"pointer"}}>Save</button>
+      </DialogFooter>
+    </Dialog>
+    <div style={{marginTop:22,padding:20,border:"1px solid var(--line)",borderRadius:"var(--radius-2xl)",background:"var(--card)"}}>
+      <EmptyState size="sm" icon={<Inbox/>} title="No documents yet" description="Once your advisor assigns a stage, its required documents will show up here.">
+        <EmptyState.Actions><Button variant="neutral" size="md" onClick={()=>{}}>View journey</Button></EmptyState.Actions>
+      </EmptyState>
+    </div>
+    <div style={{marginTop:22}}>
+      <div className="lbl" style={{font:"600 10px/1 var(--font-sans)",letterSpacing:".07em",textTransform:"uppercase",color:"var(--ink-faint)",marginBottom:10}}>GooeyStack</div>
+      <button onClick={()=>setStackOpen(v=>!v)} style={{marginBottom:12,height:34,padding:"0 14px",borderRadius:"var(--radius-control)",border:"1px solid var(--line)",background:"var(--card)",color:"var(--ink)",font:"600 12.5px/1 var(--font-sans)",cursor:"pointer"}}>{stackOpen?"Collapse":"Expand"}</button>
+      <div style={{width:260}}>
+        <GooeyStack collapsed={!stackOpen} expandedGap={10} radius={16}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"14px 16px"}}><Bell/><div><div style={{font:"600 13px/18px var(--font-sans)",color:"var(--ink)"}}>Visa appointment confirmed</div><div style={{font:"400 11.5px/16px var(--font-sans)",color:"var(--ink-faint)"}}>2 min ago</div></div></div>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"14px 16px"}}><Bell/><div><div style={{font:"600 13px/18px var(--font-sans)",color:"var(--ink)"}}>Diploma approved</div><div style={{font:"400 11.5px/16px var(--font-sans)",color:"var(--ink-faint)"}}>1 hour ago</div></div></div>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"14px 16px"}}><Bell/><div><div style={{font:"600 13px/18px var(--font-sans)",color:"var(--ink)"}}>New message from advisor</div><div style={{font:"400 11.5px/16px var(--font-sans)",color:"var(--ink-faint)"}}>Yesterday</div></div></div>
+        </GooeyStack>
+      </div>
+    </div>
+  </div>
+</div>);}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script></body></html>

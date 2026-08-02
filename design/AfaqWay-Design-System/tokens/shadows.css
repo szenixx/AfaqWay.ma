@@ -1,0 +1,30 @@
+/* AfaqWay shadows — one ink hue (rgba(23,35,58,…)); the one exception is
+   brand-hued hover on interactive indigo elements. shadow-card/elev-1..3/
+   elev-hover/shadow-brand-hover are what components render with; the
+   xs–xl + floating/modal/popover/hover/pressed scale documents the full
+   ladder without changing any of them. */
+:root{
+  /* v2 — atmospheric shadow system: larger blur, lower opacity, no hard edge.
+     Depth reads as "gently lifted," never dramatically floating or glossy. */
+  --shadow-none:none;
+  --shadow-card:0 1px 2px rgba(15,23,42,.03);            /* flattest resting card */
+  --elev-1:0 8px 24px -10px rgba(15,23,42,.06);          /* subtle lift */
+  --elev-2:0 16px 40px -14px rgba(15,23,42,.07);         /* default card */
+  --elev-3:0 28px 64px -18px rgba(15,23,42,.10);         /* prominent */
+  --elev-hover:0 22px 48px -16px rgba(15,23,42,.09);     /* card hover */
+  --shadow-brand-hover:0 16px 36px -18px rgba(22,46,140,.35); /* hover on brand elements — softened */
+
+  --shadow-xs:var(--shadow-card);
+  --shadow-sm:var(--elev-1);
+  --shadow-md:var(--elev-2);
+  --shadow-lg:var(--elev-3);
+  --shadow-xl:0 30px 80px rgba(23,35,58,.16);
+  --shadow-floating:var(--elev-hover);
+  --shadow-modal:0 30px 80px rgba(23,35,58,.3);
+  --shadow-dialog:var(--shadow-modal); /* alias — "dialog" and "modal" are the same elevation here */
+  --shadow-popover:0 18px 44px rgba(23,35,58,.16);
+  --shadow-hover:var(--shadow-brand-hover);
+  --shadow-pressed:inset 0 1px 3px rgba(23,35,58,.12);
+  /* small/medium/large aliases, matching generic naming some specs expect */
+  --shadow-small:var(--shadow-sm); --shadow-medium:var(--shadow-md); --shadow-large:var(--shadow-lg);
+}

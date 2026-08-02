@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Bell, ChevronDown, Download, ExternalLink, Paperclip } from "lucide-react";
+import { Bell, ChevronDown, Download, ExternalLink, Paperclip, TriangleAlert } from "lucide-react";
 import { Loader, HeroVideoDialog } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { fetchBlocks, fetchReminders, subscribeJourney, type DbBlock, type DbReminder } from "@/lib/journeyDb";
 import {
   accordionForDisplay, attachmentData, blockKindOf, blockPlan, checklistForDisplay,
-  embedUrl, imageData, isEmptyBlock, linkData, listItemsForDisplay, programField,
-  sanitizeRichText, tableData, CALLOUT_KINDS,
+  embedUrl, imageData, isEmptyBlock, linkData, listItemsForDisplay, moduleSummary,
+  programField, sanitizeRichText, tableData, CALLOUT_KINDS,
 } from "@/lib/journeyBlocks";
+import { markdownSegments } from "@/lib/markdown";
 import { ProgramBlock } from "./ProgramBlock";
 import type { StudyApp } from "@/lib/studyApplication";
 
@@ -75,16 +76,109 @@ export function JourneyBlock({ block, study }: { block: DbBlock; study?: StudyAp
   }
 
   if (CALLOUT_KINDS.has(kind)) {
-    // Callouts stay text: a small coloured label and the sentence itself.
+    /* Callouts are a coloured label and the detail itself, which may be a
+       sentence or a short list — the Excel writes tips and requirements both
+       ways ("Tips & Advice" is four bullets, a warning is one paragraph).
+       `important` is the red card the Excel asks to be unmissable, so it is the
+       one callout drawn as a filled card rather than a rule in the margin. */
+    const entries = listItemsForDisplay(block);
     return (
       <div className={`lrn-note lrn-note-${kind}`}>
-        {title && <span className="lrn-note-title">{title}</span>}
-        <p>{block.body}</p>
+        {kind === "important" && <TriangleAlert size={16} className="lrn-note-ico" aria-hidden />}
+        <div className="lrn-note-main">
+          {title && <span className="lrn-note-title">{title}</span>}
+          {block.body && <p>{block.body}</p>}
+          {entries.length > 0 && <ul className="lrn-ul">{entries.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+        </div>
       </div>
     );
   }
 
   switch (kind) {
+    /* A Learn module: a title, one line saying what it teaches, then Markdown.
+       Videos inside the Markdown are lifted out and given the design system's
+       own player, so no third-party frame loads until a student asks for it. */
+    case "module": {
+      const summary = moduleSummary(block);
+      return (
+        <section className="lrn-module">
+          {title && <h3 className="lrn-module-title">{title}</h3>}
+          {summary && <p className="lrn-module-sum">{summary}</p>}
+          <div className="lrn-md">
+            {markdownSegments(block.body ?? "").map((seg, i) => (
+              seg.kind === "video"
+                ? <HeroVideoDialog key={i} url={seg.url} title={seg.title} />
+                : <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    /* "Display an Important Preparation Banner above the Learn section … Keep
+       the banner visible until the student marks the step as completed." The
+       step decides whether to render it at all; this only draws it. */
+    case "banner": {
+      const entries = listItemsForDisplay(block);
+      return (
+        <div className="lrn-banner">
+          <div className="lrn-banner-head">
+            <TriangleAlert size={17} aria-hidden />
+            <span>{title || "Before you travel"}</span>
+          </div>
+          {block.body && <p className="lrn-banner-text">{block.body}</p>}
+          {entries.length > 0 && (
+            <ul className="lrn-banner-list">
+              {entries.map((t, i) => <li key={i}>{t}</li>)}
+            </ul>
+          )}
+        </div>
+      );
+    }
+
+    /* "Display a blue Application Under Review status card at the top of the
+       page with an animated loading indicator." */
+    case "review_status":
+      return (
+        <div className="lrn-review">
+          <Loader size={26} />
+          <div className="lrn-review-main">
+            <span className="lrn-review-title">{title || "Application Under Review"}</span>
+            <span className="lrn-review-text">
+              {block.body || "The Lithuanian Migration Department is reviewing your documents, biometric information and interview."}
+            </span>
+          </div>
+        </div>
+      );
+
+    /* "Add an optional Example section … can include text, images, files,
+       videos, or external links." One card, composed from the pieces that are
+       filled in, so an administrator can use as much or as little as they want. */
+    case "example": {
+      const image = imageData(block);
+      const link = linkData(block);
+      const file = attachmentData(block);
+      const video = String((block.data as { videoUrl?: string })?.videoUrl ?? "");
+      return (
+        <div className="lrn-example">
+          <span className="lrn-example-tag">{title || "Example"}</span>
+          {block.body && <div className="lrn-p" dangerouslySetInnerHTML={{ __html: sanitizeRichText(block.body) }} />}
+          {image.url && (
+            /* Administrator-supplied URL: the host is unknown, so no next/image. */
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image.url} alt={image.alt || "Example"} loading="lazy" className="lrn-example-img" />
+          )}
+          {embedUrl(video) && <HeroVideoDialog url={video} title="Example" />}
+          {link.url && (
+            <a className="lrn-link" href={link.url} target="_blank" rel="noopener noreferrer">
+              {link.label || "Open the example"}<ExternalLink size={13} />
+            </a>
+          )}
+          {file.path && <Attachment path={file.path} fileName={file.fileName} description={file.description} title="Example file" />}
+        </div>
+      );
+    }
+
     case "heading":
       return <h3 className="lrn-h">{title || block.body}</h3>;
 
@@ -204,12 +298,14 @@ export function JourneyBlock({ block, study }: { block: DbBlock; study?: StudyAp
   }
 }
 
-export function StepBlocks({ stepId, fallback, plan, study }: {
+export function StepBlocks({ stepId, fallback, plan, study, hideBanner }: {
   stepId: string;
   fallback: string;
   /** Blocks may target one service plan; the student only sees their own. */
   plan?: string | null;
   study?: StudyApp | null;
+  /** The preparation banner stays up only until the step is completed. */
+  hideBanner?: boolean;
 }) {
   const [blocks, setBlocks] = useState<DbBlock[]>([]);
   const [reminders, setReminders] = useState<DbReminder[]>([]);
@@ -235,6 +331,7 @@ export function StepBlocks({ stepId, fallback, plan, study }: {
   const visible = blocks.filter((b) => {
     const only = blockPlan(b);
     if (only && plan && only !== plan) return false;
+    if (hideBanner && blockKindOf(b.kind) === "banner") return false;
     return !isEmptyBlock(b);
   });
 

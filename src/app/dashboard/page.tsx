@@ -30,7 +30,7 @@ export default function Dashboard() {
   const chatUnread = useChatUnread(userId, nav === "messages");
 
   const buildProfile = useCallback(async (uid: string, userEmail: string | null): Promise<WsProfile | null> => {
-    const { data } = await supabase.from("profiles").select("full_name, email, onboarding_completed_at, plan, plan_status, user_number, banned, city, date_of_birth, whatsapp_country_code, whatsapp_number, destination_country, country_flow_answers, avatar_path").eq("id", uid).single();
+    const { data } = await supabase.from("profiles").select("full_name, email, onboarding_completed_at, plan, plan_status, user_number, banned, city, date_of_birth, whatsapp_country_code, whatsapp_number, destination_country, country_flow_answers, avatar_path, tester").eq("id", uid).single();
     const row = (data ?? {}) as Record<string, unknown>;
     if (!data) return null;
     const num = typeof row.user_number === "number" ? row.user_number : 0;
@@ -84,6 +84,7 @@ export default function Dashboard() {
       englishLevel: (ps?.english_level as string) ?? "",
       verified: !!payment,
       payment,
+      tester: Boolean(row.tester),
       gender: (av?.gender as string) ?? null,
       avatarSeed: av?.avatar_seed ?? null,
       avatarStyle: av?.avatar_style ?? null,
