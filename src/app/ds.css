@@ -514,6 +514,35 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-act{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;transition:color 140ms var(--ease),border-color 140ms var(--ease),transform 140ms var(--ease);}
 .chat-act:hover{color:var(--indigo-600);border-color:var(--indigo-line);transform:translateY(-1px);}
 
+/* ── Other party's avatar, inside the thread ──────────────────────────────
+   Rendered only on the OTHER side's rows — never on the viewer's own — the
+   way every consumer chat shows who's talking without repeating "you". Sits
+   at the bottom of the row so it lines up with the last line of a stacked
+   bubble, the same anchor Message.jsx uses in the design system. */
+.chat-row-avatar{flex:none;align-self:flex-end;margin-bottom:2px;}
+
+/* ── Emoji reactions ───────────────────────────────────────────────────── */
+.chat-react-strip{position:absolute;top:calc(100% + 6px);z-index:10;display:flex;gap:2px;
+  padding:5px;border-radius:999px;background:var(--card);border:1px solid var(--line);
+  box-shadow:var(--shadow-popover);animation:afMenuIn 140ms var(--ease);}
+.chat-react-strip.mine{right:0;}
+.chat-react-strip:not(.mine){left:0;}
+.chat-react-strip button{display:flex;align-items:center;justify-content:center;width:28px;height:28px;
+  border:none;background:none;border-radius:999px;font-size:16px;line-height:1;cursor:pointer;
+  transition:background 120ms var(--ease),transform 120ms var(--ease);}
+.chat-react-strip button:hover{background:var(--subtle);transform:scale(1.15);}
+
+.chat-reactions{display:flex;flex-wrap:wrap;gap:4px;}
+.chat-row.mine .chat-reactions{justify-content:flex-end;}
+.chat-reaction-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);font:600 11px/18px var(--font-sans);
+  color:var(--ink-soft);cursor:pointer;transition:border-color 140ms var(--ease),background 140ms var(--ease);}
+.chat-reaction-pill:hover{border-color:var(--indigo-line);}
+.chat-reaction-pill.active{border-color:var(--indigo-line);background:var(--indigo-tint);color:var(--indigo-text);}
+
+/* ── Seen ──────────────────────────────────────────────────────────────── */
+.chat-seen{display:flex;align-items:center;gap:4px;padding:0 3px;font:600 10.5px/14px var(--font-sans);color:var(--indigo-600);}
+
 /* ── Quick actions bar (admin only), pinned above the thread ── */
 .chat-actions{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line-soft);background:var(--card);}
 .chat-chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--card);color:var(--ink-soft);font:600 12.5px/1 var(--font-sans);cursor:pointer;transition:background 160ms var(--ease),color 160ms var(--ease),border-color 160ms var(--ease),transform 160ms var(--ease);}

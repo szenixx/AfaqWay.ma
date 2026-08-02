@@ -9,7 +9,7 @@ import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import { loadAvatarFields } from "@/lib/avatarProfile";
 import { useOnlineUsers } from "@/lib/presence";
 import { emailAdvisorMessage } from "@/lib/email/client";
-import { parseAsk } from "@/lib/chat";
+import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
 import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
 /* Tells the student's conversation that someone is composing a reply. */
@@ -17,7 +17,11 @@ import { broadcastAdvisorTyping } from "@/lib/advisor";
 import { UserDetails } from "@/components/admin/users/UserDetails";
 
 type U = { id: string; full_name: string | null; email: string | null; user_number: number | null; plan: string | null; avatar_path: string | null; gender?: string | null; avatar_seed?: string | null; avatar_style?: string | null };
-type Msg = { id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null; pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null };
+type Msg = {
+  id: string; user_id: string; sender: string; body: string; file_path: string | null; file_name: string | null;
+  pinned: boolean; emailed: boolean; created_at: string; reply_to: string | null;
+  reactions: Reactions | null; seen_at: string | null;
+};
 
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
 
@@ -75,13 +79,21 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
   useEffect(() => { void loadUsers(); }, [loadUsers]);
 
   const loadMsgs = useCallback(async (uid: string) => {
-    const { data } = await supabase.from("messages").select("id, user_id, sender, body, file_path, file_name, pinned, emailed, created_at, reply_to").eq("user_id", uid).order("created_at", { ascending: true });
+    const { data } = await supabase.from("messages").select("id, user_id, sender, body, file_path, file_name, pinned, emailed, created_at, reply_to, reactions, seen_at").eq("user_id", uid).order("created_at", { ascending: true });
     setMsgs((data ?? []) as Msg[]);
   }, []);
   const selRef = useRef<string | null>(sel);
   useEffect(() => { selRef.current = sel; }, [sel]);
   useEffect(() => { if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight; }, [msgs]);
-  useEffect(() => { if (sel) void loadMsgs(sel); else setMsgs([]); }, [sel, loadMsgs]);
+  useEffect(() => {
+    if (sel) { void loadMsgs(sel); void markMessagesSeen(sel); }
+    else setMsgs([]);
+  }, [sel, loadMsgs]);
+
+  const reactToMessage = useCallback(async (id: string, emoji: string) => {
+    const next = await toggleReaction(id, emoji);
+    if (next) setMsgs((list) => list.map((m) => (m.id === id ? { ...m, reactions: next } : m)));
+  }, []);
   // Opening a conversation clears its unread badge.
   const openConvo = (id: string) => { setSel(id); setUnread((u) => (u[id] ? { ...u, [id]: 0 } : u)); };
 
@@ -94,6 +106,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
         if (m.user_id === selRef.current) void loadMsgs(m.user_id);
         if (m.sender === "user") {
           if (m.user_id !== selRef.current) setUnread((u) => ({ ...u, [m.user_id]: (u[m.user_id] ?? 0) + 1 }));
+          else void markMessagesSeen(m.user_id);
           notify("New message from a student", m.body?.slice(0, 90) || "Sent a file");
           void loadUsers();
         }
@@ -105,6 +118,9 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
   const shown = users.filter((u) => (filter === "all" || (filter === "full" && u.plan === "full_service") || (filter === "self" && u.plan === "self_service")) && (!q.trim() || `${u.full_name ?? ""} ${u.email ?? ""} ${awu(u.user_number)}`.toLowerCase().includes(q.trim().toLowerCase())));
   const pinned = msgs.filter((m) => m.pinned);
   const files = msgs.filter((m) => m.file_path);
+  /* "Seen" renders once, under the newest message the admin sent — not per
+     row — the same place every consumer chat puts a single read receipt. */
+  const lastMineId = [...msgs].reverse().find((m) => m.sender === "admin")?.id ?? null;
 
   async function viewFile(path: string | null) { if (!path) return; const url = await fileUrl(path, "update_files"); if (url) window.open(url, "_blank", "noopener"); }
   async function downloadFile(path: string | null, name: string | null) { if (!path) return; const url = await fileUrl(path, "update_files", name ?? undefined); if (url) { const a = document.createElement("a"); a.href = url; a.download = name ?? ""; document.body.appendChild(a); a.click(); a.remove(); } }
@@ -274,6 +290,12 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
                     footer={m.sender === "admin" ? (
                       <button type="button" onClick={() => togglePin(m)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", font: "600 10px/1 var(--font-sans)", padding: 0, textDecoration: "underline" }}>{m.pinned ? "unpin" : "pin"}</button>
                     ) : null}
+                    otherAvatar={m.sender === "user" ? (
+                      <ChatAvatar size={30} src={avatars[selUser.id]} user={{ id: selUser.id, name: selUser.full_name, gender: selUser.gender, avatarSeed: selUser.avatar_seed, avatarStyle: selUser.avatar_style }} />
+                    ) : null}
+                    viewerSide="admin"
+                    onReact={reactToMessage}
+                    seen={m.sender === "admin" && m.id === lastMineId && !!m.seen_at}
                   />
                 ))}
                 {uploadingName && <UploadingBubble name={uploadingName} />}

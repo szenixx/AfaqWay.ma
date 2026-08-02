@@ -4,14 +4,18 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { supabase } from "@/lib/supabase/client";
 import { notify, requestNotify } from "@/lib/notify";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
-import { parseAsk } from "@/lib/chat";
+import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
 import { ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
 import { Loader, Pill, Status, BrandLogo } from "@/components/ds";
 import { useAdvisorIdentity, lastSeenLabel } from "@/lib/advisor";
 import { firstUnreadId } from "@/lib/chatUnread";
 
-type Msg = { id: string; sender: string; body: string; file_path: string | null; file_name: string | null; created_at: string; reply_to: string | null; pinned: boolean; emailed: boolean };
+type Msg = {
+  id: string; sender: string; body: string; file_path: string | null; file_name: string | null;
+  created_at: string; reply_to: string | null; pinned: boolean; emailed: boolean;
+  reactions: Reactions | null; seen_at: string | null;
+};
 
 const menuItem: CSSProperties = { display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 11px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)", textAlign: "left" };
 
@@ -50,7 +54,7 @@ export default function StudentChat({ userId, full, onNav }: {
   const threadRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("messages").select("id, sender, body, file_path, file_name, created_at, reply_to, pinned, emailed, meta").eq("user_id", userId).order("created_at", { ascending: true });
+    const { data } = await supabase.from("messages").select("id, sender, body, file_path, file_name, created_at, reply_to, pinned, emailed, meta, reactions, seen_at").eq("user_id", userId).order("created_at", { ascending: true });
     setMsgs((data ?? []) as Msg[]);
   }, [userId]);
 
@@ -60,10 +64,20 @@ export default function StudentChat({ userId, full, onNav }: {
     const ch = supabase.channel(`stu-msgs-${userId}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${userId}` }, (payload) => {
       void load();
       const m = payload.new as { sender?: string; body?: string } | null;
-      if (payload.eventType === "INSERT" && m?.sender === "admin") notify("New message from AfaqWay", m.body?.slice(0, 90) || "You received a file");
+      if (payload.eventType === "INSERT" && m?.sender === "admin") { notify("New message from AfaqWay", m.body?.slice(0, 90) || "You received a file"); void markMessagesSeen(userId); }
     }).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [userId, load]);
+
+  /* This component only mounts while the student is looking at the
+     conversation, so its presence on screen is exactly "the thread was
+     opened" — the same moment the advisor's own reads are marked. */
+  useEffect(() => { void markMessagesSeen(userId); }, [userId]);
+
+  const reactToMessage = useCallback(async (id: string, emoji: string) => {
+    const next = await toggleReaction(id, emoji);
+    if (next) setMsgs((list) => list.map((m) => (m.id === id ? { ...m, reactions: next } : m)));
+  }, []);
 
   /* Opening the conversation lands on the first message the student has not
      read, not on the bottom of the thread. Arriving from a notification, that
@@ -119,6 +133,9 @@ export default function StudentChat({ userId, full, onNav }: {
 
   const pinned = msgs.filter((m) => m.pinned);
   const files = msgs.filter((m) => m.file_path);
+  /* "Seen" renders once, under the newest message the student sent — not per
+     row — the same place every consumer chat puts a single read receipt. */
+  const lastMineId = [...msgs].reverse().find((m) => m.sender === "user")?.id ?? null;
 
   return (
     <div className="chat-zoom" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
@@ -169,6 +186,10 @@ export default function StudentChat({ userId, full, onNav }: {
                 onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m }); }}
                 onAnswer={m.sender === "admin" ? (o) => setBody(o) : undefined}
                 onOpenDecision={openDecision}
+                otherAvatar={m.sender === "admin" ? <BrandLogo variant="app" size={30} /> : null}
+                viewerSide="user"
+                onReact={reactToMessage}
+                seen={m.sender === "user" && m.id === lastMineId && !!m.seen_at}
               />
             ))}
             {uploadingName && <UploadingBubble name={uploadingName} />}

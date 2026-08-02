@@ -1,9 +1,9 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
-import { Download, Paperclip, Reply, ArrowRight } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Download, Paperclip, Reply, ArrowRight, SmilePlus, CheckCheck } from "lucide-react";
 import { UserAvatar, type UserAvatarUser, Loader } from "@/components/ds";
-import { parseAsk } from "@/lib/chat";
+import { parseAsk, toggleReaction, QUICK_REACTIONS, type Reactions } from "@/lib/chat";
 
 /* Pieces shared by the admin console chat and the student workspace chat, so
    both sides are literally the same product: same bubbles, same panel cards,
@@ -68,6 +68,9 @@ export type ChatMsg = {
   created_at: string; reply_to: string | null; pinned?: boolean; emailed?: boolean;
   /** Set on review decisions, so the card can colour itself and link back. */
   meta?: DecisionMeta | null;
+  reactions?: Reactions | null;
+  /** Stamped once the other side has opened the thread. */
+  seen_at?: string | null;
 };
 
 /** A review decision announced in the chat. Written by lib/journeyNotify. */
@@ -89,8 +92,59 @@ export const decisionOf = (msg: ChatMsg): DecisionMeta | null =>
   msg.meta && msg.meta.outcome && DECISION_TONE[msg.meta.outcome] ? msg.meta : null;
 
 const time = (iso: string) => new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const seenTime = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
-export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDownload, onViewFile, onContextMenu, footer, onAnswer, onOpenDecision }: {
+/** Small hover-trigger that opens a strip of QUICK_REACTIONS. Closes on an
+ *  outside click or after a pick. Owns no server state — the caller's
+ *  `onPick` does the RPC round trip and the row re-renders off the realtime
+ *  subscription, same as every other message field. */
+function ReactionPicker({ mine, onPick }: { mine: boolean; onPick: (emoji: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button type="button" className="chat-act" onClick={() => setOpen((o) => !o)} title="React" aria-label="React"><SmilePlus size={14} /></button>
+      {open && (
+        <div className={`chat-react-strip${mine ? " mine" : ""}`}>
+          {QUICK_REACTIONS.map((e) => (
+            <button key={e} type="button" onClick={() => { onPick(e); setOpen(false); }} aria-label={`React ${e}`}>{e}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The reaction pills under a bubble — one per emoji, with a count once more
+ *  than one side has used it, highlighted when the viewer's own side is
+ *  among the reactors. */
+function ReactionsRow({ reactions, viewerSide, onToggle }: { reactions: Reactions; viewerSide: "user" | "admin"; onToggle: (emoji: string) => void }) {
+  const entries = Object.entries(reactions).filter(([, sides]) => sides.length > 0);
+  if (entries.length === 0) return null;
+  return (
+    <div className="chat-reactions">
+      {entries.map(([emoji, sides]) => (
+        <button
+          key={emoji} type="button" onClick={() => onToggle(emoji)}
+          className={`chat-reaction-pill${sides.includes(viewerSide) ? " active" : ""}`}
+        >
+          <span>{emoji}</span>{sides.length > 1 && <span>{sides.length}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function MessageBubble({
+  msg, mine, quoted, quotedAuthor, onReply, onDownload, onViewFile, onContextMenu, footer, onAnswer, onOpenDecision,
+  otherAvatar, viewerSide, onReact, seen,
+}: {
   msg: ChatMsg;
   mine: boolean;
   quoted?: ChatMsg | null;
@@ -106,6 +160,17 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
   onAnswer?: (option: string) => void;
   /** Student side: opens the Journey on the step this decision belongs to. */
   onOpenDecision?: (decision: DecisionMeta) => void;
+  /** The other party's avatar. Rendered only on their messages, never on the
+   *  viewer's own — inside the thread, next to each of their bubbles, the way
+   *  every consumer chat app shows the other person and never yourself. */
+  otherAvatar?: ReactNode;
+  /** Which side the signed-in viewer is on, for reaction highlighting. */
+  viewerSide: "user" | "admin";
+  /** Reacts as the viewer. Omit to hide the reaction control entirely. */
+  onReact?: (messageId: string, emoji: string) => void;
+  /** True only on the viewer's own last message once the other side has
+   *  read it — a single "Seen" line, not a per-message receipt. */
+  seen?: boolean;
 }) {
   const ask = parseAsk(msg.body);
   const decision = decisionOf(msg);
@@ -113,6 +178,7 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
     /* The id is on the row so the conversation can scroll straight to one
        message, e.g. the first unread when arriving from a notification. */
     <div className={`chat-row${mine ? " mine" : ""}`} data-msg={msg.id} onContextMenu={onContextMenu}>
+      {!mine && <span className="chat-row-avatar">{otherAvatar}</span>}
       <div className="chat-msgcol">
       <div className={`chat-bubble${msg.pinned ? " pinned" : ""}${decision ? ` decision tone-${DECISION_TONE[decision.outcome as string]}` : ""}`}>
         {/* A thin bar across the top, and nothing else about the card changes. */}
@@ -154,6 +220,10 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
         )}
       </div>
 
+      {onReact && msg.reactions && Object.keys(msg.reactions).length > 0 && (
+        <ReactionsRow reactions={msg.reactions} viewerSide={viewerSide} onToggle={(emoji) => onReact(msg.id, emoji)} />
+      )}
+
       {/* Meta sits outside the bubble, per the design system's Message family:
           the fill carries the message, the row carries who and when. */}
       <div className="chat-time">
@@ -161,9 +231,13 @@ export function MessageBubble({ msg, mine, quoted, quotedAuthor, onReply, onDown
         {msg.emailed && <span style={{ color: "var(--green)" }}>emailed</span>}
         {footer}
       </div>
+      {seen && (
+        <div className="chat-seen"><CheckCheck size={12} />Seen{msg.seen_at ? ` ${seenTime(msg.seen_at)}` : ""}</div>
+      )}
       </div>
 
       <div className="chat-acts">
+        {onReact && <ReactionPicker mine={mine} onPick={(emoji) => onReact(msg.id, emoji)} />}
         <button type="button" className="chat-act" onClick={onReply} title="Reply" aria-label="Reply"><Reply size={14} /></button>
         {msg.file_path && <button type="button" className="chat-act" onClick={onDownload} title="Download" aria-label="Download"><Download size={14} /></button>}
       </div>
