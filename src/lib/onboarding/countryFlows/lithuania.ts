@@ -78,10 +78,16 @@ export const lithuaniaFlow: CountryFlow = {
           fields: [
             { kind: "multiselect", key: "field_of_interest", label: "Field of interest", hint: "pick up to 2", required: true, maxSelect: 2, options: FIELD_OPTIONS },
             { kind: "text", key: "max_budget", label: "Max tuition budget", hint: "€ per year, min 2800", required: true, sanitize: "digits", inputMode: "numeric", numeric: true, min: 2800, maxLength: 6, placeholder: "recommended 4500+ €" },
-            { kind: "segmented", key: "has_english_test", label: "Do you have an English test?", required: true, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] },
-            { kind: "select", key: "english_test_type", label: "Which English test?", required: true, placeholder: "Choose a test", options: [...ENGLISH_TESTS, { value: "other", label: "Other" }], showWhen: { field: "has_english_test", equals: "yes" }, row: 2 },
+            /* Desktop: `row: 1` puts these two side by side (.af-row-2 is a
+               2-column grid — see groupFields() in page.tsx, which only pairs
+               fields that are *adjacent* in this array, so english_level had
+               to move up next to has_english_test rather than stay after the
+               conditional test-detail fields). .af-row-2 collapses to a
+               single column under 860px, same as every other paired row. */
+            { kind: "segmented", key: "has_english_test", label: "Do you have an English test?", required: true, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }], row: 1 },
+            { kind: "select", key: "english_test_type", label: "Which English test?", required: true, placeholder: "Choose a test", options: [...ENGLISH_TESTS, { value: "other", label: "Other" }], showWhen: { field: "has_english_test", equals: "yes" }, row: 1 },
+            { kind: "select", key: "english_level", label: "Your English speaking level", required: true, placeholder: "Choose a level", options: ENGLISH_LEVELS, row: 2 },
             { kind: "text", key: "english_test_score", label: "Test score", hint: "numbers only", required: true, sanitize: "decimal", inputMode: "decimal", numeric: true, placeholder: "your test score", showWhen: [{ field: "has_english_test", equals: "yes" }, { field: "english_test_type", notEquals: "other" }], row: 2 },
-            { kind: "select", key: "english_level", label: "Your English speaking level", required: true, placeholder: "Choose a level", options: ENGLISH_LEVELS },
           ],
         },
       ],

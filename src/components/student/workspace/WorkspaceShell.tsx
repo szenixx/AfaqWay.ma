@@ -8,10 +8,11 @@ import { usePresenceBroadcast } from "@/lib/presence";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  LayoutDashboard, Route, FileText, Compass, Bell, MessageCircle, LifeBuoy,
+  LayoutDashboard, Route, FileText, Compass, MessageCircle, LifeBuoy,
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
   ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
+import { BellIcon, ChatBubbleIcon } from "@svg-animated-icons/react";
 import { MobileNavigationHeader } from "./MobileNavigationHeader";
 import RightPanel from "./RightPanel";
 import Schedule from "./schedule/Schedule";
@@ -20,17 +21,19 @@ import { planById } from "@/lib/plans";
 import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
 import { nextScheduleEvent } from "@/lib/schedule";
+import { useNotifications } from "@/lib/notifications";
 import { UserAvatar, BrandLogo, Toaster } from "@/components/ds";
 import { GeometricBackground } from "@/components/ds/Backgrounds";
+import { NotificationInbox } from "./NotificationInbox";
 import SidebarCarousel from "./SidebarCarousel";
 import {
-  Overview, Journey, Documents, Explore, Notifications, Support,
+  Overview, Journey, Documents, Explore, Support,
   Subscription, Profile, Settings, type WsProfile,
 } from "./Modules";
 
 export type Nav =
   | "overview" | "journey" | "documents" | "explore"
-  | "messages" | "notifications" | "support" | "subscription" | "profile" | "settings" | "schedule";
+  | "messages" | "support" | "subscription" | "profile" | "settings" | "schedule";
 
 const NAV_ICON = 20;
 const PRIMARY_NAV: { id: Nav; label: string; icon: React.ReactNode }[] = [
@@ -46,7 +49,7 @@ const firstName = (n: string | null) => (n ? n.trim().split(" ")[0] : "there");
 /* Title shown next to the back/forward buttons in the top bar. */
 const MODULE_TITLE: Record<Nav, string> = {
   overview: "Overview", journey: "My Journey", documents: "Documents", explore: "Explore Lithuania", schedule: "Schedule",
-  messages: "Messages", notifications: "Notifications", support: "Support",
+  messages: "Messages", support: "Support",
   subscription: "Subscription", profile: "Profile", settings: "Settings",
 };
 
@@ -60,6 +63,11 @@ export default function WorkspaceShell({
   onReload: () => Promise<void>;
 }) {
   const [menu, setMenu] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  /* Drives both the bell's red dot and its "keeps moving until read"
+     animation — the same live count the popover itself reads, so the two
+     never disagree about whether something is still unread. */
+  const { unread: notifUnread } = useNotifications(profile.userId);
   const [sidebarMini, setSidebarMini] = useState(false);
   /* Announce this student as online for as long as the workspace is open. */
   usePresenceBroadcast(profile.userId, { name: profile.fullName, role: "student" });
@@ -97,7 +105,7 @@ export default function WorkspaceShell({
   }, []);
   useEffect(() => { document.cookie = `sidebar_state=${!sidebarMini}; path=/; max-age=${60 * 60 * 24 * 7}`; }, [sidebarMini]);
 
-  const navItem = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; badge?: number }) => (
+  const navItem = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; badge?: number; dotOnly?: boolean }) => (
     <button
       key={id} type="button" data-label={label} title={sidebarMini ? label : undefined}
       className={`sw-navitem${nav === id ? " active" : ""}`}
@@ -105,7 +113,9 @@ export default function WorkspaceShell({
     >
       <span className="sw-navico">{icon}</span>
       <span className="sw-navlabel">{label}</span>
-      {!!opts?.badge && <span className="sw-navbadge">{opts.badge > 9 ? "9+" : opts.badge}</span>}
+      {!!opts?.badge && (opts.dotOnly
+        ? <span className="sw-navdot" aria-label={`${opts.badge} unread`} />
+        : <span className="sw-navbadge">{opts.badge > 9 ? "9+" : opts.badge}</span>)}
     </button>
   );
 
@@ -148,7 +158,6 @@ export default function WorkspaceShell({
       case "documents": return withPanel(<Documents profile={profile} onNav={(id) => onNav(id as Nav)} />, "documents");
       case "schedule": return <Schedule profile={profile} onNav={(n) => navigate(n as Nav)} />;
       case "explore": return <Explore />;
-      case "notifications": return <Notifications profile={profile} onNav={(id) => onNav(id as Nav)} />;
       case "support": return <Support onNav={(n) => navigate(n as Nav)} />;
       case "subscription": return <Subscription profile={profile} />;
       case "profile": return <Profile profile={profile} onNav={(n) => navigate(n as Nav)} />;
@@ -186,10 +195,11 @@ export default function WorkspaceShell({
             <div className="sw-group-label">Platform</div>
             {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
             {/* Everything above is a place in the journey; below is everything
-                waiting for the student's attention. */}
+                waiting for the student's attention. Notifications has no nav
+                entry of its own — the bell in the top bar (with its popover)
+                is the only way to reach them now. */}
             <div className="sw-nav-divider" role="separator" />
-            {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />)}
-            {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread })}
+            {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread, dotOnly: true })}
           </nav>
           <SidebarCarousel />
         </aside>
@@ -208,16 +218,28 @@ export default function WorkspaceShell({
             </div>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
-              <button type="button" className={`sw-iconbtn${nav === "notifications" ? " active" : ""}`} onClick={() => navigate("notifications")} aria-label="Notifications">
-                {/* No count here. A notification is a record of
-                    something that already reached the student — as a
-                    toast, and in the conversation. The red dot is
-                    reserved for the one thing that still needs them:
-                    an unread message. */}
-                <Bell size={20} />
-              </button>
-              <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
-                <MessageCircle size={20} />{chatUnread > 0 && nav !== "messages" && <span className="sw-dot">{chatUnread > 9 ? "9+" : chatUnread}</span>}
+              <div style={{ position: "relative" }}>
+                {/* Every notification still reaches the student as a toast
+                    and lives in the conversation, but the bell itself now
+                    keeps moving — not just a hover flourish — for as long as
+                    something here is unread, with its own red dot. It only
+                    settles once the popover (or the thing it links to) marks
+                    the row read. */}
+                <button type="button" className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+                  <BellIcon disableHover className="sw-topbar-icon" />
+                  {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
+                </button>
+                {notifOpen && (
+                  <NotificationInbox
+                    userId={profile.userId}
+                    onOpen={(link) => navigate(link as Nav)}
+                    onClose={() => setNotifOpen(false)}
+                  />
+                )}
+              </div>
+              <button type="button" className={`sw-iconbtn plain${nav === "messages" ? " active" : ""}${chatUnread > 0 ? " unread" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
+                <ChatBubbleIcon disableHover className="sw-topbar-icon" />
+                {chatUnread > 0 && nav !== "messages" && <span className="sw-dot">{chatUnread > 9 ? "9+" : chatUnread}</span>}
               </button>
               <div style={{ position: "relative" }}>
                 <button type="button" className="sw-profile" onClick={() => setMenu((v) => !v)} aria-label="Account menu">
@@ -264,8 +286,7 @@ export default function WorkspaceShell({
         <div className="sw-group-label">Platform</div>
         {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
         <div className="sw-nav-divider" role="separator" />
-        {navItem("notifications", "Notifications", <Bell size={NAV_ICON} />)}
-        {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread })}
+        {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread, dotOnly: true })}
         {navItem("subscription", "Subscription", <CreditCard size={NAV_ICON} />)}
         {navItem("support", "Support", <LifeBuoy size={NAV_ICON} />)}
       </MobileNavigationHeader>

@@ -191,7 +191,7 @@ function Segmented({ options, value, onChange }: { options: { value: string; lab
         const active = value === o.value;
         return (
           <button key={o.value} type="button" role="radio" aria-checked={active} disabled={o.disabled} onClick={() => !o.disabled && onChange(o.value)}
-            style={{ flex: "1 1 0", minWidth: 130, height: 44, padding: "0 18px", borderRadius: 12, border: active ? "1px solid var(--indigo-line)" : "1px solid var(--line)", cursor: o.disabled ? "not-allowed" : "pointer", font: "600 14px/1 var(--font-sans)", background: active ? "var(--indigo-tint)" : "var(--card)", color: active ? "var(--indigo-text)" : o.disabled ? "var(--ink-faint)" : "var(--ink)", opacity: o.disabled ? 0.5 : 1, transition: "border-color 120ms cubic-bezier(.4,0,.2,1), background 120ms cubic-bezier(.4,0,.2,1)" }}>
+            style={{ flex: "0 1 auto", minWidth: 96, height: 36, padding: "0 16px", borderRadius: "var(--radius-pill)", border: active ? "1px solid var(--indigo-line)" : "1px solid var(--line)", cursor: o.disabled ? "not-allowed" : "pointer", font: "600 13px/1 var(--font-sans)", background: active ? "var(--indigo-tint)" : "var(--card)", color: active ? "var(--indigo-text)" : o.disabled ? "var(--ink-faint)" : "var(--ink)", opacity: o.disabled ? 0.5 : 1, transition: "border-color 120ms cubic-bezier(.4,0,.2,1), background 120ms cubic-bezier(.4,0,.2,1)" }}>
             {o.label}
           </button>
         );

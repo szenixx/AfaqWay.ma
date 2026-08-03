@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Download, Paperclip, Reply, ArrowRight, SmilePlus, CheckCheck } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Download, Paperclip, Reply, ArrowRight, MoreVertical, CheckCheck } from "lucide-react";
 import { UserAvatar, type UserAvatarUser, Loader } from "@/components/ds";
-import { parseAsk, toggleReaction, QUICK_REACTIONS, type Reactions } from "@/lib/chat";
+import { parseAsk, QUICK_REACTIONS, type Reactions } from "@/lib/chat";
 
 /* Pieces shared by the admin console chat and the student workspace chat, so
    both sides are literally the same product: same bubbles, same panel cards,
@@ -91,33 +92,123 @@ const DECISION_TONE: Record<string, string> = {
 export const decisionOf = (msg: ChatMsg): DecisionMeta | null =>
   msg.meta && msg.meta.outcome && DECISION_TONE[msg.meta.outcome] ? msg.meta : null;
 
-const time = (iso: string) => new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 const seenTime = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
-/** Small hover-trigger that opens a strip of QUICK_REACTIONS. Closes on an
- *  outside click or after a pick. Owns no server state — the caller's
- *  `onPick` does the RPC round trip and the row re-renders off the realtime
- *  subscription, same as every other message field. */
-function ReactionPicker({ mine, onPick }: { mine: boolean; onPick: (emoji: string) => void }) {
+/** "Today" / "Yesterday" / "5 March", each paired with the clock time of the
+ *  first message that landed in that calendar day. */
+function dayDividerLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const day = sameDay(d, now) ? "Today" : sameDay(d, yesterday) ? "Yesterday" : d.toLocaleDateString(undefined, { day: "numeric", month: "long" });
+  const clock = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return `${day}, ${clock}`;
+}
+
+/** The divider that replaces the per-bubble timestamp: one centred line
+ *  between bubbles, shown once per calendar day — so it appears at most once
+ *  every 24 hours, on the first message of a new day. */
+export function ChatDayDivider({ iso }: { iso: string }) {
+  return (
+    <div className="chat-day-divider" role="separator">
+      <span>{dayDividerLabel(iso)}</span>
+    </div>
+  );
+}
+
+/** True when `iso` is the first message of its calendar day within `all` —
+ *  i.e. where the day divider belongs. Shared by both chats so "once per 24h"
+ *  means the same thing everywhere. */
+export function isNewChatDay(all: { created_at: string }[], index: number): boolean {
+  if (index === 0) return true;
+  const prev = new Date(all[index - 1].created_at);
+  const cur = new Date(all[index].created_at);
+  return prev.toDateString() !== cur.toDateString();
+}
+
+const AVATAR_GROUP_GAP_MS = 12 * 60 * 60 * 1000;
+
+/** True when message `index` should carry the avatar — the last of a
+ *  consecutive same-sender run (BubbleGroup's idea), OR a same-sender message
+ *  that follows a 12h+ gap. A long silence starts a new "session": the bubble
+ *  right before the gap keeps its own avatar rather than losing it to a
+ *  message that arrives half a day later, and the one after the gap gets its
+ *  own too, even though nothing about the sender changed. */
+export function isLastOfGroup(all: { sender: string; created_at: string }[], index: number): boolean {
+  const next = all[index + 1];
+  if (!next) return true;
+  if (next.sender !== all[index].sender) return true;
+  return new Date(next.created_at).getTime() - new Date(all[index].created_at).getTime() > AVATAR_GROUP_GAP_MS;
+}
+
+/** The row's whole action set — react, reply, download — collapsed behind one
+ *  borderless three-dot trigger next to the bubble, instead of a row of
+ *  separately-chromed icon buttons. Closes on an outside click or after a
+ *  pick. Owns no server state — `onReact`'s RPC round trip and the row
+ *  re-render come from the realtime subscription, same as every other
+ *  message field. */
+function MessageMenu({ mine, onReact, onReply, onDownload }: {
+  mine: boolean; onReact?: (emoji: string) => void; onReply: () => void; onDownload?: () => void;
+}) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const doOpen = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    // Roughly clear the row's bottom edge so a trigger near the foot of the
+    // thread doesn't open a menu that runs off-screen.
+    const estHeight = 160;
+    const top = rect.bottom + estHeight > window.innerHeight ? Math.max(8, rect.bottom - estHeight) : rect.top;
+    setPos(mine ? { top, right: window.innerWidth - rect.left + 4 } : { top, left: rect.right + 4 });
+    setOpen(true);
+  };
+
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const close = (e: MouseEvent) => {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      if (btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    // A `position: fixed` menu doesn't track its trigger's scroll position,
+    // so any scroll (capture: true catches it on nested scroll containers
+    // like the thread, not just the window) closes the menu instead of
+    // leaving it stranded over the wrong row.
+    const onScroll = () => setOpen(false);
     window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
+    window.addEventListener("scroll", onScroll, true);
+    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("scroll", onScroll, true); };
   }, [open]);
+
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button type="button" className="chat-act" onClick={() => setOpen((o) => !o)} title="React" aria-label="React"><SmilePlus size={14} /></button>
-      {open && (
-        <div className={`chat-react-strip${mine ? " mine" : ""}`}>
-          {QUICK_REACTIONS.map((e) => (
-            <button key={e} type="button" onClick={() => { onPick(e); setOpen(false); }} aria-label={`React ${e}`}>{e}</button>
-          ))}
-        </div>
+    <>
+      <button ref={btnRef} type="button" className="chat-morebtn" onClick={() => (open ? setOpen(false) : doOpen())} title="More" aria-label="More actions"><MoreVertical size={15} /></button>
+      {open && pos && createPortal(
+        /* Portaled to <body>: the row lives inside a scrolling, overflow-
+           clipped thread, so a menu positioned within that row can never
+           paint above the composer or any other frame — only escaping the
+           whole tree to the document root can. */
+        <div ref={menuRef} className={`chat-more-menu${mine ? " mine" : ""}`} style={{ position: "fixed", top: pos.top, left: pos.left, right: pos.right }}>
+          {onReact && (
+            <div className="chat-more-react">
+              {QUICK_REACTIONS.map((e) => (
+                <button key={e} type="button" onClick={() => { onReact(e); setOpen(false); }} aria-label={`React ${e}`}>{e}</button>
+              ))}
+            </div>
+          )}
+          <button type="button" className="chat-more-row" onClick={() => { onReply(); setOpen(false); }}><Reply size={14} />Reply</button>
+          {onDownload && (
+            <button type="button" className="chat-more-row" onClick={() => { onDownload(); setOpen(false); }}><Download size={14} />Download</button>
+          )}
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 
@@ -143,7 +234,7 @@ function ReactionsRow({ reactions, viewerSide, onToggle }: { reactions: Reaction
 
 export function MessageBubble({
   msg, mine, quoted, quotedAuthor, onReply, onDownload, onViewFile, onContextMenu, footer, onAnswer, onOpenDecision,
-  otherAvatar, viewerSide, onReact, seen,
+  otherAvatar, isLastOfGroup = true, viewerSide, onReact, seen,
 }: {
   msg: ChatMsg;
   mine: boolean;
@@ -164,6 +255,12 @@ export function MessageBubble({
    *  viewer's own — inside the thread, next to each of their bubbles, the way
    *  every consumer chat app shows the other person and never yourself. */
   otherAvatar?: ReactNode;
+  /** False for every message except the last in a run of consecutive
+   *  same-sender messages — a "message group", the way BubbleGroup collapses
+   *  a run to one avatar. Earlier messages in the run still reserve the
+   *  avatar's width (so the bubble column doesn't shift), they just don't
+   *  paint it. */
+  isLastOfGroup?: boolean;
   /** Which side the signed-in viewer is on, for reaction highlighting. */
   viewerSide: "user" | "admin";
   /** Reacts as the viewer. Omit to hide the reaction control entirely. */
@@ -178,8 +275,28 @@ export function MessageBubble({
     /* The id is on the row so the conversation can scroll straight to one
        message, e.g. the first unread when arriving from a notification. */
     <div className={`chat-row${mine ? " mine" : ""}`} data-msg={msg.id} onContextMenu={onContextMenu}>
-      {!mine && <span className="chat-row-avatar">{otherAvatar}</span>}
       <div className="chat-msgcol">
+      {/* Avatar + bubble share one row, so the avatar's cross-axis alignment
+          (flex-end = bottom) measures against the bubble alone — not the
+          reactions/time/seen text stacked below it, which live outside this
+          row entirely. That's what keeps the avatar level with the bubble
+          instead of sinking to match whatever meta text happens to follow. */}
+      <div className="chat-bubblewrap">
+      {!mine && (
+        <span className={`chat-row-avatar${isLastOfGroup ? "" : " spacer"}`}>
+          {isLastOfGroup ? otherAvatar : null}
+        </span>
+      )}
+      {/* Mine: the menu sits on the outer (left) side of the own bubble, the
+          side away from the screen edge — the same side WhatsApp puts it. */}
+      {mine && (
+        <div className="chat-acts">
+          <MessageMenu mine={mine} onReact={onReact ? (emoji) => onReact(msg.id, emoji) : undefined} onReply={onReply} onDownload={msg.file_path ? onDownload : undefined} />
+        </div>
+      )}
+      {/* Reactions anchor to and overlap the bubble's own bottom corner —
+          BubbleReactions' idea — rather than sit in the meta flow below it. */}
+      <div className="chat-bubble-slot">
       <div className={`chat-bubble${msg.pinned ? " pinned" : ""}${decision ? ` decision tone-${DECISION_TONE[decision.outcome as string]}` : ""}`}>
         {/* A thin bar across the top, and nothing else about the card changes. */}
         {decision && <span className="chat-decision-bar" aria-hidden />}
@@ -223,23 +340,27 @@ export function MessageBubble({
       {onReact && msg.reactions && Object.keys(msg.reactions).length > 0 && (
         <ReactionsRow reactions={msg.reactions} viewerSide={viewerSide} onToggle={(emoji) => onReact(msg.id, emoji)} />
       )}
-
-      {/* Meta sits outside the bubble, per the design system's Message family:
-          the fill carries the message, the row carries who and when. */}
-      <div className="chat-time">
-        <span>{time(msg.created_at)}</span>
-        {msg.emailed && <span style={{ color: "var(--green)" }}>emailed</span>}
-        {footer}
       </div>
-      {seen && (
-        <div className="chat-seen"><CheckCheck size={12} />Seen{msg.seen_at ? ` ${seenTime(msg.seen_at)}` : ""}</div>
+      {/* Other side: the menu sits on the outer (right) side of their bubble. */}
+      {!mine && (
+        <div className="chat-acts">
+          <MessageMenu mine={mine} onReact={onReact ? (emoji) => onReact(msg.id, emoji) : undefined} onReply={onReply} onDownload={msg.file_path ? onDownload : undefined} />
+        </div>
       )}
       </div>
 
-      <div className="chat-acts">
-        {onReact && <ReactionPicker mine={mine} onPick={(emoji) => onReact(msg.id, emoji)} />}
-        <button type="button" className="chat-act" onClick={onReply} title="Reply" aria-label="Reply"><Reply size={14} /></button>
-        {msg.file_path && <button type="button" className="chat-act" onClick={onDownload} title="Download" aria-label="Download"><Download size={14} /></button>}
+      {/* The per-message timestamp moved out of here — a centred day divider
+          in the thread carries the date now (ChatDayDivider), so this row
+          only appears when there's something else to say. */}
+      {(msg.emailed || footer) && (
+        <div className="chat-time">
+          {msg.emailed && <span style={{ color: "var(--green)" }}>emailed</span>}
+          {footer}
+        </div>
+      )}
+      {seen && (
+        <div className="chat-seen"><CheckCheck size={12} />Seen{msg.seen_at ? ` ${seenTime(msg.seen_at)}` : ""}</div>
+      )}
       </div>
     </div>
   );

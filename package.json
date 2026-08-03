@@ -17,6 +17,7 @@
     "@aws-sdk/client-s3": "^3.1095.0",
     "@aws-sdk/s3-request-presigner": "^3.1095.0",
     "@supabase/supabase-js": "^2.110.7",
+    "@svg-animated-icons/react": "^0.1.2",
     "@vercel/speed-insights": "^2.0.0",
     "dotted-map": "^3.1.0",
     "framer-motion": "^12.43.0",

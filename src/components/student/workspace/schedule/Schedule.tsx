@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Pill } from "@/components/ds";
 import {
   Bell, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, GraduationCap,
-  NotebookPen, Pin, Plus,
+  NotebookPen, Pin, Plus, X,
 } from "lucide-react";
 import { useEffect } from "react";
 import {
@@ -159,7 +159,7 @@ export default function Schedule({ profile, onNav, role = "student" }: {
                 <button
                   key={key} type="button"
                   className={`sch-day${out ? " out" : ""}${isToday ? " today" : ""}${selected === key ? " selected" : ""}`}
-                  onClick={() => { setSelected(key); if (list.length) setDayList(key); }}
+                  onClick={() => { setSelected(key); setDayList(key); }}
                 >
                   <span className="sch-daynum">{d.getDate()}</span>
                   <span className="sch-events">
@@ -226,33 +226,96 @@ export default function Schedule({ profile, onNav, role = "student" }: {
         />
       )}
       {dayList && (
-        <div className="spm-overlay" onClick={() => setDayList(null)} role="dialog" aria-modal="true" aria-label="Events">
-          <div className="sch-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="sch-modal-head">
-              <span className="sch-modal-ico"><CalendarDays size={18} /></span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="sch-modal-title">{new Date(dayList).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</div>
-                <div className="sch-modal-sub">{(byDay.get(dayList) ?? []).length} event(s) on this day</div>
+        <DaySchedulePanel
+          dateKey={dayList}
+          events={byDay.get(dayList) ?? []}
+          onClose={() => setDayList(null)}
+          onOpenEvent={(e) => { setDetails(e); setDayList(null); }}
+          onAddAt={() => { setSelected(dayList); setDayList(null); setForm({ kind: "reminder" }); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* Day schedule — a mini module for one day, hour by hour, the idea behind
+   Mantine Schedule's day view: instead of a flat list of events, the whole
+   day is laid out as an hour rail the student can browse, and an event sits
+   next to the hour it's actually at. All-day items (no `time`) get their own
+   row above the rail rather than being pinned to a fake hour. Reuses the
+   platform's existing centred-modal shell (.spm-overlay/.sch-modal) — the
+   same frame the rest of Schedule's modals already use — with its own
+   explicit close (X), not just an overlay click. */
+function DaySchedulePanel({ dateKey, events, onClose, onOpenEvent, onAddAt }: {
+  dateKey: string;
+  events: ScheduleEvent[];
+  onClose: () => void;
+  onOpenEvent: (e: ScheduleEvent) => void;
+  onAddAt: (hour: number | null) => void;
+}) {
+  const allDay = events.filter((e) => !e.time);
+  const timed = events.filter((e) => !!e.time);
+  const byHour = new Map<number, ScheduleEvent[]>();
+  for (const e of timed) {
+    const h = Number(e.time!.slice(0, 2)) || 0;
+    byHour.set(h, [...(byHour.get(h) ?? []), e]);
+  }
+  const hours = Array.from({ length: 24 }, (_, h) => h);
+
+  return (
+    <div className="spm-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Day schedule">
+      <div className="sch-modal sch-daymodal" onClick={(e) => e.stopPropagation()}>
+        <header className="sch-modal-head">
+          <span className="sch-modal-ico"><CalendarDays size={18} /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="sch-modal-title">{new Date(dateKey).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</div>
+            <div className="sch-modal-sub">{events.length === 0 ? "Nothing on this day yet" : `${events.length} event${events.length === 1 ? "" : "s"} on this day`}</div>
+          </div>
+          <button type="button" className="chat-act" onClick={onClose} aria-label="Close"><X size={15} /></button>
+        </header>
+
+        <div className="sch-modal-body">
+          {allDay.length > 0 && (
+            <div className="sch-hour-allday">
+              <span className="sch-hour-allday-label">All day</span>
+              <div className="sch-hour-allday-chips">
+                {allDay.map((e) => (
+                  <button key={e.id} type="button" className="sch-hour-chip" onClick={() => onOpenEvent(e)}>
+                    <span className="sch-dot" style={{ background: KIND_META[e.kind].color }} />{e.title}
+                  </button>
+                ))}
               </div>
-            </header>
-            <div className="sch-modal-body">
-              {(byDay.get(dayList) ?? []).map((e) => (
-                <button key={e.id} type="button" className="sch-daylist-item" onClick={() => { setDetails(e); setDayList(null); }}>
-                  <span className="sch-dot" style={{ background: KIND_META[e.kind].color }} />
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span className="sch-note-title">{e.title}</span>
-                    <span className="sch-note-date">{e.time ? `${e.time} · ` : "All day · "}{KIND_META[e.kind].label}</span>
-                  </span>
-                </button>
-              ))}
             </div>
-            <footer className="sch-modal-foot">
-              <button type="button" className="chat-chip" onClick={() => setDayList(null)}>Close</button>
-              <button type="button" className="chat-send" onClick={() => { setSelected(dayList); setDayList(null); setForm({ kind: "reminder" }); }}><Plus size={15} />Add event</button>
-            </footer>
+          )}
+
+          <div className="sch-hourgrid">
+            {hours.map((h) => {
+              const list = byHour.get(h) ?? [];
+              return (
+                <div key={h} className="sch-hour-row">
+                  <span className="sch-hour-label">{String(h).padStart(2, "0")}:00</span>
+                  <div className="sch-hour-track">
+                    {list.length === 0 ? (
+                      <button type="button" className="sch-hour-add" onClick={() => onAddAt(h)} aria-label={`Add event at ${h}:00`}><Plus size={12} /></button>
+                    ) : list.map((e) => (
+                      <button key={e.id} type="button" className="sch-hour-chip" onClick={() => onOpenEvent(e)}>
+                        <span className="sch-dot" style={{ background: KIND_META[e.kind].color }} />
+                        <span className="sch-hour-chip-title">{e.title}</span>
+                        <span className="sch-hour-chip-time">{e.time}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      )}
+
+        <footer className="sch-modal-foot">
+          <button type="button" className="chat-chip" onClick={onClose}>Close</button>
+          <button type="button" className="chat-send" onClick={() => onAddAt(null)}><Plus size={15} />Add event</button>
+        </footer>
+      </div>
     </div>
   );
 }

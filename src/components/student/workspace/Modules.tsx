@@ -12,14 +12,14 @@ import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
 import { removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
 import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, UserAvatar, Accordion, Loader, fieldIcon, iconForLabel, Pill, Status, ContributionGraph } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, Accordion, fieldIcon, iconForLabel, Pill, Status, ContributionGraph } from "@/components/ds";
 import { MorphingDialog, MorphingDialogTrigger, MorphingDialogContent, MorphingDialogClose } from "@/components/ds/MorphingDialog";
 import { SpotlightCard } from "@/components/ds/SpotlightCard";
 import { DecorativeBackground } from "@/components/ds/Backgrounds";
 import { ENGLISH_LEVELS } from "@/lib/programs/catalog";
 import { useActivity } from "@/lib/activity";
 import { useJourneySummary } from "@/lib/useJourneySummary";
-import { useNotifications, markRead } from "@/lib/notifications";
+import { useNotifications } from "@/lib/notifications";
 import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
   Bell, MessageCircle, ArrowRight, Plus, Check, Pencil, Mail, Phone, MapPin,
@@ -32,7 +32,7 @@ import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
 import { RECENT_ACTIVITY, UPCOMING_TASKS, FAQ } from "./data";
 import {
-  Panel, CardTitle, StatTile, ProgressLine, EmptyState,
+  Panel, CardTitle, StatTile, ProgressLine,
   BtnPrimary, BtnGhost, StatusGlyph, IconChip, CompactCard,
   SectionTitle, InlineNote,
 } from "./parts";
@@ -185,7 +185,9 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
           </Panel>
 
           <Panel>
-            <CardTitle title="Notifications" sub={`${unread} unread`} action={<BtnGhost onClick={() => onNav("notifications")} style={{ height: 34 }}>All<ArrowRight size={15} /></BtnGhost>} />
+            {/* No "All" link: the full-page notifications module is gone —
+                the bell in the top bar is the only way to reach them now. */}
+            <CardTitle title="Notifications" sub={`${unread} unread`} />
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {notifs.length === 0 ? (
                 <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", padding: "9px 0" }}>
@@ -224,68 +226,14 @@ const iconBtnSt: React.CSSProperties = {
 export { default as Explore } from "./explore/ExploreLithuania";
 
 /* ── Notifications ────────────────────────────────────────────────────────── */
-const NOTIF_ICON: Record<string, React.ReactNode> = {
+/* Exported: the header's notification popover (NotificationInbox.tsx) reuses
+   this exact icon-per-kind mapping, so the popover and the full history read
+   as the same list, not two different designs of the same data. */
+export const NOTIF_ICON: Record<string, React.ReactNode> = {
   document: <FileText size={16} />, journey: <Route size={16} />, message: <MessageCircle size={16} />,
   schedule: <Calendar size={16} />, payment: <CreditCard size={16} />, update: <Sparkles size={16} />,
   system: <Bell size={16} />,
 };
-
-/* The real notification centre: journey decisions, document verifications,
-   schedule reminders and platform announcements, live. */
-/* The notification centre is a history, not an inbox.
- *
- * Every notification here has already reached the student once as a floating
- * toast, and anything that needs an answer — a journey decision, an advisor's
- * message — lives in the conversation where they can reply. So this list
- * carries no unread state and no red dot: it is the record of what has
- * happened, kept so nothing is lost when a toast disappears.
- *
- * The one red badge left in the workspace is on Messages. */
-export function Notifications({ profile, onNav }: { profile: WsProfile; onNav?: (id: string) => void }) {
-  const { items, loading, reload } = useNotifications(profile.userId);
-
-  const open = async (n: { id: string; read: boolean; link: string }) => {
-    // Opening still clears the row's own unread flag, so the history reads as
-    // seen; nothing about it was ever shown in red.
-    if (!n.read) { await markRead(n.id); await reload(); }
-    if (n.link && onNav) onNav(n.link);
-  };
-
-  if (loading) return <Loader size={40} block label="Loading your notifications" />;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Panel style={{ padding: 8 }}>
-        {items.length === 0 ? (
-          <EmptyState icon={<Bell size={26} />} title="Nothing yet" sub="Every update you receive is kept here, so you can look back at it after the notification disappears." />
-        ) : items.map((n, i) => (
-          <button
-            key={n.id} type="button" onClick={() => open(n)}
-            style={{
-              display: "flex", gap: 13, padding: "14px 12px", width: "100%", textAlign: "left",
-              border: "none", cursor: n.link ? "pointer" : "default", font: "inherit",
-              borderBottom: i < items.length - 1 ? "1px solid var(--line-soft)" : "none",
-              background: n.read ? "transparent" : "var(--indigo-tint)", borderRadius: 12,
-            }}
-          >
-            <span style={{ width: 38, height: 38, borderRadius: 12, flex: "none", background: "#fff", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 3px 10px rgba(23,35,58,.06)" }}>
-              {NOTIF_ICON[n.kind] ?? <Bell size={16} />}
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ font: "600 13.5px/18px var(--font-sans)", color: "var(--ink)" }}>{n.title}</span>
-              </span>
-              {n.body && <span style={{ display: "block", font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>{n.body}</span>}
-              <span style={{ display: "block", font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", marginTop: 3 }}>
-                {new Date(n.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-              </span>
-            </span>
-          </button>
-        ))}
-      </Panel>
-    </div>
-  );
-}
 
 /* ── Support ──────────────────────────────────────────────────────────────── */
 export function Support({ onNav }: { onNav: (id: string) => void }) {

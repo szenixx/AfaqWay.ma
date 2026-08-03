@@ -11,7 +11,7 @@ import { useOnlineUsers } from "@/lib/presence";
 import { emailAdvisorMessage } from "@/lib/email/client";
 import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
 import { CircleHelp, Download, EllipsisVertical, FileText, Info, Mail, MessageCircle, Paperclip, Pencil, Pin, Plus, Reply, Send, Trash2, Users, X } from "lucide-react";
-import { ChatAvatar, ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import { ChatAvatar, ChatEmpty, ChatDayDivider, isNewChatDay, isLastOfGroup, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
 /* Tells the student's conversation that someone is composing a reply. */
 import { broadcastAdvisorTyping } from "@/lib/advisor";
 import { UserDetails } from "@/components/admin/users/UserDetails";
@@ -276,27 +276,30 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
 
               <div ref={threadRef} className="chat-thread stu-chat-texture">
                 {msgs.length === 0 && <ChatEmpty icon={<MessageCircle size={24} />} title="No messages yet" sub="Send the first update to this student." />}
-                {msgs.map((m) => (
-                  <MessageBubble
-                    key={m.id}
-                    msg={m}
-                    mine={m.sender === "admin"}
-                    quoted={m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null}
-                    quotedAuthor={m.reply_to && msgs.find((x) => x.id === m.reply_to)?.sender === "admin" ? "You" : selUser.full_name || "Student"}
-                    onReply={() => setReplyTo(m)}
-                    onDownload={() => downloadFile(m.file_path, m.file_name)}
-                    onViewFile={() => viewFile(m.file_path)}
-                    onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "msg" }); }}
-                    footer={m.sender === "admin" ? (
-                      <button type="button" onClick={() => togglePin(m)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", font: "600 10px/1 var(--font-sans)", padding: 0, textDecoration: "underline" }}>{m.pinned ? "unpin" : "pin"}</button>
-                    ) : null}
-                    otherAvatar={m.sender === "user" ? (
-                      <ChatAvatar size={30} src={avatars[selUser.id]} user={{ id: selUser.id, name: selUser.full_name, gender: selUser.gender, avatarSeed: selUser.avatar_seed, avatarStyle: selUser.avatar_style }} />
-                    ) : null}
-                    viewerSide="admin"
-                    onReact={reactToMessage}
-                    seen={m.sender === "admin" && m.id === lastMineId && !!m.seen_at}
-                  />
+                {msgs.map((m, i) => (
+                  <div key={m.id}>
+                    {isNewChatDay(msgs, i) && <ChatDayDivider iso={m.created_at} />}
+                    <MessageBubble
+                      msg={m}
+                      mine={m.sender === "admin"}
+                      quoted={m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null}
+                      quotedAuthor={m.reply_to && msgs.find((x) => x.id === m.reply_to)?.sender === "admin" ? "You" : selUser.full_name || "Student"}
+                      onReply={() => setReplyTo(m)}
+                      onDownload={() => downloadFile(m.file_path, m.file_name)}
+                      onViewFile={() => viewFile(m.file_path)}
+                      onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m, kind: "msg" }); }}
+                      footer={m.sender === "admin" ? (
+                        <button type="button" onClick={() => togglePin(m)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", font: "600 10px/1 var(--font-sans)", padding: 0, textDecoration: "underline" }}>{m.pinned ? "unpin" : "pin"}</button>
+                      ) : null}
+                      otherAvatar={m.sender === "user" ? (
+                        <ChatAvatar size={30} src={avatars[selUser.id]} user={{ id: selUser.id, name: selUser.full_name, gender: selUser.gender, avatarSeed: selUser.avatar_seed, avatarStyle: selUser.avatar_style }} />
+                      ) : null}
+                      isLastOfGroup={isLastOfGroup(msgs, i)}
+                      viewerSide="admin"
+                      onReact={reactToMessage}
+                      seen={m.sender === "admin" && m.id === lastMineId && !!m.seen_at}
+                    />
+                  </div>
                 ))}
                 {uploadingName && <UploadingBubble name={uploadingName} />}
               </div>

@@ -7,7 +7,7 @@ import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import FeaturesDoc from "@/components/pricing/FeaturesDoc";
 import { PLANS, planById, PAY_METHODS, type Plan, type PayMethod } from "@/lib/plans";
 import { uploadUserFile, deleteUserFile } from "@/lib/storage/client";
-import { Loader, FileDrop } from "@/components/ds";
+import { FileDrop } from "@/components/ds";
 import { SpotlightCard } from "@/components/ds/SpotlightCard";
 
 /* Pricing & Checkout. Renders its own af-frame-body + af-frame-footer so the
@@ -185,15 +185,17 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
     return (
       <>
         <div className="af-frame-body">
-          {/* Read-first line: outside the reminder frame, no background. */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-            <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>Please read what each plan includes before you choose.</span>
-            <button type="button" onClick={() => setShowAll(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/19px var(--font-sans)", color: "var(--indigo-600)", textDecoration: "underline", padding: 0 }}>Explore more</button>
-          </div>
-          {/* Non-refundable reminder, each language on its own line. */}
-          <div className="af-remind af-remind-stack" style={{ marginBottom: 18 }}>
-            <span className="af-remind-en">Once you agree to the features and pay, the payment is non-refundable.</span>
-            <span className="af-remind-ar" dir="rtl" lang="ar">بمجرد موافقتك على مزايا الخطة والدفع، يصبح المبلغ غير قابل للاسترجاع.</span>
+          {/* Read-first line, plus the refund-policy pointer directly under it
+              in the same plain style — no frame, no background, English only.
+              Points to the policy rather than stating its outcome: the terms
+              themselves live at /refund, this is not the place to restate or
+              summarize them. */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>Please read what each plan includes before you choose.</span>
+              <button type="button" onClick={() => setShowAll(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/19px var(--font-sans)", color: "var(--indigo-600)", textDecoration: "underline", padding: 0 }}>Explore more</button>
+            </div>
+            <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>Please read our <a href="/refund" target="_blank" rel="noopener" style={{ color: "var(--indigo-600)", textDecoration: "underline" }}>Refund Policy</a> before paying.</span>
           </div>
           <div className="af-plan-grid">
             {PLANS.map((p) => <GlassPlanCard key={p.id} plan={p} onChoose={() => { setPricing("plan", p.id); if (!pricing.ref) setPricing("ref", genRef()); setPriceSub(1); }} onSeeAll={() => setShowAll(true)} />)}
@@ -253,7 +255,9 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
         <div className="af-review-overlay" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24, background: "rgba(255,255,255,.72)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
           {!confirmCancel ? (
             <>
-              <Loader size={16} />
+              {/* The platform's own animated mark, not the small inline spinner —
+                  reviewing a receipt is the one wait long enough to deserve it. */}
+              <LogoMark size={64} />
               <div style={{ font: "600 18px/24px var(--font-sans)", color: "var(--ink)", marginTop: 18 }}>Under review</div>
               <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink-soft)", maxWidth: 380, margin: "8px 0 20px" }}>We received your receipt and our team is verifying your payment. This usually takes a few hours, you can safely close this page and come back, your progress is saved.</p>
               <button type="button" onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink-faint)", textDecoration: "underline" }}>Cancel this payment</button>

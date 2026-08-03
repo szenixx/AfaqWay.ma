@@ -6,7 +6,7 @@ import { notify, requestNotify } from "@/lib/notify";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
-import { ChatEmpty, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import { ChatEmpty, ChatDayDivider, isNewChatDay, isLastOfGroup, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
 import { Loader, Pill, Status, BrandLogo } from "@/components/ds";
 import { useAdvisorIdentity, lastSeenLabel } from "@/lib/advisor";
 import { firstUnreadId } from "@/lib/chatUnread";
@@ -173,24 +173,27 @@ export default function StudentChat({ userId, full, onNav }: {
                 </div>
               </div>
             </div>
-            {msgs.map((m) => (
-              <MessageBubble
-                key={m.id}
-                msg={m}
-                mine={m.sender === "user"}
-                quoted={m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null}
-                quotedAuthor={m.reply_to && msgs.find((x) => x.id === m.reply_to)?.sender === "user" ? "You" : "AfaqWay"}
-                onReply={() => setReplyTo(m)}
-                onDownload={() => downloadFile(m.file_path, m.file_name)}
-                onViewFile={() => viewFile(m.file_path)}
-                onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m }); }}
-                onAnswer={m.sender === "admin" ? (o) => setBody(o) : undefined}
-                onOpenDecision={openDecision}
-                otherAvatar={m.sender === "admin" ? <BrandLogo variant="app" size={30} /> : null}
-                viewerSide="user"
-                onReact={reactToMessage}
-                seen={m.sender === "user" && m.id === lastMineId && !!m.seen_at}
-              />
+            {msgs.map((m, i) => (
+              <div key={m.id}>
+                {isNewChatDay(msgs, i) && <ChatDayDivider iso={m.created_at} />}
+                <MessageBubble
+                  msg={m}
+                  mine={m.sender === "user"}
+                  quoted={m.reply_to ? msgs.find((x) => x.id === m.reply_to) : null}
+                  quotedAuthor={m.reply_to && msgs.find((x) => x.id === m.reply_to)?.sender === "user" ? "You" : "AfaqWay"}
+                  onReply={() => setReplyTo(m)}
+                  onDownload={() => downloadFile(m.file_path, m.file_name)}
+                  onViewFile={() => viewFile(m.file_path)}
+                  onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, msg: m }); }}
+                  onAnswer={m.sender === "admin" ? (o) => setBody(o) : undefined}
+                  onOpenDecision={openDecision}
+                  otherAvatar={m.sender === "admin" ? <BrandLogo variant="app" size={30} /> : null}
+                  isLastOfGroup={isLastOfGroup(msgs, i)}
+                  viewerSide="user"
+                  onReact={reactToMessage}
+                  seen={m.sender === "user" && m.id === lastMineId && !!m.seen_at}
+                />
+              </div>
             ))}
             {uploadingName && <UploadingBubble name={uploadingName} />}
           </div>

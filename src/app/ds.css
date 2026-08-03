@@ -484,6 +484,12 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
    variant (card + hairline), the student's own is `default` (indigo). */
 .chat-thread{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;padding:18px;display:flex;flex-direction:column;gap:14px;}
 
+/* Day divider: one centred line + label, replaces the per-bubble timestamp.
+   Appears once per calendar day, so at most once every 24h. */
+.chat-day-divider{display:flex;align-items:center;gap:10px;margin:4px 0;color:var(--ink-faint);}
+.chat-day-divider::before,.chat-day-divider::after{content:"";flex:1;height:1px;background:var(--line-soft);}
+.chat-day-divider span{flex:none;font:600 10.5px/14px var(--font-sans);letter-spacing:.02em;white-space:nowrap;}
+
 .chat-row{display:flex;width:100%;min-width:0;gap:8px;align-items:flex-end;
   font:400 13.5px/20px var(--font-sans);animation:afBubbleIn 260ms var(--ease) both;}
 .chat-row.mine{flex-direction:row-reverse;}
@@ -495,6 +501,12 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
    frame to the bubble's 78% max-width. */
 .chat-msgcol{display:flex;min-width:0;max-width:min(78%,560px);flex-direction:column;gap:6px;align-items:flex-start;}
 .chat-row.mine .chat-msgcol{align-items:flex-end;}
+
+/* Avatar + bubble, one flex row so the avatar's flex-end (bottom) alignment
+   measures against the bubble alone. Reactions/time/seen live outside this
+   row, so a long meta line underneath can never pull the avatar down with it. */
+.chat-bubblewrap{display:flex;align-items:flex-end;gap:8px;min-width:0;max-width:100%;}
+.chat-bubble-slot{position:relative;min-width:0;}
 
 .chat-bubble{width:fit-content;max-width:100%;min-width:0;overflow:hidden;padding:10px 14px;
   border-radius:var(--radius-dialog);background:var(--card);border:1px solid var(--line);
@@ -508,35 +520,63 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 /* Meta outside the bubble — the design system's msg-footer. */
 .chat-time{display:flex;max-width:100%;min-width:0;align-items:center;gap:8px;padding:0 3px;
   font:400 10.5px/14px var(--font-sans);color:var(--ink-faint);}
-/* Row actions fade in on hover. */
-.chat-acts{display:flex;flex-direction:column;gap:4px;flex:none;opacity:0;transition:opacity 160ms var(--ease);}
+/* Row menu, fades in on hover. Lives inside .chat-bubblewrap now, `align-self:
+   center` so the trigger sits level with the bubble's own vertical middle —
+   "equal with" the frame — rather than pinned to the row's bottom edge. */
+.chat-acts{display:flex;flex:none;align-self:center;margin-top:4px;opacity:0;transition:opacity 160ms var(--ease);}
 .chat-row:hover .chat-acts,.chat-row:focus-within .chat-acts{opacity:1;}
 .chat-act{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;transition:color 140ms var(--ease),border-color 140ms var(--ease),transform 140ms var(--ease);}
 .chat-act:hover{color:var(--indigo-600);border-color:var(--indigo-line);transform:translateY(-1px);}
 
-/* ── Other party's avatar, inside the thread ──────────────────────────────
-   Rendered only on the OTHER side's rows — never on the viewer's own — the
-   way every consumer chat shows who's talking without repeating "you". Sits
-   at the bottom of the row so it lines up with the last line of a stacked
-   bubble, the same anchor Message.jsx uses in the design system. */
-.chat-row-avatar{flex:none;align-self:flex-end;margin-bottom:2px;}
-
-/* ── Emoji reactions ───────────────────────────────────────────────────── */
-.chat-react-strip{position:absolute;top:calc(100% + 6px);z-index:10;display:flex;gap:2px;
-  padding:5px;border-radius:999px;background:var(--card);border:1px solid var(--line);
+/* Bubble row menu: one borderless three-dot trigger next to the bubble frame,
+   in place of a row of separately-chromed icon buttons. */
+.chat-morebtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+  border:none;background:none;border-radius:8px;color:var(--ink-faint);cursor:pointer;
+  transition:color 140ms var(--ease),background 140ms var(--ease);}
+.chat-morebtn:hover{color:var(--indigo-600);background:var(--subtle);}
+/* Portaled straight to <body> (see MessageMenu in parts.tsx), with its
+   top/left/right set inline from the trigger's own bounding rect — so
+   z-index only has to beat every other layer, not fight a scroll-clipped
+   ancestor too. --z-select-menu is the same "floating menu over everything"
+   tier the Select dropdown itself uses (.af-menu-float). */
+.chat-more-menu{z-index:var(--z-select-menu);display:flex;flex-direction:column;gap:2px;
+  min-width:150px;padding:6px;border-radius:14px;background:var(--card);border:1px solid var(--line);
   box-shadow:var(--shadow-popover);animation:afMenuIn 140ms var(--ease);}
-.chat-react-strip.mine{right:0;}
-.chat-react-strip:not(.mine){left:0;}
-.chat-react-strip button{display:flex;align-items:center;justify-content:center;width:28px;height:28px;
+.chat-more-react{display:flex;gap:2px;padding-bottom:4px;margin-bottom:4px;border-bottom:1px solid var(--line-soft);}
+.chat-more-react button{display:flex;align-items:center;justify-content:center;width:28px;height:28px;
   border:none;background:none;border-radius:999px;font-size:16px;line-height:1;cursor:pointer;
   transition:background 120ms var(--ease),transform 120ms var(--ease);}
-.chat-react-strip button:hover{background:var(--subtle);transform:scale(1.15);}
+.chat-more-react button:hover{background:var(--subtle);transform:scale(1.15);}
+.chat-more-row{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;
+  border-radius:9px;background:none;cursor:pointer;text-align:left;color:var(--ink);
+  font:600 12.5px/1 var(--font-sans);transition:background 120ms var(--ease);}
+.chat-more-row:hover{background:var(--subtle);}
 
-.chat-reactions{display:flex;flex-wrap:wrap;gap:4px;}
-.chat-row.mine .chat-reactions{justify-content:flex-end;}
-.chat-reaction-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;
-  border:1px solid var(--line);background:var(--card);font:600 11px/18px var(--font-sans);
-  color:var(--ink-soft);cursor:pointer;transition:border-color 140ms var(--ease),background 140ms var(--ease);}
+/* ── Other party's avatar, inside the thread ──────────────────────────────
+   Rendered only on the OTHER side's messages — never on the viewer's own —
+   and only on the LAST message of a consecutive run from them (BubbleGroup's
+   idea: one avatar per group, not one per bubble). Earlier messages in the
+   run get `.spacer`, an equal-width empty slot, so the bubble column holds
+   its x-position across the whole group instead of jumping sideways. Sized
+   to fill the row's cross axis so `align-items:flex-end` on .chat-bubblewrap
+   is really comparing against the bubble's own bottom edge. */
+.chat-row-avatar{flex:none;width:30px;display:flex;align-self:flex-end;margin-bottom:8px;}
+.chat-row-avatar.spacer{visibility:hidden;}
+.chat-row-avatar img,.chat-row-avatar>*{border-radius:999px;overflow:hidden;}
+
+/* ── Emoji reactions ───────────────────────────────────────────────────── */
+
+/* Overlaps the bubble's own bottom corner — BubbleReactions' idea — instead
+   of sitting in the meta flow underneath. Opposite corner from the avatar:
+   received bubbles get their reactions bottom-right, sent bubbles bottom-left,
+   so the pill never sits over the avatar or the message tail. */
+.chat-reactions{position:absolute;bottom:-9px;display:flex;flex-wrap:wrap;gap:3px;z-index:2;}
+.chat-row:not(.mine) .chat-reactions{right:-4px;}
+.chat-row.mine .chat-reactions{left:-4px;}
+.chat-reaction-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-card);
+  font:600 11px/16px var(--font-sans);color:var(--ink-soft);cursor:pointer;
+  transition:border-color 140ms var(--ease),background 140ms var(--ease);}
 .chat-reaction-pill:hover{border-color:var(--indigo-line);}
 .chat-reaction-pill.active{border-color:var(--indigo-line);background:var(--indigo-tint);color:var(--indigo-text);}
 

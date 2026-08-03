@@ -158,7 +158,10 @@ a {
 .af-country-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media (max-width: 860px) { .af-row-2, .af-row-3 { grid-template-columns: 1fr; } .af-country-grid { grid-template-columns: 1fr; } }
 /* plans stack vertically (plan under plan); each card is a horizontal split */
-.af-plan-grid { display: flex; flex-direction: column; gap: 26px; padding-top: 12px; }
+/* padding-top clears the "Most popular" ribbon, which floats ~37px above its
+   card's own top edge (see .af-plan-tab) — without it the ribbon overlapped
+   whatever sat directly above the first card. */
+.af-plan-grid { display: flex; flex-direction: column; gap: 26px; padding-top: 38px; }
 .af-method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 720px) { .af-method-grid { grid-template-columns: 1fr; } }
 /* required-but-empty highlight after pressing Continue */
@@ -172,7 +175,12 @@ a {
 @media (max-width: 720px) { .af-review-overlay { position: fixed; inset: 0; z-index: 90; } }
 /* iOS-style glass plan card (user-requested exception, scoped to pricing) */
 .af-glass-card { position: relative; display: flex; flex-direction: column; padding: 24px 26px; border-radius: 20px; background: rgba(255,255,255,.62); backdrop-filter: blur(22px) saturate(1.6); -webkit-backdrop-filter: blur(22px) saturate(1.6); border: 1px solid rgba(255,255,255,.75); box-shadow: 0 12px 36px rgba(23,35,58,.16), inset 0 1px 0 rgba(255,255,255,.65); }
-.af-plan-tab { position: absolute; top: -13px; left: 22px; font: 600 10.5px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--indigo-600); border-radius: 8px; padding: 5px 12px; box-shadow: 0 4px 12px rgba(22,46,140,.3); }
+/* Floats as a ribbon above the card's own top edge. `SpotlightCard` renders
+   this inside `.af-spotlight-content`, an inner wrapper that is itself
+   `position:relative` and sits inset by the card's own 24px/26px padding —
+   so top/left here must net out *that* padding, not just the visual gap,
+   or the badge lands inside the card instead of floating above it. */
+.af-plan-tab { position: absolute; top: calc(-13px - 24px); left: calc(22px - 26px); font: 600 10.5px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--indigo-600); border-radius: 8px; padding: 5px 12px; box-shadow: 0 4px 12px rgba(22,46,140,.3); z-index: 2; }
 .af-plan-split { display: flex; gap: 26px; align-items: stretch; }
 .af-plan-left { flex: 0 0 42%; display: flex; flex-direction: column; }
 .af-plan-divider { width: 1px; background: var(--line-soft); align-self: stretch; }
@@ -194,8 +202,15 @@ a {
 @keyframes afShimmer { 0% { background-position: -180px 0; } 100% { background-position: calc(180px + 100%) 0; } }
 .af-skeleton { background-color: var(--subtle); background-image: linear-gradient(90deg, var(--subtle), var(--card), var(--subtle)); background-size: 180px 100%; background-repeat: no-repeat; animation: afShimmer 1.4s ease-in-out infinite; }
 
-/* Onboarding two-panel shell: left 45% hero / right 55% form. No top bar. */
-.af-onboard-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: url(/hero-ambient.webp) center/cover no-repeat, var(--paper); }
+/* Onboarding two-panel shell: left 45% hero / right 55% form. No top bar.
+   Zoomed in 10% by default on desktop. `zoom` does not rescale viewport
+   units, so 100vh must be divided by the zoom factor first or the shell
+   falls short of the fold — same fix as the admin console's --adm-vh. Scoped
+   to desktop (min-width:861px, the mobile breakpoint's complement below):
+   phones already need every pixel for the step-3 program list (see the
+   sticky-footer fix nearby), zooming them in would only make that worse. */
+.af-onboard-shell { --ob-zoom: 1; --ob-vh: 100vh; height: var(--ob-vh); zoom: var(--ob-zoom); display: flex; flex-direction: column; overflow: hidden; background: url(/hero-ambient.webp) center/cover no-repeat, var(--paper); }
+@media (min-width: 861px) { .af-onboard-shell { --ob-zoom: 1.1; --ob-vh: calc(100vh / 1.1); } }
 .af-onboard-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 45% 55%; }
 .af-onboard-left { position: relative; background: transparent; overflow: hidden; padding: 16px; }
 .af-onboard-right { overflow: hidden; padding: 16px 40px; display: flex; justify-content: center; align-items: stretch; background: transparent; }
@@ -281,6 +296,15 @@ a {
   .af-onboard-col { height: auto; }
   .af-onboard-scroll { overflow: visible; flex: none; display: block; }
   .af-frame-body { overflow: visible; padding: 20px; }
+  /* Continue must never require scrolling past a whole list (Pick your
+     program can run to 12 cards) to reach it. `.af-frame-body` gave up its
+     own scroll pane above (the page scrolls instead), so the footer needs
+     `overflow: visible` on `.af-frame` too — an `overflow: hidden` ancestor
+     breaks `position: sticky` on any descendant — then it can stick to the
+     bottom of the viewport as the page scrolls, the same way it stays pinned
+     on desktop's scrollable frame. */
+  .af-frame { overflow: visible; }
+  .af-frame-footer { position: sticky; bottom: 0; z-index: 5; }
   .af-onboard-mobilebar { display: flex; }
   .af-onboard-mobilesteps { display: block; }
   .af-onboard-info { display: none; }
@@ -536,6 +560,42 @@ a {
 .sw-dot { position: absolute; top: 6px; right: 7px; display: flex; align-items: center; justify-content: center;
   width: 17px; height: 17px; padding: 0; border-radius: 50%; background: var(--red); color: #fff;
   font: 700 9px/1 var(--font-sans); border: 2px solid #fff; box-sizing: border-box; }
+/* Bell's dot carries no count — a notification has no per-item badge, it
+   only ever says "something is waiting". */
+.sw-dot-plain { width: 10px; height: 10px; top: 7px; right: 8px; }
+
+/* Sidebar's Messages badge — a plain dot only, per the request that the top
+   bar carries the count and the left panel carries just presence. */
+.sw-navdot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: var(--red); margin-left: auto; }
+
+/* Top-bar icon buttons: @svg-animated-icons ship a hover-only wiggle (single
+   700ms run, keyframes injected by the component's own inline <style>, named
+   ai-bell-motion-1 / ai-chat-bubble-bounce). `.unread` re-triggers those same
+   keyframes on loop instead of on :hover, so the icon keeps moving for as
+   long as something is unread and stops the moment it's read — `disableHover`
+   on the React component turns off the built-in hover trigger so the two
+   don't fight over the same properties. */
+/* Plain top-bar icon buttons (bell, messages): no circular chrome, a bigger
+   and bolder-stroked glyph so it reads clearly on its own, colour is the only
+   thing that changes on click/active — using the design system's own ink/
+   indigo pair, not a new colour. Box sizing (42px hit target) is untouched,
+   only the background/border/shadow that made it look like a chip are gone. */
+.sw-iconbtn.plain { background: none; border: none; box-shadow: none; color: var(--ink-soft); }
+.sw-iconbtn.plain:hover { background: none; box-shadow: none; color: var(--indigo-600); transform: none; }
+.sw-iconbtn.plain.active { background: none; border: none; color: var(--indigo-600); }
+.sw-topbar-icon { font-size: 26px; width: 1em; height: 1em; }
+.sw-topbar-icon path, .sw-topbar-icon circle { stroke-width: 1.4; }
+.sw-iconbtn.unread .ai-bell-icon .bell,
+.sw-iconbtn.unread .ai-bell-icon .clapper { animation: ai-bell-motion-1 1.1s ease-in-out infinite; }
+.sw-iconbtn.unread .ai-chat-bubble-icon .dot { animation: ai-chat-bubble-bounce 1.1s ease-in-out infinite; }
+.sw-iconbtn.unread .ai-chat-bubble-icon .dot-1 { animation-delay: 0ms; }
+.sw-iconbtn.unread .ai-chat-bubble-icon .dot-2 { animation-delay: 100ms; }
+.sw-iconbtn.unread .ai-chat-bubble-icon .dot-3 { animation-delay: 200ms; }
+@media (prefers-reduced-motion: reduce) {
+  .sw-iconbtn.unread .ai-bell-icon .bell,
+  .sw-iconbtn.unread .ai-bell-icon .clapper,
+  .sw-iconbtn.unread .ai-chat-bubble-icon .dot { animation: none; }
+}
 .sw-avatar { width: 42px; height: 42px; border-radius: 14px; flex: none; background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700)); color: #fff; border: none; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); box-shadow: 0 6px 16px rgba(22,46,140,.32); }
 /* Profile capsule: avatar + name/email, white pill, thin border, soft shadow. */
 .sw-profile { display: inline-flex; align-items: center; gap: 11px; padding: 6px 12px 6px 6px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1px solid rgba(22,46,140,.07); box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 10px 24px -20px rgba(22,46,140,.24); cursor: pointer; transition: background 220ms var(--ease), box-shadow 220ms var(--ease), transform 220ms var(--ease); }
@@ -549,6 +609,30 @@ a {
 .sw-menu-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 11px; border: none; background: transparent; cursor: pointer; font: 600 13.5px/18px var(--font-sans); color: var(--ink); }
 .sw-menu-row:hover { background: var(--subtle); }
 .sw-menu-row.danger { color: var(--red); }
+
+/* Notification inbox popover — drops from the bell button itself (anchored to
+   its own position:relative wrapper), not centred over the page. */
+.sw-notifpop { position: absolute; top: calc(100% + 10px); right: 0; width: 360px; max-width: calc(100vw - 24px);
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 48px rgba(23,35,58,.18);
+  z-index: 60; overflow: hidden; animation: afMenuIn 160ms var(--ease); }
+.sw-notifpop-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
+  border-bottom: 1px solid var(--line-soft); font: 700 13.5px/18px var(--font-sans); color: var(--ink); }
+.sw-notifpop-head button { display: flex; align-items: center; gap: 4px; border: none; background: none; cursor: pointer;
+  font: 600 11.5px/16px var(--font-sans); color: var(--indigo-600); padding: 0; }
+.sw-notifpop-list { max-height: min(70vh, 420px); overflow-y: auto; padding: 6px; }
+.sw-notifpop-group { padding: 10px 8px 4px; font: 700 10px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+.sw-notifpop-row { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 9px 8px; border: none;
+  border-radius: 12px; background: transparent; cursor: pointer; text-align: left; font: inherit; }
+.sw-notifpop-row:hover { background: var(--subtle); }
+.sw-notifpop-row.unread { background: var(--indigo-tint); }
+.sw-notifpop-row.unread:hover { background: var(--indigo-100); }
+.sw-notifpop-ico { flex: none; width: 32px; height: 32px; border-radius: 10px; background: #fff; color: var(--indigo-600);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(23,35,58,.06); margin-top: 1px; }
+.sw-notifpop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sw-notifpop-title { font: 600 13px/18px var(--font-sans); color: var(--ink); }
+.sw-notifpop-sub { font: 400 12px/17px var(--font-sans); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sw-notifpop-time { flex: none; font: 500 10.5px/16px var(--font-sans); color: var(--ink-faint); margin-top: 1px; }
+.sw-notifpop-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 34px 12px; color: var(--ink-faint); font: 500 12.5px/18px var(--font-sans); }
 /* One card language everywhere: white surface, thin semi-transparent blue border,
    soft ambient shadow, subtle blue reflection, generous padding, smooth hover. */
 .sw-tile { background: linear-gradient(180deg, #FCFDFF, #FFFFFF 40%); border: 1px solid rgba(22,46,140,.09); border-radius: 22px; box-shadow: 0 1px 2px rgba(23,35,58,.04), 0 14px 32px -22px rgba(22,46,140,.20), inset 0 1px 0 rgba(255,255,255,.9); padding: 20px; transition: box-shadow 220ms var(--ease), transform 220ms var(--ease); }
@@ -1004,6 +1088,24 @@ body {
 .sch-daylist-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); text-align: left; cursor: pointer; transition: border-color 160ms var(--ease); }
 .sch-daylist-item + .sch-daylist-item { margin-top: 8px; }
 .sch-daylist-item:hover { border-color: var(--indigo-line); }
+
+/* ── Day schedule panel: hour-by-hour browse of one day ── */
+.sch-daymodal { max-width: 520px; }
+.sch-hour-allday { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 4px 14px; margin-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.sch-hour-allday-label { flex: none; font: 700 10px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+.sch-hour-allday-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sch-hourgrid { display: flex; flex-direction: column; }
+.sch-hour-row { display: flex; align-items: flex-start; gap: 12px; min-height: 40px; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.sch-hour-row:first-child { border-top: none; }
+.sch-hour-label { flex: none; width: 46px; padding-top: 3px; font: 600 11px/16px var(--font-sans); color: var(--ink-faint); }
+.sch-hour-track { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.sch-hour-chip { display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--subtle); cursor: pointer; text-align: left; font: 600 12px/16px var(--font-sans); color: var(--ink); transition: border-color 140ms var(--ease); }
+.sch-hour-chip:hover { border-color: var(--indigo-line); background: var(--indigo-tint); }
+.sch-hour-chip-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sch-hour-chip-time { flex: none; font: 500 10.5px/14px var(--font-sans); color: var(--ink-faint); }
+.sch-hour-add { flex: none; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 999px; background: none; color: var(--ink-faint); cursor: pointer; opacity: 0; transition: opacity 140ms var(--ease), color 140ms var(--ease), border-color 140ms var(--ease); }
+.sch-hour-row:hover .sch-hour-add { opacity: 1; }
+.sch-hour-add:hover { color: var(--indigo-600); border-color: var(--indigo-line); }
 @media (max-width: 1023px) { .sch-grid { grid-auto-rows: minmax(68px, auto); } .sch-row2 { grid-template-columns: 1fr; } }
 
 /* Onboarding: full name 75% / gender 25% on one row, stacked on mobile. */
@@ -2390,6 +2492,14 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 /* Below the desktop breakpoint the main column has no definite height, so the
    chat falls back to a usable fixed height rather than collapsing. */
 .adm-chat-fill { min-height: 520px; }
+
+/* Admin Messages only: all three panels (student list, conversation, pinned/
+   documents) zoomed in 10% — scoped to .chat-shell inside .adm-chat-fill so
+   the student's own chat (which reuses the same .chat-shell/.chat-col
+   classes) is untouched. No vh-compensation needed here: nothing under
+   .chat-shell sizes off the viewport, it all sizes off .adm-chat-fill's own
+   flex height. */
+.adm-chat-fill .chat-shell { zoom: 1.1; }
 
 /* Unread badge on a sidebar item: pending review requests, live. */
 .adm-badge {
