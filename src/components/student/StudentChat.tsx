@@ -157,7 +157,13 @@ export default function StudentChat({ userId, full, onNav }: {
               When a different advisor replies, only this header changes —
               every earlier message stays as it was sent. */}
           <header className="chat-header">
-            <span className="chat-brand-avatar"><BrandLogo variant="app" size={40} /></span>
+            <span className="chat-brand-wrap">
+              <span className="chat-brand-avatar"><BrandLogo variant="app" size={40} /></span>
+              {/* Mobile only: a small Instagram-style online dot on the avatar
+                  itself, instead of the system Status pill (hidden on mobile
+                  below) — desktop keeps the pill exactly as it was. */}
+              {(advisor.online || advisor.typing) && <span className="chat-ig-dot" aria-hidden />}
+            </span>
             <span style={{ minWidth: 0, flex: 1 }}>
               <span className="chat-header-name">
                 AfaqWay Advisor

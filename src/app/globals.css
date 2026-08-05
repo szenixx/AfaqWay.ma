@@ -321,6 +321,17 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .stu-chat-texture::before { animation: none; }
 }
+/* Mobile only: the infinite 9s loop was the confirmed cause of the chat
+   white-flash (isolated by disabling all CSS animations, one at a time,
+   against the rest of the app) — an animated, blurred, absolutely-positioned
+   layer inside a scoped stacking context is a known class of iOS Safari
+   compositing bug, and this is the only surface with one running
+   continuously and exclusively (every other workspace page was unaffected).
+   Runs once on mount instead of looping — same watermark, same settle-in,
+   just not forever. Desktop keeps the original infinite breathing loop. */
+@media (max-width: 1023px) {
+  .stu-chat-texture::before { animation: afChatMark 900ms ease-out 1 both; }
+}
 /* phone-only chrome: hidden on desktop */
 .af-onboard-mobilebar, .af-onboard-mobilesteps { display: none; }
 
