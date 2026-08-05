@@ -33,20 +33,35 @@ export function useDebugLog(): DebugEntry[] {
   return log;
 }
 
-/* ── One-at-a-time visual-effect toggles ──────────────────────────────────
+/* ── Visual-effect toggles ─────────────────────────────────────────────────
    Each flag maps to an `html.dbg-<flag>` class (see the CSS block flagged
-   "TEMPORARY DEBUG TOGGLES" near the end of globals.css) that neutralises one
+   "TEMPORARY DEBUG TOGGLES" near the end of globals.css) that overrides one
    specific effect with !important, so it can be flipped live on a real phone
-   without a redeploy. Never combine two at once while testing — the whole
-   point is isolating exactly one cause. */
+   without a redeploy.
+
+   "Scenario testing" pairs let afChatMark / dsStatusPing be forced on or off
+   independently of whatever the shipped mobile default currently is — check
+   the combination matching the scenario you're running (A/B/C/D), not one
+   box at a time. Everything else below that: one at a time. */
 export const DEBUG_FLAGS = [
-  { key: "no-texture", label: "1. Chat texture/background" },
-  { key: "no-fixed-lock", label: "2. sw-content-full position:fixed (chat scroll-lock)" },
-  { key: "no-blobs", label: "3. filter:blur() sw-root corner blobs" },
-  { key: "no-mask", label: "4. -webkit-mask-image (background grid)" },
-  { key: "no-zoom", label: "5. chat-zoom (zoom/transform)" },
-  { key: "no-anim", label: "8. All CSS animations (global)" },
-  { key: "no-trans", label: "9. All CSS transitions (global)" },
+  { key: "chatmark-on", label: "afChatMark: force ON (infinite 9s)", group: "Scenario testing" },
+  { key: "chatmark-off", label: "afChatMark: force OFF (none)", group: "Scenario testing" },
+  { key: "statusping-on", label: "dsStatusPing: force ON (show pill + ring)", group: "Scenario testing" },
+  { key: "statusping-off", label: "dsStatusPing: force OFF (hidden)", group: "Scenario testing" },
+
+  { key: "no-texture-blur-only", label: "Watermark: strip filter:blur() only (keep animation)", group: "Compositing interaction" },
+  { key: "no-texture", label: "Chat texture/background (whole layer)", group: "Compositing interaction" },
+  { key: "no-fixed-lock", label: "sw-content-full position:fixed (chat scroll-lock)", group: "Compositing interaction" },
+  { key: "no-blobs", label: "filter:blur() sw-root corner blobs", group: "Compositing interaction" },
+  { key: "no-mask", label: "-webkit-mask-image (background grid)", group: "Compositing interaction" },
+  { key: "no-zoom", label: "chat-zoom (zoom/transform)", group: "Compositing interaction" },
+
+  { key: "no-grid-cell", label: "afGridCell (background grid cells)", group: "Other infinite animations" },
+  { key: "no-chev", label: "afChevGo (logo chevron, mobile top bar)", group: "Other infinite animations" },
+  { key: "no-bell-anim", label: "bell / chat-bubble unread wiggle", group: "Other infinite animations" },
+
+  { key: "no-anim", label: "ALL CSS animations (global)", group: "Blanket (confirmatory only)" },
+  { key: "no-trans", label: "ALL CSS transitions (global)", group: "Blanket (confirmatory only)" },
 ] as const;
 
 export type DebugFlagKey = typeof DEBUG_FLAGS[number]["key"];
@@ -69,4 +84,28 @@ export function useActiveDebugFlags(): Set<DebugFlagKey> {
     return () => { flagListeners.delete(l); };
   }, []);
   return activeFlags;
+}
+
+/* One-tap scenario presets — sets exactly the 4 scenario-relevant flags to
+   the right state (leaves every other flag, e.g. no-grid-cell, untouched),
+   so there's no chance of a manual-toggle mistake while running A/B/C/D. */
+const SCENARIO_KEYS = ["chatmark-on", "chatmark-off", "statusping-on", "statusping-off"] as const;
+export const SCENARIOS: Record<"A" | "B" | "C" | "D", DebugFlagKey[]> = {
+  A: ["chatmark-on", "statusping-off"],
+  B: ["chatmark-off", "statusping-on"],
+  C: ["chatmark-on", "statusping-on"],
+  D: ["chatmark-off", "statusping-off"],
+};
+
+export function setScenario(name: keyof typeof SCENARIOS) {
+  const el = document.documentElement;
+  const want = new Set(SCENARIOS[name]);
+  for (const k of SCENARIO_KEYS) {
+    const on = want.has(k);
+    if (on === activeFlags.has(k)) continue;
+    if (on) { activeFlags.add(k); el.classList.add(`dbg-${k}`); }
+    else { activeFlags.delete(k); el.classList.remove(`dbg-${k}`); }
+  }
+  dbg(`scenario ${name}: ${SCENARIOS[name].join(" + ")}`);
+  flagListeners.forEach((l) => l());
 }
