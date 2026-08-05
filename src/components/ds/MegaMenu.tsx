@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 
 /* MegaMenu — ported from the godui mega-menu motion: a highlight pill slides
@@ -23,6 +23,7 @@ export function MegaMenu({ items, openDelay = 80, closeDelay = 140 }: { items: M
   const [hovered, setHovered] = useState<number | null>(null);
   const openTimer = useRef<number | undefined>(undefined);
   const closeTimer = useRef<number | undefined>(undefined);
+  const navRef = useRef<HTMLElement>(null);
 
   const spring = reduceMotion ? { duration: 0 } : ({ type: "spring", stiffness: 320, damping: 32, mass: 0.9 } as const);
 
@@ -37,12 +38,28 @@ export function MegaMenu({ items, openDelay = 80, closeDelay = 140 }: { items: M
     setHovered(null);
     closeTimer.current = window.setTimeout(() => setActive(null), closeDelay);
   };
+  /* Touch devices have no hover/mouseleave, so a tap-opened panel needs an
+     explicit way to close both by tapping its own trigger again and by
+     tapping anywhere else — without this the panel could only ever open on
+     a phone, never close. */
+  const toggle = (index: number) => {
+    window.clearTimeout(openTimer.current);
+    window.clearTimeout(closeTimer.current);
+    setHovered(null);
+    setActive((cur) => (cur === index ? null : index));
+  };
+  useEffect(() => {
+    if (active === null) return;
+    const close = (e: MouseEvent) => { if (!navRef.current?.contains(e.target as Node)) setActive(null); };
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [active]);
 
   const highlight = hovered ?? active;
   const activeItem = active !== null ? items[active] : null;
 
   return (
-    <nav aria-label="Explore menu" style={{ position: "relative" }} onMouseLeave={scheduleClose}>
+    <nav ref={navRef} aria-label="Explore menu" style={{ position: "relative" }} onMouseLeave={scheduleClose}>
       <ul style={{ display: "flex", alignItems: "center", gap: 4, listStyle: "none", margin: 0, padding: 0 }}>
         {items.map((item, index) => {
           const hasPanel = !!item.sections;
@@ -58,7 +75,7 @@ export function MegaMenu({ items, openDelay = 80, closeDelay = 140 }: { items: M
           return (
             <li key={item.label} style={{ position: "relative" }}>
               {hasPanel ? (
-                <button type="button" aria-expanded={active === index} aria-haspopup="true" onMouseEnter={() => scheduleOpen(index)} onFocus={() => scheduleOpen(index)} style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer" }}>
+                <button type="button" aria-expanded={active === index} aria-haspopup="true" onMouseEnter={() => scheduleOpen(index)} onFocus={() => scheduleOpen(index)} onClick={() => toggle(index)} style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer" }}>
                   {trigger}
                 </button>
               ) : (

@@ -5,7 +5,7 @@ import {
   AlignLeft, Bell, CalendarDays, CircleCheck, Clock, FolderOpen, GraduationCap,
   Landmark, Link2, MapPin, NotebookPen, Pin, Trash2, Type, X,
 } from "lucide-react";
-import { Input, TextArea, Select, Toggle, Checkbox, Pill } from "@/components/ds";
+import { Input, TextArea, Select, Toggle, Checkbox, Pill, Portal } from "@/components/ds";
 import {
   DEFAULT_TIMING, KIND_META, TIMING_LABEL, newId, reminderTemplate,
   type EventKind, type ReminderTiming, type ScheduleEvent,
@@ -34,6 +34,7 @@ export function ModalShell({ icon, title, subtitle, onClose, footer, children }:
   }, [onClose]);
 
   return (
+    <Portal>
     <div className="spm-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
       <div className="sch-modal" onClick={(e) => e.stopPropagation()}>
         <header className="sch-modal-head">
@@ -48,6 +49,7 @@ export function ModalShell({ icon, title, subtitle, onClose, footer, children }:
         <footer className="sch-modal-foot">{footer}</footer>
       </div>
     </div>
+    </Portal>
   );
 }
 

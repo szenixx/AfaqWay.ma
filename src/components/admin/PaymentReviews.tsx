@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Clock, CircleX, RotateCcw, RotateCw, ShieldCheck, Wallet, X, ZoomIn, ZoomOut } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Loader, Pill, Status, ImageZoom, type StatusState } from "@/components/ds";
+import { Loader, Pill, Status, ImageZoom, Portal, type StatusState } from "@/components/ds";
 import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { fileUrl, deleteUserFile } from "@/lib/storage/client";
@@ -241,6 +241,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       )}
 
       {viewer && (
+        <Portal>
         <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(23,35,58,.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ position: "relative", width: "100%", maxWidth: 860, height: "88vh", background: "var(--card)", borderRadius: 18, boxShadow: "0 24px 70px rgba(23,35,58,.3)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--line-soft)" }}>
@@ -265,9 +266,11 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {askReset && (
+        <Portal>
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 400, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 24 }}>
             <h2 style={{ font: "700 17px/23px var(--font-sans)", color: "var(--ink)", margin: "0 0 8px" }}>Reset the statistics?</h2>
@@ -278,6 +281,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

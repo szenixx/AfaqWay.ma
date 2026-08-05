@@ -757,22 +757,22 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .ub-img.in{opacity:1;}
 
 /* ══ Animated modal (Inspira UI motion, AfaqWay surfaces) ══════════════════
-   enter: opacity 0 → 1, scale .5 → 1, rotateX 80deg → 0, y 40 → 0 (spring
-   stiffness 260 / damping 15, approximated with an overshooting curve)
+   enter: opacity 0 → 1, scale .5 → 1, rotateX 80deg → 0, y 40 → 0, a real
+   framer-motion spring (stiffness 260 / damping 15)
    exit:  opacity → 0, scale → .8, rotateX → 10deg
-   backdrop: blur 0 → 10px */
-.am-overlay{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(23,35,58,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);perspective:1200px;animation:amOverlayIn 200ms ease-out both;}
-.am-overlay.leaving{animation:amOverlayOut 200ms ease-in both;}
+   Opacity/transform are driven by framer-motion (AnimatedModal.tsx), not a
+   CSS animation — the two would otherwise fight over the same properties.
+   .spm-card/.sch-modal below still use the CSS keyframes directly. */
+.am-overlay{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(23,35,58,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);perspective:1200px;}
 @keyframes amOverlayIn{from{opacity:0;backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);}to{opacity:1;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}}
 @keyframes amOverlayOut{from{opacity:1;}to{opacity:0;backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);}}
 /* Every dialog gets the frame from the shell itself: a panel can never end up
    transparent because someone forgot to style its own class. Specific dialogs
    override only the width. */
-.am-panel{transform-style:preserve-3d;animation:amPanelIn 420ms cubic-bezier(.16,1.28,.38,1) both;
+.am-panel{transform-style:preserve-3d;
   display:flex;flex-direction:column;width:100%;max-width:560px;max-height:min(88vh,820px);
   background:var(--card);border:1px solid var(--line);border-radius:24px;
   box-shadow:0 30px 80px rgba(23,35,58,.28);overflow:hidden;}
-.am-panel.leaving{animation:amPanelOut 200ms ease-in both;}
 @keyframes amPanelIn{from{opacity:0;transform:scale(.5) rotateX(80deg) translateY(40px);}to{opacity:1;transform:none;}}
 @keyframes amPanelOut{from{opacity:1;transform:none;}to{opacity:0;transform:scale(.8) rotateX(10deg);}}
 /* Every existing modal surface inherits the same motion. */
@@ -891,7 +891,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .af-confetti{position:absolute;inset:auto;pointer-events:none;z-index:0;}
 
 @media (prefers-reduced-motion:reduce){
-  .am-overlay,.am-panel,.spm-card,.sch-modal{animation:none;}
+  .spm-card,.sch-modal{animation:none;}
   /* Still arc, gently fading: motion off, progress still legible. */
   .af-loader-arc{animation:afLoaderFade 1.4s ease-in-out infinite;stroke-dasharray:400,400;}
   @keyframes afLoaderFade{0%,100%{opacity:.35;}50%{opacity:1;}}

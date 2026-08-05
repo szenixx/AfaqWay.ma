@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Play, X } from "lucide-react";
+import { Portal } from "./Portal";
 
 /* Hero video dialog.
 
@@ -72,6 +73,7 @@ export function HeroVideoDialog({ url, title, thumbnail }: {
       </button>
 
       {open && (
+        <Portal>
         <div className="hvd-overlay" role="dialog" aria-modal="true" aria-label={label} onClick={() => setOpen(false)}>
           <div className="hvd-panel" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="hvd-close" onClick={() => setOpen(false)} aria-label="Close video">
@@ -85,6 +87,7 @@ export function HeroVideoDialog({ url, title, thumbnail }: {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </>
   );

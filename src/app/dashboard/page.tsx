@@ -101,22 +101,48 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace("/signup"); return; }
-      const { role } = await fetchAdminRole(user.email);
-      if (cancelled) return;
-      if (role) { router.replace("/admin"); return; }
-      const { data: gate } = await supabase.from("profiles").select("onboarding_completed_at, banned").eq("id", user.id).single();
-      if (cancelled) return;
-      const g = (gate ?? {}) as Record<string, unknown>;
-      if (!gate) { await supabase.auth.signOut(); router.replace("/signup"); return; }
-      if (g.banned) { await supabase.auth.signOut(); router.replace("/signup?reason=inactive"); return; }
-      if (!g.onboarding_completed_at) { router.replace("/profile-setup"); return; }
-      const p = await buildProfile(user.id, user.email ?? null);
-      if (cancelled || !p) return;
-      setUserId(user.id);
-      setProfile(p);
-      setLoading(false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.replace("/signup"); return; }
+        const { role } = await fetchAdminRole(user.email);
+        if (cancelled) return;
+        if (role) { router.replace("/admin"); return; }
+        const { data: gate } = await supabase.from("profiles").select("onboarding_completed_at, banned").eq("id", user.id).single();
+        if (cancelled) return;
+        const g = (gate ?? {}) as Record<string, unknown>;
+        if (!gate) { await supabase.auth.signOut(); router.replace("/signup"); return; }
+        if (g.banned) { await supabase.auth.signOut(); router.replace("/signup?reason=inactive"); return; }
+        if (!g.onboarding_completed_at) { router.replace("/profile-setup"); return; }
+        const p = await buildProfile(user.id, user.email ?? null);
+        if (cancelled || !p) return;
+        setUserId(user.id);
+        setProfile(p);
+        setLoading(false);
+      } catch (err) {
+        /* A rejected request here (iOS Safari suspends in-flight fetches when a
+           tab is backgrounded, then resumes/aborts them oddly) used to leave
+           `loading` stuck true forever — a full-screen "Loading your workspace"
+           overlay the student could never get past without a manual reload.
+           Retry once before giving up: most failures here are exactly that kind
+           of one-off network hiccup, not a real auth problem. */
+        if (cancelled) return;
+        console.warn("workspace auth check failed, retrying once", err);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (cancelled) return;
+          if (!user) { router.replace("/signup"); return; }
+          const p = await buildProfile(user.id, user.email ?? null);
+          if (cancelled) return;
+          if (!p) { router.replace("/signup"); return; }
+          setUserId(user.id);
+          setProfile(p);
+          setLoading(false);
+        } catch (retryErr) {
+          if (cancelled) return;
+          console.error("workspace auth check failed twice, signing out", retryErr);
+          router.replace("/signup");
+        }
+      }
     })();
     return () => { cancelled = true; };
   }, [router, buildProfile]);

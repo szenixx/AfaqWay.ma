@@ -2,7 +2,7 @@
 
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useReviewAlerts } from "@/lib/reviewAlerts";
-import { BrandLogo, Pill, Toaster, Status } from "@/components/ds";
+import { BrandLogo, Pill, Toaster, Status, Portal } from "@/components/ds";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
@@ -214,6 +214,7 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
       )}
 
       {banPanel && (
+        <Portal>
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -245,6 +246,7 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

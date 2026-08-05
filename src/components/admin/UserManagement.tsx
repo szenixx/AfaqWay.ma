@@ -8,7 +8,7 @@ import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { plansForCountry, PLAN_LABEL } from "@/config/pricing";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
-import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar, DataTable, Pill, Status, type Column } from "@/components/ds";
+import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar, DataTable, Pill, Status, Portal, type Column } from "@/components/ds";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
@@ -311,6 +311,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       )}
       {program && <ProgramModal user={program} onClose={() => setProgram(null)} onSaved={() => { setProgram(null); }} />}
       {confirm && (
+        <Portal>
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: `1px solid ${confirm.tone === "orange" ? "var(--amber-line)" : "var(--red-line)"}`, borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: confirm.tone === "orange" ? "var(--amber-tint)" : "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -326,6 +327,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
@@ -370,6 +372,7 @@ function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_nam
   }
 
   return (
+    <Portal>
     <div style={{ position: "fixed", inset: 0, zIndex: 65, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 560, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 22, display: "flex", flexDirection: "column", maxHeight: "88vh" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -420,12 +423,14 @@ function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_nam
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
 
 function Modal({ title, children, onClose, onSave }: { title: string; children: React.ReactNode; onClose: () => void; onSave?: () => void }) {
   return (
+    <Portal>
     <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 24 }}>
         <h2 style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)", margin: "0 0 16px" }}>{title}</h2>
@@ -436,5 +441,6 @@ function Modal({ title, children, onClose, onSave }: { title: string; children: 
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

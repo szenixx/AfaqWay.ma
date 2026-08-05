@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   CircleCheckBig, Clock3, Download, ExternalLink, FileText, TriangleAlert, Upload,
 } from "lucide-react";
-import { Loader, Status } from "@/components/ds";
+import { Loader, Status, Portal } from "@/components/ds";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
@@ -253,6 +253,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
         />
       )}
       {preview && (
+        <Portal>
         <div className="spm-overlay" onClick={() => setPreview(null)} role="dialog" aria-modal="true" aria-label={preview.file_name}>
           <div className="dm-preview" onClick={(e) => e.stopPropagation()}>
             {/* Read-only: no onDecide, so the approve and reject controls
@@ -260,6 +261,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
             <DocumentViewer doc={preview} onClose={() => setPreview(null)} />
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

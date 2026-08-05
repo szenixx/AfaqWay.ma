@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Pill } from "@/components/ds";
+import { Pill, Portal } from "@/components/ds";
 import {
   Bell, CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, GraduationCap,
   NotebookPen, Pin, Plus, X,
@@ -263,6 +263,7 @@ function DaySchedulePanel({ dateKey, events, onClose, onOpenEvent, onAddAt }: {
   const hours = Array.from({ length: 24 }, (_, h) => h);
 
   return (
+    <Portal>
     <div className="spm-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Day schedule">
       <div className="sch-modal sch-daymodal" onClick={(e) => e.stopPropagation()}>
         <header className="sch-modal-head">
@@ -317,5 +318,6 @@ function DaySchedulePanel({ dateKey, events, onClose, onOpenEvent, onAddAt }: {
         </footer>
       </div>
     </div>
+    </Portal>
   );
 }

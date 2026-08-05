@@ -238,7 +238,7 @@ export default function WorkspaceShell({
                     something here is unread, with its own red dot. It only
                     settles once the popover (or the thing it links to) marks
                     the row read. */}
-                <button type="button" className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+                <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
                   <BellIcon disableHover className="sw-topbar-icon" />
                   {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
                 </button>
@@ -295,7 +295,7 @@ export default function WorkspaceShell({
       <MobileNavigationHeader
         rightExtra={
           <div style={{ position: "relative" }}>
-            <button type="button" className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+            <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
               <BellIcon disableHover className="sw-topbar-icon" />
               {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
             </button>

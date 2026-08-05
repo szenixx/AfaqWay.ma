@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CircleCheck, CircleX, LifeBuoy, Mic } from "lucide-react";
-import { AnimatedModal, Confetti, DialogHead, DialogFoot } from "@/components/ds";
+import { AnimatedModal, Confetti, DialogHead, DialogFoot, Portal } from "@/components/ds";
 import { whatsappLink } from "@/lib/whatsapp";
 import { JrButton } from "./parts";
 
@@ -95,6 +95,7 @@ export function TrpDecisionDialog({ open, busy, onCancel, onDecide }: {
 export function TrpCelebration({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
   return (
+    <Portal>
     <div className="jr-cheer" role="dialog" aria-modal="true" aria-label="Congratulations">
       <div className="jr-cheer-confetti"><Confetti bursts={3} particles={110} spread={900} height={420} /></div>
 
@@ -111,6 +112,7 @@ export function TrpCelebration({ open, onClose }: { open: boolean; onClose: () =
         <JrButton tone="primary" size="md" onClick={onClose}>Continue my journey</JrButton>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -144,6 +146,7 @@ export function JourneyCompleteCelebration({ open, name, whatsapp, onClose }: {
   ].join("\n");
 
   return (
+    <Portal>
     <div className="jr-cheer" role="dialog" aria-modal="true" aria-label="Journey complete">
       <div className="jr-cheer-confetti"><Confetti bursts={4} particles={130} spread={900} height={460} /></div>
 
@@ -181,6 +184,7 @@ export function JourneyCompleteCelebration({ open, name, whatsapp, onClose }: {
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 

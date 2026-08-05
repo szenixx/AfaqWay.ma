@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TriangleAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import { Input, Select, fieldIcon, DataTable, Pill, Status, type Column } from "@/components/ds";
+import { Input, Select, fieldIcon, DataTable, Pill, Status, Portal, type Column } from "@/components/ds";
 
 type Admin = { id: string; email: string; role: string; name: string | null; phone: string | null; describe_role: string | null; banned: boolean; must_reset_pw: boolean; created_at: string };
 type Form = { id?: string; name: string; email: string; phone: string; role: string; describe_role: string };
@@ -116,6 +116,7 @@ export default function AdminManagement() {
       )}
 
       {confirm && (
+        <Portal>
         <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
             <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -131,9 +132,11 @@ export default function AdminManagement() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {form && (
+        <Portal>
         <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 24 }}>
             <h2 style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)", margin: "0 0 16px" }}>{form.id ? "Edit admin" : "Add admin"}</h2>
@@ -152,6 +155,7 @@ export default function AdminManagement() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

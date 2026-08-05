@@ -44,7 +44,16 @@ export function NotificationInbox({ userId, onOpen, onClose }: {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
+    /* The bell button itself sits outside this popover's own DOM subtree, so
+       without the trigger check below, tapping it while open used to fire
+       both handlers in the same gesture: mousedown closes here first, then
+       click re-opens via the trigger's own setNotifOpen(v => !v) — the
+       popover would visually close and instantly reopen, unable to be
+       dismissed by re-tapping the bell. */
+    const close = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (ref.current && !ref.current.contains(target) && !target.closest?.("[data-notif-trigger]")) onClose();
+    };
     const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("mousedown", close);
     window.addEventListener("keydown", key);
