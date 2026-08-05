@@ -53,10 +53,12 @@ export const DEBUG_FLAGS = [
   { key: "no-texture", label: "Chat texture/background (whole layer)", group: "Compositing interaction" },
   { key: "no-fixed-lock", label: "sw-content-full position:fixed (chat scroll-lock)", group: "Compositing interaction" },
   { key: "no-blobs", label: "filter:blur() sw-root corner blobs", group: "Compositing interaction" },
-  { key: "no-mask", label: "-webkit-mask-image (background grid)", group: "Compositing interaction" },
   { key: "no-zoom", label: "chat-zoom (zoom/transform)", group: "Compositing interaction" },
 
-  { key: "no-grid-cell", label: "afGridCell (background grid cells)", group: "Other infinite animations" },
+  { key: "no-grid-cell", label: "1. Remove CSS animation only (keep grid, mask, cells)", group: "afGridCell breakdown" },
+  { key: "no-mask", label: "2. Remove -webkit-mask-image only (keep animation)", group: "afGridCell breakdown" },
+  { key: "no-grid-reroll", label: "4. Remove JS reroll only (keep CSS animation looping)", group: "afGridCell breakdown" },
+
   { key: "no-chev", label: "afChevGo (logo chevron, mobile top bar)", group: "Other infinite animations" },
   { key: "no-bell-anim", label: "bell / chat-bubble unread wiggle", group: "Other infinite animations" },
 

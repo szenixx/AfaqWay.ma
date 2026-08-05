@@ -886,6 +886,17 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
   mask-image:radial-gradient(ellipse at center,#000 45%,transparent 78%);}
 .af-grid-cell{position:absolute;width:44px;height:44px;background:rgba(22,46,140,.14);animation:afGridCell 4s ease-in-out infinite;}
 @keyframes afGridCell{0%,100%{opacity:0;}45%,55%{opacity:1;}}
+/* Mobile only: confirmed live on a real iPhone (isolating the CSS animation
+   from the mask, the layer and the JS reroll individually) as the cause of
+   the chat white-flash — this .af-grid layer sits behind every workspace
+   page, including chat, and Safari's mask-compositing path couldn't keep up
+   with 14 cells re-animating opacity every 4s. Cells stay static (visible,
+   not fading) instead of animating; the JS reroll keeps moving them to new
+   positions every 3.2s regardless, so the pattern still isn't frozen — just
+   not continuously re-animating. Desktop keeps the original infinite fade. */
+@media (max-width:1023px){
+  .af-grid-cell{animation:none;}
+}
 
 /* ══ Confetti ══════════════════════════════════════════════════════════════ */
 .af-confetti{position:absolute;inset:auto;pointer-events:none;z-index:0;}

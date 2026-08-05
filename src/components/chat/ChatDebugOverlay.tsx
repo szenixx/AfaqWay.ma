@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { DEBUG_FLAGS, SCENARIOS, setScenario, toggleDebugFlag, useActiveDebugFlags, useDebugLog, type DebugFlagKey } from "@/lib/chatDebug";
 
-const GROUPS = ["Scenario testing", "Compositing interaction", "Other infinite animations", "Blanket (confirmatory only)"] as const;
+const GROUPS = ["Scenario testing", "afGridCell breakdown", "Compositing interaction", "Other infinite animations", "Blanket (confirmatory only)"] as const;
 
 export function ChatDebugOverlay() {
   const log = useDebugLog();
