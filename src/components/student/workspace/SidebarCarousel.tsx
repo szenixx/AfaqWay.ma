@@ -1,14 +1,16 @@
 "use client";
 
 /* Small auto-rotating image carousel for the bottom of the workspace sidebar.
-   Uses the three PNGs in /public/document (1.png, 2.png, 3.png). Falls back to a
-   soft placeholder tile if an image is missing, so the sidebar never looks broken.
-   Fade transition, advances every 5s, dot pagination reflects the active slide. */
+   Uses the three images in /public/document (1.webp, 2.webp, 3.webp). Falls back
+   to a soft placeholder tile if an image is missing, so the sidebar never looks
+   broken. Fade transition, advances every 5s, dot pagination reflects the active
+   slide. Desktop-only surface (.sw-sidebar is hidden on mobile) — this component
+   still mounts everywhere `WorkspaceShell` does, so keep these small. */
 
 import { useEffect, useState } from "react";
 
 // ?v bumped whenever the images are replaced, so browsers don't serve a stale cache.
-const IMAGES = ["/document/1.png?v=4", "/document/2.png?v=4", "/document/3.png?v=4"];
+const IMAGES = ["/document/1.webp?v=5", "/document/2.webp?v=5", "/document/3.webp?v=5"];
 const INTERVAL = 22000;
 
 export default function SidebarCarousel() {
@@ -32,6 +34,7 @@ export default function SidebarCarousel() {
               key={i}
               src={src}
               alt=""
+              loading="lazy"
               className="sw-carousel-slide"
               style={{ opacity: active === i ? 1 : 0 }}
               onError={() => setBroken((b) => { const n = [...b]; n[i] = true; return n; })}

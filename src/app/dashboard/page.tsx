@@ -22,33 +22,11 @@ import { useSingleSession } from "@/lib/useSingleSession";
 const NAV_VALUES: Nav[] = ["overview", "journey", "documents", "explore", "messages", "support", "subscription", "profile", "settings", "schedule"];
 
 export default function Dashboard() {
-  return (
-    <Suspense fallback={<div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block label="Loading your workspace" /></div>}>
-      <DashboardInner />
-    </Suspense>
-  );
-}
-
-function DashboardInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [profile, setProfile] = useState<WsProfile | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  /* The open module lives in the URL (?view=journey), not in React state, so
-     the browser's own Back/Forward buttons move between modules the way they
-     move between any two pages — each `setNav` below is a real navigation
-     (router.push), not a state update, so it creates a real history entry.
-     This also means a refresh naturally reopens the same module: the URL
-     already says which one, no separate persistence needed. */
-  const viewParam = searchParams.get("view");
-  const nav: Nav = (NAV_VALUES as string[]).includes(viewParam ?? "") ? (viewParam as Nav) : "overview";
-  const setNav = useCallback((id: string) => {
-    router.push(id === "overview" ? "/dashboard" : `/dashboard?view=${id}`);
-  }, [router]);
   useSingleSession(userId);
-  // Live count of advisor messages, cleared while the chat is open.
-  const chatUnread = useChatUnread(userId, nav === "messages");
 
   const buildProfile = useCallback(async (uid: string, userEmail: string | null): Promise<WsProfile | null> => {
     const { data } = await supabase.from("profiles").select("full_name, email, onboarding_completed_at, plan, plan_status, user_number, banned, city, date_of_birth, whatsapp_country_code, whatsapp_number, destination_country, country_flow_answers, avatar_path, tester").eq("id", uid).single();
@@ -158,15 +136,56 @@ function DashboardInner() {
     return !error;
   }
 
+  if (loading || !profile) {
+    return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block label="Loading your workspace" /></div>;
+  }
+
+  /* The nav-reading part is isolated in its own small Suspense boundary
+     below — useSearchParams() requires one, and keeping it away from the
+     profile/auth state above means a resuspend there can never re-run the
+     auth guard or refetch the profile; at worst it re-subscribes a couple of
+     lightweight hooks, never a blank "loading your workspace" flash. */
+  return (
+    <Suspense fallback={null}>
+      <NavAwareWorkspace
+        profile={profile}
+        userId={userId}
+        onSignOut={signOut}
+        onProgramRequest={onProgramRequest}
+        onReload={reload}
+      />
+    </Suspense>
+  );
+}
+
+function NavAwareWorkspace({ profile, userId, onSignOut, onProgramRequest, onReload }: {
+  profile: WsProfile; userId: string | null; onSignOut: () => void;
+  onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean>;
+  onReload: () => Promise<void>;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  /* The open module lives in the URL (?view=journey), not in React state, so
+     the browser's own Back/Forward buttons move between modules the way they
+     move between any two pages — each `setNav` below is a real navigation
+     (router.push), not a state update, so it creates a real history entry.
+     This also means a refresh naturally reopens the same module: the URL
+     already says which one, no separate persistence needed. `scroll:false`
+     keeps the workspace's own scroll position instead of jumping to top on
+     every module switch. */
+  const viewParam = searchParams.get("view");
+  const nav: Nav = (NAV_VALUES as string[]).includes(viewParam ?? "") ? (viewParam as Nav) : "overview";
+  const setNav = useCallback((id: string) => {
+    router.push(id === "overview" ? "/dashboard" : `/dashboard?view=${id}`, { scroll: false });
+  }, [router]);
+  // Live count of advisor messages, cleared while the chat is open.
+  const chatUnread = useChatUnread(userId, nav === "messages");
+
   /* Every notification that arrives also floats in from the top of the screen.
      Its action opens the page the notification points at — for a journey
      decision or an advisor message that is the conversation, which then scrolls
      itself to the first unread message. */
-  useNotificationToasts(userId, (link) => setNav(link as Nav));
-
-  if (loading || !profile) {
-    return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block label="Loading your workspace" /></div>;
-  }
+  useNotificationToasts(userId, (link) => setNav(link));
 
   return (
     <WorkspaceShell
@@ -174,9 +193,9 @@ function DashboardInner() {
       nav={nav}
       onNav={setNav}
       chatUnread={chatUnread}
-      onSignOut={signOut}
+      onSignOut={onSignOut}
       onProgramRequest={onProgramRequest}
-      onReload={reload}
+      onReload={onReload}
     />
   );
 }

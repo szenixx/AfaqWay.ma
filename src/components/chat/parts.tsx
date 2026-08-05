@@ -27,8 +27,8 @@ export function ChatAvatar({ size = 38, src, online, verified, user }: {
 
 export type EmptyArt = "pinned" | "documents";
 const ART: Record<EmptyArt, string> = {
-  pinned: "/illustrations/empty-pinned.png",
-  documents: "/illustrations/empty-documents.png",
+  pinned: "/illustrations/empty-pinned.webp",
+  documents: "/illustrations/empty-documents.webp",
 };
 
 export function ChatEmpty({ art, title, sub, icon, action }: { art?: EmptyArt; title: string; sub?: string; icon?: ReactNode; action?: ReactNode }) {
