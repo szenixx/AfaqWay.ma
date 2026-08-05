@@ -4,7 +4,7 @@
    switches on the user's plan (self_service vs full_service). Realistic demo
    data comes from ./data. Presentational pieces come from ./parts. */
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { DOC_STATUS, STATE_BADGE, STATE_STATUS } from "@/lib/journey";
 import { supabase } from "@/lib/supabase/client";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
@@ -12,7 +12,7 @@ import { useAvatarUrl, setAvatarUrl } from "@/lib/avatar";
 import { removeUploadedPhoto, setUploadedPhoto } from "@/lib/avatarProfile";
 import { squareCompress } from "@/lib/imagePrep";
 import { downloadInvoice } from "@/lib/invoice";
-import { Input, TextArea, Select, UserAvatar, Accordion, fieldIcon, iconForLabel, Pill, Status, ContributionGraph } from "@/components/ds";
+import { Input, TextArea, Select, UserAvatar, AvatarUpload, Accordion, fieldIcon, iconForLabel, Pill, Status, ContributionGraph } from "@/components/ds";
 import { MorphingDialog, MorphingDialogTrigger, MorphingDialogContent, MorphingDialogClose } from "@/components/ds/MorphingDialog";
 import { SpotlightCard } from "@/components/ds/SpotlightCard";
 import { DecorativeBackground } from "@/components/ds/Backgrounds";
@@ -522,9 +522,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
   const [savedKey, setSavedKey] = useState("");
   const [busy, setBusy] = useState("");
   const [uploading, setUploading] = useState(false);
-  const photoRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState(0);
-  const seed = profile.avatarSeed;
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
 
   const flash = (k: string) => { setSavedKey(k); setTimeout(() => setSavedKey(""), 2200); };
@@ -578,37 +576,17 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Profile picture: uploaded photo, or the generated avatar. */}
+      {/* Profile picture: uploaded photo, or the default avatar. */}
       <Panel>
-        <SectionTitle tone="blue" sub="Your photo replaces the generated avatar everywhere on the platform">Profile Information</SectionTitle>
-        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-          <UserAvatar size={96} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: seed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {/* Upload only: a photo from the device, or remove the one there. */}
-              <input
-                ref={photoRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }}
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadPhoto(f); }}
-              />
-              <BtnPrimary onClick={() => photoRef.current?.click()} disabled={uploading}>
-                <Upload size={16} />{uploading ? `Uploading ${progress}%` : "Change Profile Picture"}
-              </BtnPrimary>
-              {avatarUrl && (
-                <BtnGhost tone="red" onClick={removePhoto} disabled={uploading}>
-                  <X size={15} />Remove photo
-                </BtnGhost>
-              )}
-            </div>
-            {uploading && (
-              <span style={{ display: "block", height: 6, borderRadius: 999, background: "var(--subtle)", overflow: "hidden", maxWidth: 260 }}>
-                <span style={{ display: "block", height: "100%", width: `${progress}%`, background: "var(--indigo-600)", borderRadius: 999, transition: "width 200ms var(--ease)" }} />
-              </span>
-            )}
-            <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)" }}>
-              PNG, JPG or WEBP. Images are cropped square and compressed before upload.
-            </div>
-          </div>
-        </div>
+        <SectionTitle tone="blue" sub="Your photo replaces the default avatar everywhere on the platform">Profile Information</SectionTitle>
+        <AvatarUpload
+          size={96}
+          user={{ id: profile.userId, name: profile.fullName, avatarUrl, verified: profile.verified }}
+          uploading={uploading}
+          progress={progress}
+          onFile={(file) => void uploadPhoto(file)}
+          onRemove={avatarUrl ? removePhoto : undefined}
+        />
       </Panel>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="sw-2col">

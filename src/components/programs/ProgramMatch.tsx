@@ -118,7 +118,10 @@ export default function ProgramMatch({ profile, selected, onSelect }: { profile:
           const active = path === v;
           return (
             <button key={v} type="button" role="radio" aria-checked={active} onClick={() => setPath(v)}
-              style={{ flex: "1 1 0", height: 46, borderRadius: 12, cursor: "pointer", font: "600 14px/1 var(--font-sans)", border: active ? "1px solid var(--indigo-line)" : "1px solid var(--line)", background: active ? "var(--indigo-tint)" : "var(--card)", color: active ? "var(--indigo-text)" : "var(--ink)" }}>
+              /* Secondary ramp (slate-blue, close to indigo without being the
+                 brand colour itself) instead of the indigo tint — this is a
+                 mode switch, not the primary action on the step. */
+              style={{ flex: "1 1 0", height: 38, borderRadius: "var(--radius-pill)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", border: active ? "1px solid var(--secondary-300)" : "1px solid var(--line)", background: active ? "var(--secondary-100)" : "var(--card)", color: active ? "var(--secondary-700)" : "var(--ink)" }}>
               {label}
             </button>
           );
@@ -126,11 +129,10 @@ export default function ProgramMatch({ profile, selected, onSelect }: { profile:
       </div>
 
       {selected.length > 0 && (
-        <div style={{ background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-          <div style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-text)", marginBottom: 6 }}>Your program</div>
-          <ol style={{ margin: 0, paddingLeft: 18, font: "400 13px/20px var(--font-sans)", color: "var(--ink)" }}>
-            {selected.map((id) => <li key={id}>{byId.get(id)?.name ?? id}</li>)}
-          </ol>
+        /* A divider, not a card: the choice is confirmed and small, not a
+           thing that needs its own frame competing with the list below it. */
+        <div className="pm-current-divider" role="status">
+          <span>You currently choose: {selected.map((id) => byId.get(id)?.name ?? id).join(", ")}</span>
         </div>
       )}
 

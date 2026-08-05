@@ -380,6 +380,15 @@ select.af{border-radius:var(--radius-pill);padding-right:38px;cursor:pointer;}
 
 /* Slim bilingual reminder banner (amber = the platform's orange). Text only:
    no icon, no emoji. One line on desktop, stacks cleanly on small screens. */
+/* Note: leading icon + left accent bar, same amber as the pill reminder it
+   replaces — just without a filled/bordered frame behind the text. */
+.af-note{display:flex;align-items:flex-start;gap:10px;width:100%;padding:10px 4px 14px;border-bottom:1px solid var(--line-soft);margin-bottom:14px;}
+.af-note-ico{flex:none;width:20px;height:20px;color:var(--amber);display:flex;align-items:center;justify-content:center;margin-top:1px;}
+.af-note-body{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;min-width:0;}
+.af-note-en{font:500 12.5px/18px var(--font-sans);color:var(--amber);}
+.af-note-ar{font:500 13px/20px var(--font-sans);color:var(--amber);}
+.af-note-sep{color:var(--amber-line);}
+
 .af-remind{display:flex;align-items:center;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;width:100%;padding:9px 16px;border:1px solid var(--amber-line);border-radius:var(--radius-pill);background:var(--amber-tint);}
 .af-remind-en{font:500 12.5px/18px var(--font-sans);color:var(--amber);}
 .af-remind-ar{font:500 13px/20px var(--font-sans);color:var(--amber);}
@@ -489,6 +498,12 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-day-divider{display:flex;align-items:center;gap:10px;margin:4px 0;color:var(--ink-faint);}
 .chat-day-divider::before,.chat-day-divider::after{content:"";flex:1;height:1px;background:var(--line-soft);}
 .chat-day-divider span{flex:none;font:600 10.5px/14px var(--font-sans);letter-spacing:.02em;white-space:nowrap;}
+
+/* Same divider idea, for confirming the chosen program: a line, not a card,
+   so the confirmation doesn't compete with the list below it. */
+.pm-current-divider{display:flex;align-items:center;gap:10px;margin:2px 0 16px;color:var(--indigo-line);}
+.pm-current-divider::before,.pm-current-divider::after{content:"";flex:1;height:1px;background:var(--indigo-line);}
+.pm-current-divider span{flex:none;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 11.5px/16px var(--font-sans);color:var(--indigo-600);}
 
 .chat-row{display:flex;width:100%;min-width:0;gap:8px;align-items:flex-end;
   font:400 13.5px/20px var(--font-sans);animation:afBubbleIn 260ms var(--ease) both;}
@@ -701,12 +716,34 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 @media (max-width:720px){.mc-grid{grid-template-columns:1fr;}}
 @media (prefers-reduced-motion:reduce){.mc,.mc-ico,.mc-menu{transition:none;animation:none;}}
 
+/* ══ Avatar upload ═══════════════════════════════════════════════════════
+   Ported from reui's c-file-upload-2: circular dashed drop zone, camera
+   badge, drag state, remove link, destructive alert on a rejected file. */
+.af-avaup{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.af-avaup-drop{position:relative;flex:none;border-radius:999px;cursor:pointer;outline:none;transition:transform 160ms var(--ease),border-color 160ms var(--ease),background 160ms var(--ease);}
+.af-avaup-drop:hover{transform:translateY(-1px);}
+.af-avaup-drop:focus-visible{outline:2.5px solid var(--indigo-600);outline-offset:2px;}
+.af-avaup-drop:not(.filled){border:2px dashed var(--line);background:var(--subtle);display:flex;align-items:center;justify-content:center;}
+.af-avaup-drop:not(.filled):hover,.af-avaup-drop:not(.filled).dragging{border-color:var(--indigo-600);background:var(--indigo-tint);}
+.af-avaup-drop.filled{border:2px solid var(--line);}
+.af-avaup-drop.filled.dragging{border-color:var(--indigo-600);box-shadow:0 0 0 4px var(--indigo-tint);}
+.af-avaup-img{display:block;border-radius:999px;object-fit:cover;}
+.af-avaup-badge{position:absolute;right:-2px;bottom:-2px;width:30px;height:30px;border-radius:999px;background:var(--indigo-600);color:#fff;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--card);box-shadow:0 2px 6px rgba(23,35,58,.2);}
+.af-avaup-overlay{position:absolute;inset:0;border-radius:999px;background:rgba(23,35,58,.45);display:flex;align-items:center;justify-content:center;color:#fff;}
+.af-avaup-meta{display:flex;flex-direction:column;gap:5px;min-width:180px;}
+.af-avaup-label{font:600 14px/19px var(--font-sans);color:var(--ink);}
+.af-avaup-hint{font:400 12px/16px var(--font-sans);color:var(--ink-faint);}
+.af-avaup-remove{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;margin-top:1px;border:none;background:none;padding:0;cursor:pointer;font:600 12.5px/1 var(--font-sans);color:var(--red);}
+.af-avaup-remove:hover{text-decoration:underline;}
+.af-avaup-alert{display:flex;align-items:center;gap:8px;margin-top:2px;padding:9px 11px;border-radius:10px;background:var(--red-tint);border:1px solid var(--red-line);color:var(--red);font:500 12.5px/17px var(--font-sans);max-width:320px;}
+@media (prefers-reduced-motion:reduce){.af-avaup-drop{transition:none;}}
+
 /* ══ User avatar ═══════════════════════════════════════════════════════════
    Uploaded photo → generated avatar, always circular, skeleton before load. */
 .ua{position:relative;display:inline-flex;flex:none;border-radius:999px;overflow:visible;}
 .ua-img,.ua-gen{display:block;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,#EEF2F9,#E1E8F3);border:1px solid rgba(22,46,140,.10);object-fit:cover;opacity:0;transform:scale(.96);transition:opacity 200ms var(--ease),transform 200ms var(--ease);}
 .ua-img.in,.ua-gen.in{opacity:1;transform:none;}
-.ua-gen > svg{display:block;width:100%;height:100%;}
+.ua-gen{display:flex;align-items:center;justify-content:center;}
 .ua-skeleton{display:block;width:100%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--subtle) 25%,#E9EDF5 37%,var(--subtle) 63%);background-size:400% 100%;animation:afShimmer 1.4s ease infinite;}
 @keyframes afShimmer{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
 .ua-status{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:999px;border:2px solid var(--card);background:var(--grey);}

@@ -1,21 +1,14 @@
 "use client";
 
-import { memo, useMemo, useState, type CSSProperties } from "react";
-import dynamic from "next/dynamic";
-import { BadgeCheck } from "lucide-react";
-import { avatarConfig, seedFromId, styleForGender, type Gender } from "@/lib/avatarIdentity";
+import { memo, useState, type CSSProperties } from "react";
+import { BadgeCheck, User } from "lucide-react";
+import type { Gender } from "@/lib/avatarIdentity";
 
 /* The platform's only avatar component.
 
-   Priority: uploaded photo → generated avatar. The generated face is produced
-   by @avatune/react from the user's stored seed, so it is identical every time
-   and is never regenerated on render. */
-
-// The renderer and its theme are loaded lazily: they never enter the initial bundle.
-const Avatar = dynamic(() => import("@avatune/react").then((m) => m.Avatar), {
-  ssr: false,
-  loading: () => <span className="ua-skeleton" aria-hidden />,
-});
+   Priority: uploaded photo → default person silhouette. Nobody without a
+   photo gets a generated face; they get the same neutral placeholder, same
+   as Facebook's fallback avatar. */
 
 export type UserAvatarUser = {
   id?: string | null;
@@ -44,11 +37,6 @@ function UserAvatarBase({ size = 40, user, className, showStatus, clickable, onC
   const [broken, setBroken] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const seed = user?.avatarSeed || seedFromId(user?.id || user?.name || "afaqway");
-  const styleName = user?.avatarStyle || styleForGender((user?.gender as Gender) ?? "prefer_not_to_say");
-  // Generated once per identity, then reused: never recomputed on a rerender.
-  const config = useMemo(() => avatarConfig(seed, styleName), [seed, styleName]);
-
   const uploaded = user?.avatarUrl && !broken;
   const badge = Math.max(14, Math.round(size * 0.34));
 
@@ -61,7 +49,7 @@ function UserAvatarBase({ size = 40, user, className, showStatus, clickable, onC
     />
   ) : (
     <span className="ua-gen in" style={{ width: size, height: size }}>
-      <GeneratedFace size={size} config={config} />
+      <User size={Math.round(size * 0.56)} strokeWidth={1.75} color="var(--neutral-300)" aria-hidden />
     </span>
   );
 
@@ -83,16 +71,6 @@ function UserAvatarBase({ size = 40, user, className, showStatus, clickable, onC
       {content}
     </button>
   );
-}
-
-/* Kept separate so the memoised config is the only thing the renderer sees. */
-function GeneratedFace({ size, config }: { size: number; config: Record<string, unknown> }) {
-  const [theme, setTheme] = useState<unknown>(null);
-  useMemo(() => { void import("@avatune/yanliu-theme/react").then((m) => setTheme(m.default)); }, []);
-  if (!theme) return <span className="ua-skeleton" aria-hidden />;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const A = Avatar as any;
-  return <A theme={theme} size={size} {...config} />;
 }
 
 export const UserAvatar = memo(UserAvatarBase);

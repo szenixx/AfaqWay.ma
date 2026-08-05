@@ -210,6 +210,35 @@ a {
    phones already need every pixel for the step-3 program list (see the
    sticky-footer fix nearby), zooming them in would only make that worse. */
 .af-onboard-shell { --ob-zoom: 1; --ob-vh: 100vh; height: var(--ob-vh); zoom: var(--ob-zoom); display: flex; flex-direction: column; overflow: hidden; background: url(/hero-ambient.webp) center/cover no-repeat, var(--paper); }
+/* Onboarding-only: text inputs take the dropdown's own capsule radius and a
+   slightly slimmer height, so the two field types read as one family on this
+   page. Scoped here rather than on the shared `input.af` rule (ds.css),
+   which every form on the platform uses — this is a look for this page, not
+   a change to the control itself. */
+.af-onboard-shell input.af { border-radius: var(--radius-pill); min-height: 40px; padding: 9px 15px; }
+
+/* @reui/c-input-5's invalid-field treatment, own colour — explicitly NOT the
+   platform's var(--red)/var(--red-tint), per instruction. A destructive red
+   border plus a soft glow ring (reui's `aria-invalid:border-destructive
+   aria-invalid:ring-destructive/20`), transitioning in rather than snapping,
+   and real message text under the field instead of a bare coloured edge. */
+.af-onboard-shell input.af[aria-invalid="true"],
+.af-onboard-shell select.af[aria-invalid="true"],
+.af-onboard-shell textarea.af[aria-invalid="true"],
+.af-onboard-shell .af-select-btn[data-invalid="true"] {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(220,38,38,.2) !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.af-onboard-shell .af-error,
+.af-onboard-shell .af-onb-error {
+  color: #DC2626;
+  font: 400 12.5px/17px var(--font-sans);
+  animation: afOnbErrorIn 150ms ease both;
+}
+.af-onb-error { display: block; margin-top: 6px; }
+@keyframes afOnbErrorIn { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .af-onboard-shell .af-error, .af-onboard-shell .af-onb-error { animation: none; } }
 @media (min-width: 861px) { .af-onboard-shell { --ob-zoom: 1.1; --ob-vh: calc(100vh / 1.1); } }
 .af-onboard-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 45% 55%; }
 .af-onboard-left { position: relative; background: transparent; overflow: hidden; padding: 16px; }
@@ -248,14 +277,22 @@ a {
 .dash-advice { display: none; }
 @media (max-width: 768px) { .dash-advice { display: block; } }
 
-/* Student chat: soft grey background scattered with small faint AfaqWay marks */
 /* Chat background: a white field carrying two quiet layers — a very faint
    brand-blue wash so the panel is not flat paper, and one large brand mark
    centred in it, blurred and low-opacity, breathing slowly. A watermark, not a
-   pattern. Replaces the tiled grey chevron texture. */
+   pattern.
+
+   Lives on the non-scrolling .chat-col, not .chat-thread: the watermark used
+   to be an absolutely-positioned pseudo-element on .chat-thread itself, which
+   is the overflow-y:auto scroll container — absolutely-positioned content
+   scrolls with a scrolling box's content the same as any other descendant, so
+   it scrolled out of view the moment the thread had enough messages to
+   scroll, or even on first open, since the thread auto-scrolls to the newest
+   message on mount. Moving the texture up to the panel that never scrolls
+   fixes that; .chat-header and .chat-composer already paint their own opaque
+   background, so nothing shows through where it shouldn't. */
 .stu-chat-texture {
   position: relative;
-  background-color: var(--card);
   background-image: linear-gradient(rgba(22, 46, 140, .028), rgba(22, 46, 140, .028));
   --chat-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23162E8C' stroke-width='13' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M29 28 48 45 67 28'/%3E%3Cpath d='M29 54 48 71 67 54'/%3E%3C/g%3E%3C/svg%3E");
 }
@@ -278,13 +315,25 @@ a {
   0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: .07; }
   50%      { transform: translate(-50%, -50%) scale(1.06); opacity: .1; }
 }
-/* Messages must always sit above the watermark. */
-.stu-chat-texture > * { position: relative; z-index: 1; }
+/* The thread itself (message bubbles) must sit above the watermark; header
+   and composer are already fully opaque so they don't need this. */
+.stu-chat-texture > .chat-thread { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
   .stu-chat-texture::before { animation: none; }
 }
 /* phone-only chrome: hidden on desktop */
 .af-onboard-mobilebar, .af-onboard-mobilesteps { display: none; }
+
+/* ── Mobile stepper (@reui/stepper structure, platform colour) ────────────
+   Only reachable through .af-onboard-mobilesteps, which stays display:none
+   until the 860px breakpoint below — so this never renders on desktop. */
+.rst-nav { display: flex; align-items: center; width: 100%; }
+.rst-item { display: flex; align-items: center; }
+.rst-indicator { flex: none; width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font: 600 12px/1 var(--font-sans); border: 1px solid var(--line); background: var(--card); color: var(--ink-faint); transition: background 160ms var(--ease), border-color 160ms var(--ease), color 160ms var(--ease); }
+.rst-indicator[data-state="active"], .rst-indicator[data-state="completed"] { background: var(--indigo-600); border-color: var(--indigo-600); color: #fff; }
+.rst-indicator[data-state="loading"] { background: var(--card); border-color: var(--indigo-line); color: var(--indigo-600); }
+.rst-separator { flex: 1; height: 2px; margin: 0 2px; border-radius: 999px; background: var(--line); transition: background 160ms var(--ease); }
+.rst-separator[data-state="completed"] { background: var(--indigo-600); }
 @media (max-width: 860px) {
   html, body { overflow-x: hidden; }
   .af-onboard-shell { height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: visible; }
@@ -304,10 +353,23 @@ a {
      bottom of the viewport as the page scrolls, the same way it stays pinned
      on desktop's scrollable frame. */
   .af-frame { overflow: visible; }
-  .af-frame-footer { position: sticky; bottom: 0; z-index: 5; }
+  /* Rounding the sticky footer's own bottom corners to match the card: with
+     `.af-frame` no longer clipping (needed for `position: sticky` above),
+     the card's own border-radius stopped reaching the footer's flat white
+     background, which squared off the bottom of every step's frame. */
+  .af-frame-footer { position: sticky; bottom: 0; z-index: 5; border-radius: 0 0 16px 16px; }
   .af-onboard-mobilebar { display: flex; }
   .af-onboard-mobilesteps { display: block; }
   .af-onboard-info { display: none; }
+  /* The marble hero image is a 45%-panel desktop treatment; full-bleed behind
+     the whole page on a phone it just reads as background noise showing
+     through the header block above the card. Flat paper instead. */
+  .af-onboard-shell { background: var(--paper); }
+  /* SubStepper (the small "Choose a plan / Checkout" progress row) rendered
+     directly on that background with nothing behind it — floating text and
+     circles with no container. A contained card gives it the same footing
+     as everything else on the step instead of looking like debris. */
+  .af-substep-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow-card); }
   /* 16px inputs so iOS never auto-zooms the field on focus */
   .af, input.af, select.af, textarea.af { font-size: 16px; }
   /* the roadmap video frame must be able to grow with its content on phones */
@@ -659,11 +721,36 @@ a {
 }
 @media (max-width: 1023px) {
   .sw-root { height: auto; overflow-x: hidden; overflow-y: visible; }
-  .sw-shell { flex-direction: column; padding: 12px; gap: 12px; height: auto; }
+  /* Top padding clears the fixed pill bar (see .mnav-header, --mnav-clear)
+     so page content never starts underneath it. */
+  .sw-shell { flex-direction: column; padding: var(--mnav-clear) 12px 12px; gap: 12px; height: auto; }
   .sw-sidebar { display: none; }
   .sw-mobilebar { display: flex; }
   .sw-main { width: 100%; height: auto; }
   .sw-content { overflow: visible; }
+
+  /* Messages: every other module lets the page grow and scroll naturally on
+     mobile (rules above), but the chat needs the opposite — a screen-locked
+     box with only the message thread scrolling inside it and the composer
+     pinned to the bottom, the way Instagram's own chat behaves, instead of
+     growing to fit every message and dragging the whole page down with it.
+     Pinning with top/left/right/bottom (not a computed height) means its
+     size is exact regardless of any rounding in the ancestor chain above —
+     a fixed box can't overflow the page because it was never part of the
+     page's flow height to begin with. */
+  .sw-content-full {
+    position: fixed; z-index: 5;
+    top: var(--mnav-clear); left: 12px; right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  /* The info panel (pinned updates / shared documents) is a desktop-only
+     sidebar; on a phone it would stack below the whole conversation instead
+     of scrolling with it, which is the "really long" symptom. Full-screen
+     conversation only, like a real chat app. */
+  .sw-content-full .chat-shell > .chat-col:last-child { display: none; }
+  /* iOS Safari auto-zooms the page when a focused input's font-size is
+     under 16px — this is what causes "the phone zooms in when typing". */
+  .af-composer-input { font-size: 16px; }
 }
 @media (max-width: 720px) {
   .sw-statrow { grid-template-columns: repeat(2, 1fr) !important; }
@@ -727,22 +814,65 @@ body {
 .sw-content-full { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 6px; }
 .sw-content-full > * { flex: 1; min-height: 0; }
 
-/* ── Mobile navigation header (Untitled UI structure, AfaqWay tokens) ────── */
-.mnav-header { display: none; height: 56px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--card); padding: 12px 12px 12px 16px; }
-.mnav-trigger { position: relative; display: flex; align-items: center; justify-content: center; padding: 8px; border: none; border-radius: 8px; background: var(--card); color: var(--ink-soft); cursor: pointer; transition: background 200ms var(--ease), color 200ms var(--ease); }
-.mnav-trigger:hover { background: var(--subtle); color: var(--ink); }
-.mnav-trigger:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; }
+/* ── Mobile navigation header ─────────────────────────────────────────────
+   Literally the same bar as the marketing SiteHeader's mobile header: a
+   compact pill that hugs its own content (logo + controls), centred on the
+   page, not a full-width bar with space-between. --mnav-clear is the one
+   shared measurement (bar footprint + a small gap) every other mobile-only
+   rule below anchors to, so the bar, the dropdown, the notification popover
+   and the messages scroll-lock can never drift out of sync with each other
+   the way separately hand-tuned numbers did before. */
+:root { --mnav-clear: calc(98px + env(safe-area-inset-top, 0px)); }
+/* Fixed to the viewport (not the page), so it stays visible while the
+   workspace content scrolls underneath it. */
+.mnav-header { display: none; align-items: center; justify-content: center; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 0; background: transparent; position: fixed; top: 0; left: 0; right: 0; z-index: 30; }
+.mnav-pill { display: flex; align-items: center; gap: 20px; max-width: calc(100vw - 32px); height: 64px; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow-card); padding: 10px 20px; }
+.mnav-brand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.mnav-brand-name { font: 700 22px/1 var(--font-sans); color: var(--ink); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mnav-trigger { position: relative; display: inline-flex; align-items: center; padding: 6px; margin: 0; border: none; background: none; color: var(--ink-soft); cursor: pointer; }
+.mnav-trigger:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; border-radius: 6px; }
 .mnav-ico-menu, .mnav-ico-close { transition: opacity 200ms var(--ease); }
 .mnav-ico-close { position: absolute; opacity: 0; }
 .mnav-trigger[aria-expanded="true"] .mnav-ico-menu { opacity: 0; }
 .mnav-trigger[aria-expanded="true"] .mnav-ico-close { opacity: 1; }
-.mnav-overlay { position: fixed; inset: 0; z-index: 50; cursor: pointer; background: rgba(23,35,58,.7); padding-right: 64px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); animation: afFadeIn 300ms var(--ease); }
 @keyframes afFadeIn { from { opacity: 0; } to { opacity: 1; } }
-.mnav-close { position: fixed; top: 10px; right: 12px; display: flex; align-items: center; justify-content: center; padding: 8px; border: none; border-radius: 8px; background: transparent; color: rgba(255,255,255,.7); cursor: pointer; transition: background 160ms var(--ease), color 160ms var(--ease); }
-.mnav-close:hover { background: rgba(255,255,255,.1); color: #fff; }
-.mnav-modal { width: 100%; max-width: 296px; height: 100dvh; cursor: auto; will-change: transform; }
-.mnav-dialog { height: 100dvh; outline: none; background: var(--card); display: flex; flex-direction: column; gap: 4px; padding: 16px; overflow-y: auto; }
-@media (max-width: 1023px) { .mnav-header { display: flex; } }
+
+/* Dropdown — same frame as the SiteHeader's mobile menu: a centred rounded
+   card below the bar, not a full-height side drawer. Each row keeps the
+   reference's own divider/chevron look; the only addition is a leading icon
+   per row, requested explicitly. */
+.mnav-dropdown-backdrop { position: fixed; inset: 0; z-index: 15; }
+.mnav-dropdown { position: fixed; top: var(--mnav-clear); left: 50%; transform: translateX(-50%); width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - var(--mnav-clear) - 16px); overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(23,35,58,.12); padding: 8px 16px 16px; z-index: 20; animation: afFadeIn 180ms var(--ease); }
+.mnav-row { display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; border: none; border-bottom: 1px solid var(--line-soft); background: none; padding: 0; cursor: pointer; font: 500 15px/22px var(--font-sans); color: var(--ink); text-align: left; }
+.mnav-row-ico { display: flex; align-items: center; justify-content: center; flex: none; color: var(--ink-soft); }
+.mnav-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mnav-row-chev { flex: none; color: var(--ink-faint); }
+.mnav-row.active { color: var(--indigo-600); }
+.mnav-row.active .mnav-row-ico { color: var(--indigo-600); }
+.mnav-row-badge { flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--red); color: #fff; font: 700 10.5px/18px var(--font-sans); text-align: center; }
+@media (max-width: 1023px) {
+  .mnav-header { display: flex; }
+  .sw-header { display: none; }
+  /* The notification popover gets the same centred treatment as the
+     dropdown above, instead of hanging off the bell button's corner. */
+  .sw-notifpop { position: fixed; top: var(--mnav-clear); left: 50%; right: auto; transform: translateX(-50%); width: min(360px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - var(--mnav-clear) - 16px); }
+}
+
+/* ── Mobile chat launcher (WhatsApp-extension badge, floating bottom-right) ── */
+.sw-mobile-fab { display: none; }
+@media (max-width: 1023px) {
+  .sw-mobile-fab {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 25;
+    width: 50px; height: 50px; border: none; border-radius: 999px;
+    background: var(--indigo-600); color: #fff; cursor: pointer;
+    box-shadow: 0 10px 26px -6px rgba(22,46,140,.48), 0 2px 6px rgba(23,35,58,.18);
+    transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+  }
+  .sw-mobile-fab:hover, .sw-mobile-fab:active { transform: translateY(-2px) scale(1.04); }
+  .sw-mobile-fab .sw-topbar-icon { font-size: 28px; }
+  .sw-mobile-fab-dot { position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 999px; background: var(--red); border: 2px solid var(--indigo-600); }
+}
 
 /* Desktop workspace renders at 110%, matching /admin. */
 @media (min-width: 1024px) {
@@ -2498,8 +2628,17 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
    the student's own chat (which reuses the same .chat-shell/.chat-col
    classes) is untouched. No vh-compensation needed here: nothing under
    .chat-shell sizes off the viewport, it all sizes off .adm-chat-fill's own
-   flex height. */
+   flex height.
+   Same Firefox fallback and the same 1100px reset as the student side's
+   .chat-zoom — .chat-shell already collapses to one column at that width
+   (ds.css), so the zoom needs to drop with it instead of staying at 1.1 with
+   no responsive relief. */
 .adm-chat-fill .chat-shell { zoom: 1.1; }
+@supports not (zoom: 1.1) { .adm-chat-fill .chat-shell { transform: scale(1.1); transform-origin: top left; width: 90.9091%; height: 90.9091%; } }
+@media (max-width: 1100px) {
+  .adm-chat-fill .chat-shell { zoom: 1; }
+  @supports not (zoom: 1) { .adm-chat-fill .chat-shell { transform: none; width: 100%; height: 100%; } }
+}
 
 /* Unread badge on a sidebar item: pending review requests, live. */
 .adm-badge {
@@ -2584,7 +2723,18 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
   .pf-stats { grid-template-columns: repeat(2, 1fr); }
   .pf-stat:nth-child(2) { border-right: none; }
   .pf-stat:nth-child(-n+2) { border-bottom: 1px solid var(--line-soft); }
-  .pf-head { padding: 0 18px 18px; }
+  /* `align-items: flex-end` anchors avatar/name/button to a shared bottom
+     edge, which only stays clear of the cover because the avatar is
+     normally the tallest item. A long name or a wrapped badge row can make
+     .pf-id taller than the avatar instead, and its top — where the name
+     sits — then reaches up into the -46px overlap and renders on the cover.
+     Stacking the head vertically sidesteps that entirely: each item's
+     position only depends on what's above it, never on which sibling is
+     tallest. */
+  .pf-head { padding: 0 18px 18px; margin-top: -40px; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+  .pf-id { padding-bottom: 0; }
+  .pf-meta { justify-content: center; }
+  .pf-head > .af-btn, .pf-head > button { margin-bottom: 0; }
   .pf-pad { padding: 20px 18px 22px; }
   .pf-name { font-size: 22px; line-height: 28px; }
 }

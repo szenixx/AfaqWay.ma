@@ -141,7 +141,7 @@ export default function StudentChat({ userId, full, onNav }: {
     <div className="chat-zoom" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <div className="chat-shell" style={{ gridTemplateColumns: "minmax(0,1fr) 272px", flex: 1, minHeight: 0 }}>
         {/* ── Conversation ── */}
-        <div className="chat-col">
+        <div className="chat-col stu-chat-texture">
           {/* The platform answers, never a named person: the mark, the constant
               name, and the number of whoever is currently on the conversation.
               When a different advisor replies, only this header changes —
@@ -165,7 +165,7 @@ export default function StudentChat({ userId, full, onNav }: {
             />
           </header>
 
-          <div ref={threadRef} className="chat-thread stu-chat-texture">
+          <div ref={threadRef} className="chat-thread">
             <div className="chat-row">
               <div className="chat-msgcol">
                 <div className="chat-bubble">

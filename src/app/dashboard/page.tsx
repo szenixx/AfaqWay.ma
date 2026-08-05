@@ -4,8 +4,8 @@
    mounts the one universal WorkspaceShell. Content adapts to the user's plan
    (self_service vs full_service). See docs/workspace-architecture.md. */
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Loader } from "@/components/ds";
 import { fetchAdminRole } from "@/lib/admin";
@@ -19,12 +19,33 @@ import { useNotificationToasts } from "@/lib/notifications";
 import { useChatUnread } from "@/lib/chatUnread";
 import { useSingleSession } from "@/lib/useSingleSession";
 
+const NAV_VALUES: Nav[] = ["overview", "journey", "documents", "explore", "messages", "support", "subscription", "profile", "settings", "schedule"];
+
 export default function Dashboard() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)" }}><Loader size={56} block label="Loading your workspace" /></div>}>
+      <DashboardInner />
+    </Suspense>
+  );
+}
+
+function DashboardInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [profile, setProfile] = useState<WsProfile | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [nav, setNav] = useState<Nav>("overview");
+  /* The open module lives in the URL (?view=journey), not in React state, so
+     the browser's own Back/Forward buttons move between modules the way they
+     move between any two pages — each `setNav` below is a real navigation
+     (router.push), not a state update, so it creates a real history entry.
+     This also means a refresh naturally reopens the same module: the URL
+     already says which one, no separate persistence needed. */
+  const viewParam = searchParams.get("view");
+  const nav: Nav = (NAV_VALUES as string[]).includes(viewParam ?? "") ? (viewParam as Nav) : "overview";
+  const setNav = useCallback((id: string) => {
+    router.push(id === "overview" ? "/dashboard" : `/dashboard?view=${id}`);
+  }, [router]);
   useSingleSession(userId);
   // Live count of advisor messages, cleared while the chat is open.
   const chatUnread = useChatUnread(userId, nav === "messages");

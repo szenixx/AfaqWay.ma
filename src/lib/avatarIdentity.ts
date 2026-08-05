@@ -1,8 +1,8 @@
 /* Avatar identity — one place that decides what a user's avatar looks like.
 
-   Priority is always: uploaded photo → generated avatar. The generated avatar
-   is deterministic: the same seed always produces the same face, so it never
-   changes unless the user explicitly asks for a new one. */
+   Priority is always: uploaded photo → default person silhouette. Gender is
+   still captured on the profile and still feeds `avatar_style`, kept for a
+   future avatar picker, but nothing renders from it today. */
 
 export type Gender = "male" | "female" | "prefer_not_to_say";
 export type AvatarType = "generated" | "uploaded";
@@ -39,25 +39,6 @@ export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "female", label: "Female" },
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
-
-/* Theme parts that read as masculine / feminine / neutral. Everything not
-   listed here is chosen by the seed, so two users of the same gender still get
-   different faces. */
-const FEMININE_HAIR = ["straightLong", "straightMedium", "braids", "puff"] as const;
-const MASCULINE_FORELOCK = ["short", "underCut", "curve"] as const;
-const MASCULINE_FACEHAIR = ["bigBeard", "chevronMustache", "mustache", "none"] as const;
-
-/** Avatar configuration for the avatune theme, derived from seed + style. */
-export function avatarConfig(seed: string, style: string): Record<string, unknown> {
-  const n = hash(seed);
-  if (style === "feminine") {
-    return { seed, hair: FEMININE_HAIR[n % FEMININE_HAIR.length], faceHair: "none", faceDetails: n % 2 ? "blushes" : "none" };
-  }
-  if (style === "masculine") {
-    return { seed, hair: "medium", forelock: MASCULINE_FORELOCK[n % MASCULINE_FORELOCK.length], faceHair: MASCULINE_FACEHAIR[n % MASCULINE_FACEHAIR.length] };
-  }
-  return { seed }; // neutral: the seed decides everything
-}
 
 /** Normalises whatever the profile row holds into a complete identity. */
 export function identityFrom(row: {

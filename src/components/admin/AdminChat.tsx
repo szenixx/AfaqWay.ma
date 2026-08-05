@@ -249,7 +249,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
         </div>
 
         {/* ── CENTER: header, actions, thread, composer ── */}
-        <div className="chat-col">
+        <div className="chat-col stu-chat-texture">
           {!selUser ? (
             <ChatEmpty icon={<MessageCircle size={24} />} title="Select a conversation" sub="Pick a student on the left to open the conversation." />
           ) : (
@@ -274,7 +274,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
                 <Toggle checked={showQ} onChange={setShowQ} ariaLabel="Ask a question" label={<span style={optLbl}><CircleHelp size={14} />Question</span>} />
               </div>
 
-              <div ref={threadRef} className="chat-thread stu-chat-texture">
+              <div ref={threadRef} className="chat-thread">
                 {msgs.length === 0 && <ChatEmpty icon={<MessageCircle size={24} />} title="No messages yet" sub="Send the first update to this student." />}
                 {msgs.map((m, i) => (
                   <div key={m.id}>

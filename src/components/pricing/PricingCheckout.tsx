@@ -223,7 +223,13 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
       if (ins.error) {
         // Insert refused (e.g. the 3-per-6h receipt limit) — drop the orphaned object.
         await deleteUserFile(up.path).catch(() => {});
-        throw ins.error;
+        /* supabase-js's PostgrestError is a plain {message,details,hint,code}
+           object, not an actual Error — `throw ins.error` directly made the
+           catch below's `e instanceof Error` check always fail, so every DB
+           rejection (the rate limit included) fell through to the generic
+           "Upload failed" text instead of ins.error.message, the one place
+           that actually said what went wrong. */
+        throw new Error(ins.error.message);
       }
       setPricing("payment_id", ins.data.id as string);
       setPricing("reject_comment", "");
@@ -248,19 +254,36 @@ export default function PricingCheckout({ userId, pricing, setPricing, priceSub,
   if (underReview) {
     return (
       <>
-        <div className="af-frame-body" aria-hidden style={{ opacity: 0.5 }}>
+        {/* The real "choose a payment method" frame, inert and blurred behind
+            the overlay — not a grey placeholder box standing in for it. The
+            shimmer (the same sweep .af-skeleton uses elsewhere) is the
+            "animated" part; the overlay's own backdrop-filter is what blurs it. */}
+        <div className="af-frame-body" aria-hidden inert style={{ opacity: 0.6 }}>
           <div style={{ font: "600 15px/20px var(--font-sans)", color: "var(--ink)" }}>{plan?.name} · {plan ? money(plan.price, plan.currency) : ""}</div>
-          <div style={{ height: 160, borderRadius: 12, background: "var(--subtle)", marginTop: 12 }} />
+          <div style={{ font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-faint)", margin: "18px 0 12px" }}>Choose a payment method</div>
+          <div className="af-method-grid">
+            {methods.map((m) => (
+              <div key={m.id} className="af-skeleton" style={{ display: "flex", alignItems: "center", gap: 12, padding: 13, borderRadius: 12, border: "1px solid var(--line)" }}>
+                <MethodLogo m={m} />
+                <span style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, flex: 1 }}>
+                  <span style={{ font: "600 14px/19px var(--font-sans)", color: "var(--ink)" }}>{m.name}</span>
+                  <span style={{ font: "400 12px/16px var(--font-sans)", color: "var(--ink-soft)" }}>{m.desc}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="af-review-overlay" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24, background: "rgba(255,255,255,.72)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
+        <div className="af-review-overlay" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24, background: "rgba(255,255,255,.6)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}>
           {!confirmCancel ? (
             <>
               {/* The platform's own animated mark, not the small inline spinner —
                   reviewing a receipt is the one wait long enough to deserve it. */}
               <LogoMark size={64} />
               <div style={{ font: "600 18px/24px var(--font-sans)", color: "var(--ink)", marginTop: 18 }}>Under review</div>
-              <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink-soft)", maxWidth: 380, margin: "8px 0 20px" }}>We received your receipt and our team is verifying your payment. This usually takes a few hours, you can safely close this page and come back, your progress is saved.</p>
-              <button type="button" onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink-faint)", textDecoration: "underline" }}>Cancel this payment</button>
+              <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink-soft)", maxWidth: 320, margin: "8px 0 20px" }}>Verifying your payment, usually a few hours. Safe to close this page — we&apos;ll save your place.</p>
+              {/* Bare text link, red only — no frame/background added, per the
+                  design system's own intentional exception for this control. */}
+              <button type="button" onClick={() => setConfirmCancel(true)} style={{ background: "none", border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--red)", textDecoration: "underline" }}>Cancel this payment</button>
               <a href="https://wa.me/212600000000" target="_blank" rel="noopener noreferrer" style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 999, background: "#25D366", color: "#fff", font: "600 13.5px/1 var(--font-sans)", textDecoration: "none", boxShadow: "0 6px 16px rgba(37,211,102,.3)" }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1 3.7 3.8-1A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.3.6.6-2.2-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.6.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3c-.2.3-.9.9-.9 2.1s.9 2.5 1 2.6c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z" /></svg>
                 Chat with support

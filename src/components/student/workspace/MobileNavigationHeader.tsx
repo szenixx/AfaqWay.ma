@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren, type ReactNode } from "react";
 import { X as CloseIcon, Menu as Menu02 } from "lucide-react";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 
-/* Mobile navigation header — same structure and sequence as the reference:
-   header (logo + morphing menu/close button) → dismissable blurred overlay →
-   fixed close button → modal panel → dialog holding the navigation.
-   Only the colours, icons and primitives are ours (no react-aria-components). */
+/* Mobile navigation header — literally the marketing SiteHeader's mobile bar
+   (same compact pill that hugs its own content, same logo/text size, same
+   bare hamburger) plus the notification bell, the only addition. The
+   dropdown below it is that same header's own mobile menu shape too: a
+   centred rounded card under the bar, not a full-height side drawer. */
 
-export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
+export const MobileNavigationHeader = ({ children, rightExtra }: PropsWithChildren<{ rightExtra?: ReactNode }>) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -22,37 +23,40 @@ export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
   return (
     <>
       <header className="mnav-header">
-        <LogoMark size={24} />
-
-        <button
-          type="button"
-          aria-label="Expand navigation menu"
-          aria-expanded={open}
-          className="mnav-trigger group"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <Menu02 className="mnav-ico-menu" size={24} />
-          <CloseIcon className="mnav-ico-close" size={24} />
-        </button>
+        <div className="mnav-pill">
+          <div className="mnav-brand">
+            <LogoMark size={34} />
+            <span className="mnav-brand-name">AfaqWay</span>
+          </div>
+          {rightExtra}
+          <button
+            type="button"
+            aria-label="Expand navigation menu"
+            aria-expanded={open}
+            className="mnav-trigger group"
+            onClick={() => setOpen((v) => !v)}
+          >
+            <Menu02 className="mnav-ico-menu" size={24} />
+            <CloseIcon className="mnav-ico-close" size={24} />
+          </button>
+        </div>
       </header>
 
       {open && (
-        <div className="mnav-overlay" onClick={() => setOpen(false)}>
-          <button
-            type="button"
-            aria-label="Close navigation menu"
+        <>
+          <div className="mnav-dropdown-backdrop" onClick={() => setOpen(false)} aria-hidden />
+          {/* Closes on any click inside too — picking a module should
+              dismiss the dropdown, not leave it hanging open. */}
+          <div
+            className="mnav-dropdown"
             onClick={() => setOpen(false)}
-            className="mnav-close"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
           >
-            <CloseIcon size={24} />
-          </button>
-
-          <div className="mnav-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="mnav-dialog" role="dialog" aria-modal="true" aria-label="Navigation">
-              {children}
-            </div>
+            {children}
           </div>
-        </div>
+        </>
       )}
     </>
   );

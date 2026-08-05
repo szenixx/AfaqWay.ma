@@ -1,9 +1,11 @@
 "use client";
 
 import { titleCase } from "@/lib/text";
+import { Info } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon, Loader, Pill } from "@/components/ds";
+import { Stepper, StepperNav, StepperItem, StepperIndicator, StepperSeparator } from "@/components/ds/Stepper";
 import { Confetti } from "@/components/ds/Confetti";
 import { GENDER_OPTIONS, type Gender } from "@/lib/avatarIdentity";
 import { ensureGeneratedAvatar } from "@/lib/avatarProfile";
@@ -176,6 +178,14 @@ function groupFields(fields: FieldDef[]): FieldDef[][] {
   return groups;
 }
 
+/* @reui/c-input-5's own destructive red — explicit hex, not var(--red):
+   this validation styling is deliberately kept off the platform design
+   system, so it can't reach for a DS token either. Used only for the two
+   hand-rolled invalid borders (multiselect/segmented) that can't go through
+   the scoped CSS override in globals.css because they're inline styles,
+   which always beat a class selector. */
+const REUI_RED = "#DC2626";
+
 const eyebrow: CSSProperties = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-faint)" };
 const sectionTitle: CSSProperties = { font: "600 18px/24px var(--font-sans)", color: "var(--ink)", margin: "4px 0 16px" };
 const fieldLabel: CSSProperties = { font: "500 13px/20px var(--font-sans)", color: "var(--ink)", marginBottom: 6 };
@@ -191,7 +201,12 @@ function Segmented({ options, value, onChange }: { options: { value: string; lab
         const active = value === o.value;
         return (
           <button key={o.value} type="button" role="radio" aria-checked={active} disabled={o.disabled} onClick={() => !o.disabled && onChange(o.value)}
-            style={{ flex: "0 1 auto", minWidth: 96, height: 36, padding: "0 16px", borderRadius: "var(--radius-pill)", border: active ? "1px solid var(--indigo-line)" : "1px solid var(--line)", cursor: o.disabled ? "not-allowed" : "pointer", font: "600 13px/1 var(--font-sans)", background: active ? "var(--indigo-tint)" : "var(--card)", color: active ? "var(--indigo-text)" : o.disabled ? "var(--ink-faint)" : "var(--ink)", opacity: o.disabled ? 0.5 : 1, transition: "border-color 120ms cubic-bezier(.4,0,.2,1), background 120ms cubic-bezier(.4,0,.2,1)" }}>
+            /* Solid when chosen — the same idea as a primary button, not the
+               pale tint used for hover/secondary states — so "which one is
+               picked" reads at a glance. --primary-400, the DS's lighter
+               indigo step (the 600 default read as too dark/heavy here,
+               unbalanced against the rest of the page). */
+            style={{ flex: "0 1 auto", minWidth: 96, height: 36, padding: "0 16px", borderRadius: "var(--radius-pill)", border: active ? "1px solid var(--primary-400)" : "1px solid var(--line)", cursor: o.disabled ? "not-allowed" : "pointer", font: "600 13px/1 var(--font-sans)", background: active ? "var(--primary-400)" : "var(--card)", color: active ? "#fff" : o.disabled ? "var(--ink-faint)" : "var(--ink)", opacity: o.disabled ? 0.5 : 1, boxShadow: active ? "0 4px 12px rgba(76,99,196,.24)" : "none", transition: "border-color 120ms cubic-bezier(.4,0,.2,1), background 120ms cubic-bezier(.4,0,.2,1), box-shadow 120ms cubic-bezier(.4,0,.2,1)" }}>
             {o.label}
           </button>
         );
@@ -207,9 +222,18 @@ function SaveIndicator({ state }: { state: "idle" | "saving" | "saved" | "error"
   return <span style={{ font: "400 13px/20px var(--font-sans)", color: "var(--red)" }}>{"Couldn’t save, retrying"}</span>;
 }
 
+/* c-input-5's own point: an invalid field says *why*, not just a red edge.
+   One template covers every flow-config field instead of hand-writing a
+   message per key — "{label} is required." reads fine for all of them
+   (text/select/segmented ask for one value; multiselect for "at least one"). */
+function fieldErrorText(field: FieldDef): string {
+  if (field.kind === "multiselect") return `Please choose at least one ${field.label.toLowerCase()}.`;
+  return `${field.label} is required.`;
+}
+
 function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { field: FieldDef; value: string; stepValues: Record<string, string>; onChange: (v: string) => void; onFlush: () => void; invalid?: boolean }) {
   if (field.kind === "text") {
-    return <Field label={field.label} icon={iconForLabel(field.label)} hint={field.hint} placeholder={field.placeholder} required={field.required} inputMode={field.inputMode} maxLength={field.maxLength} value={value} aria-invalid={invalid || undefined} onChange={(e) => onChange(sanitize(field, e.target.value))} onBlur={onFlush} />;
+    return <Field label={field.label} icon={iconForLabel(field.label)} hint={field.hint} placeholder={field.placeholder} required={field.required} inputMode={field.inputMode} maxLength={field.maxLength} value={value} aria-invalid={invalid || undefined} error={invalid ? fieldErrorText(field) : undefined} onChange={(e) => onChange(sanitize(field, e.target.value))} onBlur={onFlush} />;
   }
   if (field.kind === "select") {
     return (
@@ -222,7 +246,7 @@ function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { f
           icon={iconForLabel(field.label)}
           placeholder={field.placeholder ?? "Select"}
           ariaLabel={field.label}
-          error={invalid ? " " : undefined}
+          error={invalid ? fieldErrorText(field) : undefined}
         />
       </div>
     );
@@ -237,7 +261,11 @@ function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { f
     return (
       <div>
         <div style={fieldLabel}>{field.label}{field.hint && <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}> · {field.hint}</span>}</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: invalid ? 6 : 0, border: invalid ? "1px solid var(--red)" : "none", borderRadius: 12 }}>
+        {/* Same pill as before, just laid out so the row wraps in order
+            instead of drifting — align-content keeps each wrapped line
+            flush left rather than letting the flex box stretch gaps between
+            rows to fill the container height. */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: 8, padding: invalid ? 6 : 0, border: invalid ? `1px solid ${REUI_RED}` : "none", borderRadius: 12 }}>
           {field.options?.map((o) => {
             const on = chosen.includes(o.value);
             const full = !on && chosen.length >= max;
@@ -249,6 +277,7 @@ function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { f
             );
           })}
         </div>
+        {invalid && <span className="af-onb-error">{fieldErrorText(field)}</span>}
       </div>
     );
   }
@@ -256,9 +285,10 @@ function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { f
   return (
     <div>
       <div style={fieldLabel}>{field.label}</div>
-      <div style={{ display: "inline-block", padding: invalid ? 6 : 0, border: invalid ? "1px solid var(--red)" : "none", borderRadius: 14 }}>
+      <div style={{ display: "inline-block", padding: invalid ? 6 : 0, border: invalid ? `1px solid ${REUI_RED}` : "none", borderRadius: 14 }}>
         <Segmented value={value} onChange={onChange} options={(field.options ?? []).map((o) => ({ ...o, disabled: dis ? o.value === dis.option : false }))} />
       </div>
+      {invalid && <span className="af-onb-error">{fieldErrorText(field)}</span>}
       {dis?.note && <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>{dis.note}</div>}
     </div>
   );
@@ -297,21 +327,25 @@ function MobileBar() {
 }
 
 // Phone-only horizontal stepper (1—2—3—4—5) with the current step title + copy.
+// Indicator/separator structure ported from @reui/stepper — see Stepper.tsx.
 function MobileSteps({ items, view, reached, meta }: { items: string[]; view: number; reached: number; meta: { title: string; description: string } }) {
   return (
     <div className="af-onboard-mobilesteps" style={{ marginBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-        {items.map((label, i) => {
-          const step = i + 1;
-          const active = step === view;
-          const done = step <= reached && !active;
-          return (
-            <div key={step} style={{ display: "flex", alignItems: "center", flex: i < items.length - 1 ? 1 : "none" }}>
-              <span style={{ width: 28, height: 28, borderRadius: 999, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", background: active || done ? "var(--indigo-600)" : "var(--card)", color: active || done ? "#fff" : "var(--ink-faint)", border: step > reached ? "1px solid var(--line)" : "none", font: "600 12px/1 var(--font-sans)" }}>{done ? <Icon name="check" size={13} /> : step}</span>
-              {i < items.length - 1 && <span style={{ flex: 1, height: 2, background: reached > step ? "var(--indigo-600)" : "var(--line)", borderRadius: 999 }} />}
-            </div>
-          );
-        })}
+      <div style={{ marginBottom: 16 }}>
+        <Stepper value={view} reached={reached} indicators={{ completed: <Icon name="check" size={13} /> }}>
+          <StepperNav>
+            {items.map((_, i) => {
+              const step = i + 1;
+              const isLast = i === items.length - 1;
+              return (
+                <StepperItem key={step} step={step} isLast={isLast}>
+                  <StepperIndicator />
+                  <StepperSeparator isLast={isLast} />
+                </StepperItem>
+              );
+            })}
+          </StepperNav>
+        </Stepper>
       </div>
       <h1 style={{ font: "700 22px/28px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{meta.title}</h1>
       <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0" }}>{meta.description}</p>
@@ -335,7 +369,7 @@ function StepFooter({ onBack, backLabel = "Back", saveState, right }: { onBack?:
 // Small 2-step progress marker used inside the Program step.
 function SubStepper({ sub, labels, onJump }: { sub: number; labels: string[]; onJump: (i: number) => void }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", marginBottom: 22 }}>
+    <div style={{ display: "flex", alignItems: "center" }}>
       {labels.map((l, i) => {
         const active = i === sub, done = i < sub;
         return (
@@ -582,8 +616,8 @@ export default function ProfileSetup() {
               <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{meta.title}</h1>
               <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0", maxWidth: 620 }}>{meta.description}</p>
             </div>
-            {isProgram && <div style={{ marginBottom: 14 }}><SubStepper sub={progSub} labels={["Your preferences", "Pick your programs"]} onJump={setProgSub} /></div>}
-            {isPricing && <div style={{ marginBottom: 14 }}><SubStepper sub={priceSub} labels={["Choose a plan", "Checkout"]} onJump={setPriceSub} /></div>}
+            {isProgram && <div className="af-substep-card" style={{ marginBottom: 14 }}><SubStepper sub={progSub} labels={["Your preferences", "Pick your programs"]} onJump={setProgSub} /></div>}
+            {isPricing && <div className="af-substep-card" style={{ marginBottom: 14 }}><SubStepper sub={priceSub} labels={["Choose a plan", "Checkout"]} onJump={setPriceSub} /></div>}
             <div className="af-onboard-scroll">
               <div className={`af-frame ${isPricing && priceSub === 0 ? "af-frame-open" : "af-frame-card"}${isRoadmap ? " af-frame-video" : ""}`}>
                 {isRoadmap && (
@@ -618,18 +652,18 @@ export default function ProfileSetup() {
               <div style={sectionTitle}>Who you are</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div className="af-row-name">
-                  <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} onChange={(e) => setP("full_name", titleCase(e.target.value))} onBlur={flushSave} placeholder="Your full name" />
+                  <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} error={showErrors && !personal.full_name.trim() ? "Full name is required." : undefined} onChange={(e) => setP("full_name", titleCase(e.target.value))} onBlur={flushSave} placeholder="Your full name" />
                   <Select
                     label="Gender" icon={fieldIcon("gender")} value={personal.gender}
                     onChange={(v) => { setP("gender", v); flushSave(); }}
                     options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))}
                     placeholder="Select"
-                    error={showErrors && !personal.gender ? " " : undefined}
+                    error={showErrors && !personal.gender ? "Please select your gender." : undefined}
                   />
                 </div>
                 <div className="af-row-2">
-                  <Field label="Date of birth" icon={fieldIcon("dob")} type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
-                  <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} onChange={(e) => setP("city", titleCase(e.target.value))} onBlur={flushSave} placeholder="e.g. Casablanca" />
+                  <Field label="Date of birth" icon={fieldIcon("dob")} type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} error={showErrors && !personal.date_of_birth ? "Date of birth is required." : undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
+                  <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} error={showErrors && !personal.city.trim() ? "City is required." : undefined} onChange={(e) => setP("city", titleCase(e.target.value))} onBlur={flushSave} placeholder="e.g. Casablanca" />
                 </div>
                 <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <span style={{ font: "500 13px/20px var(--font-sans)", color: "var(--ink)" }}>WhatsApp number</span>
@@ -637,6 +671,7 @@ export default function ProfileSetup() {
                     <input className="af" value={personal.whatsapp_country_code} onChange={(e) => setP("whatsapp_country_code", e.target.value.replace(/[^\d+]/g, ""))} onBlur={flushSave} style={{ width: 76, textAlign: "center" }} aria-label="Country code" />
                     <input className="af" value={personal.whatsapp_number} aria-invalid={(showErrors && !/^\d{6,15}$/.test(personal.whatsapp_number.replace(/\s/g, ""))) || undefined} onChange={(e) => setP("whatsapp_number", e.target.value.replace(/[^\d]/g, ""))} onBlur={flushSave} inputMode="numeric" placeholder="6XXXXXXXX" style={{ flex: 1 }} aria-label="WhatsApp number" />
                   </div>
+                  {showErrors && !/^\d{6,15}$/.test(personal.whatsapp_number.replace(/\s/g, "")) && <span className="af-onb-error">Enter a valid WhatsApp number.</span>}
                 </label>
               </div>
 
@@ -685,10 +720,16 @@ export default function ProfileSetup() {
                 </>
               ) : (
                 <>
-                  {/* Slim bilingual reminder, sits above the programme list. */}
-                  <div className="af-remind">
-                    <span className="af-remind-en">Take your time choosing your program.</span>
-                    <span className="af-remind-ar" dir="rtl" lang="ar">خذ وقتك في اختيار برنامجك الدراسي.</span>
+                  {/* A note, not a banner: leading icon + left accent, same
+                      amber as before — just without the filled pill/frame
+                      behind the text. Sits at the very top of the frame. */}
+                  <div className="af-note">
+                    <span className="af-note-ico"><Info size={15} /></span>
+                    <span className="af-note-body">
+                      <span className="af-note-en">Take your time choosing your program.</span>
+                      <span className="af-note-sep" aria-hidden>·</span>
+                      <span className="af-note-ar" dir="rtl" lang="ar">خذ وقتك في اختيار برنامجك الدراسي.</span>
+                    </span>
                   </div>
                   <ProgramMatch profile={programProfile} selected={selectedPrograms} onSelect={(ids) => setFieldValue(bStep!, "selected_programs", ids.join("|"))} />
                 </>

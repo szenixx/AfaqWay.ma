@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { emailAnnouncement } from "@/lib/email/client";
-/* Imported from the module, not the design-system barrel: pulling the barrel
-   into a lib drags in every component and creates an import cycle back
-   through anything that reads notifications. */
-import { toast, type ToastKind } from "@/components/ds/Toast";
+import { raiseSonnerNotification } from "@/lib/sonnerNotify";
 
 /* The notification centre.
 
@@ -261,15 +258,10 @@ export function useNotifications(userId: string | null | undefined) {
 
 /* ── Floating notifications ───────────────────────────────────────────────── */
 
-/** The notification kinds that map onto a toast's own vocabulary. */
-const TOAST_KIND: Record<NotifKind, ToastKind> = {
-  update: "update", journey: "journey", document: "document",
-  schedule: "system", message: "message", payment: "payment", system: "system",
-};
-
 /**
  * Raises a floating toast for every notification that arrives while the person
- * is looking at the platform.
+ * is looking at the platform. Rendered by sonner (its own icons/frame/type/
+ * animation — see sonnerNotify.ts), not the ds Toast used everywhere else.
  *
  * The database row is the single source: whatever inserted it — a journey
  * decision, a document verification, a payment update, an announcement — gets a
@@ -293,14 +285,7 @@ export function useNotificationToasts(
     return subscribeNotifications(userId, (inserted) => {
       // Only arrivals raise a toast; a row being marked read must not.
       if (!inserted || inserted.read) return;
-      toast({
-        kind: TOAST_KIND[inserted.kind] ?? "system",
-        title: inserted.title,
-        message: inserted.body || undefined,
-        at: inserted.created_at,
-        actionLabel: "Click Here",
-        onAction: inserted.link ? () => open.current(inserted.link, inserted) : undefined,
-      });
+      raiseSonnerNotification(inserted, (link) => open.current(link, inserted));
     });
   }, [userId]);
 }

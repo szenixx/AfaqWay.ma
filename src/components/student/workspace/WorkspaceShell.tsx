@@ -7,6 +7,7 @@
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, Route, FileText, Compass, MessageCircle, LifeBuoy,
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
@@ -22,8 +23,9 @@ import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
 import { nextScheduleEvent } from "@/lib/schedule";
 import { useNotifications } from "@/lib/notifications";
-import { UserAvatar, BrandLogo, Toaster } from "@/components/ds";
-import { GeometricBackground } from "@/components/ds/Backgrounds";
+import { UserAvatar, BrandLogo } from "@/components/ds";
+import { Toaster as SonnerToaster } from "sonner";
+import { AnimatedGridPattern } from "@/components/home/AnimatedGridPattern";
 import { NotificationInbox } from "./NotificationInbox";
 import SidebarCarousel from "./SidebarCarousel";
 import {
@@ -73,25 +75,15 @@ export default function WorkspaceShell({
   usePresenceBroadcast(profile.userId, { name: profile.fullName, role: "student" });
   const full = profile.plan === "full_service";
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
+  const router = useRouter();
 
-  /* Module history powering the top-bar back/forward buttons. Every navigation
-     in the workspace goes through `navigate`, so the trail is complete; back and
-     forward replay it without recording the replay itself. */
-  const [hist, setHist] = useState<Nav[]>([nav]);
-  const [hIdx, setHIdx] = useState(0);
-  const canBack = hIdx > 0;
-  const canFwd = hIdx < hist.length - 1;
+  /* `onNav` is a real navigation (router.push, from the page above), so every
+     call here already lands in the browser's own history — the top bar's
+     back/forward buttons just replay that real history instead of a
+     hand-rolled copy of it. */
   const navigate = (n: Nav) => {
     if (n === nav) return;
-    setHist((h) => [...h.slice(0, hIdx + 1), n]);
-    setHIdx(hIdx + 1);
     onNav(n);
-  };
-  const goHist = (step: -1 | 1) => {
-    const i = hIdx + step;
-    if (i < 0 || i >= hist.length) return;
-    setHIdx(i);
-    onNav(hist[i]);
   };
 
   /* Collapsed state persists (cookie) and toggles with ⌘/Ctrl+B, like the
@@ -116,6 +108,17 @@ export default function WorkspaceShell({
       {!!opts?.badge && (opts.dotOnly
         ? <span className="sw-navdot" aria-label={`${opts.badge} unread`} />
         : <span className="sw-navbadge">{opts.badge > 9 ? "9+" : opts.badge}</span>)}
+    </button>
+  );
+
+  /* The mobile hamburger dropdown's own row — same frame as the marketing
+     site's mobile menu links (icon added, per that request). */
+  const mobileRow = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; badge?: number }) => (
+    <button key={id} type="button" className={`mnav-row${nav === id ? " active" : ""}`} onClick={opts?.onClick ?? (() => navigate(id))}>
+      <span className="mnav-row-ico">{icon}</span>
+      <span className="mnav-row-label">{label}</span>
+      {!!opts?.badge && <span className="mnav-row-badge">{opts.badge > 9 ? "9+" : opts.badge}</span>}
+      <ChevronRight size={16} className="mnav-row-chev" />
     </button>
   );
 
@@ -169,11 +172,21 @@ export default function WorkspaceShell({
 
   return (
     <div className="sw-root">
-      {/* Canvas: grid ruling plus two corner blooms, sitting behind every
-          module's frames and cards. Blue, from the platform tokens. */}
-      <GeometricBackground />
-      {/* One stack for the whole workspace; every module raises toasts into it. */}
-      <Toaster />
+      {/* Canvas: the home hero's own animated grid — same background across
+          every module, not just the marketing page. */}
+      <div aria-hidden style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <AnimatedGridPattern />
+      </div>
+      {/* One stack for the whole workspace; every module raises toasts into it.
+          Sonner's own look (frame, type, animation) — not the ds Toast used
+          everywhere else in the app — per explicit request for this surface.
+          White frame with only the icon carrying colour (green/orange/yellow/
+          red per sonnerNotify.ts, never blue) rather than sonner's own
+          richColors, which tints the whole toast body per variant. */}
+      <SonnerToaster
+        position="top-center" closeButton expand
+        toastOptions={{ style: { background: "#fff", borderRadius: "16px", border: "1.5px solid #E2E4EA", boxShadow: "0 18px 44px rgba(23,35,58,.16)" } }}
+      />
       <div className="sw-shell">
         {/* Sidebar */}
         <aside className={`sw-sidebar${sidebarMini ? " mini" : ""}`}>
@@ -211,8 +224,8 @@ export default function WorkspaceShell({
             {/* mobile logo + menu */}
             {/* Back / forward through visited modules, then the current module name. */}
             <div className="sw-topnav">
-              <button type="button" className="sw-navbtn" onClick={() => goHist(-1)} disabled={!canBack} aria-label="Back" title="Back"><ChevronLeft size={20} /></button>
-              <button type="button" className="sw-navbtn" onClick={() => goHist(1)} disabled={!canFwd} aria-label="Forward" title="Forward"><ChevronRight size={20} /></button>
+              <button type="button" className="sw-navbtn" onClick={() => router.back()} aria-label="Back" title="Back"><ChevronLeft size={20} /></button>
+              <button type="button" className="sw-navbtn" onClick={() => router.forward()} aria-label="Forward" title="Forward"><ChevronRight size={20} /></button>
               <span className="sw-topnav-sep" aria-hidden />
               <span className="sw-topnav-title">{MODULE_TITLE[nav]}</span>
             </div>
@@ -275,21 +288,48 @@ export default function WorkspaceShell({
         </div>
       </div>
 
-      {/* Mobile navigation — header + dismissable dialog (reference structure) */}
-      <MobileNavigationHeader>
-        <div className="sw-brandrow" style={{ height: "auto", marginBottom: 6 }}>
-          <Link href="/" className="sw-brand" aria-label="AfaqWay home">
-            <BrandLogo size={24} />
-            <span className="sw-brand-name">AfaqWay</span>
-          </Link>
+      {/* Mobile navigation — floating pill bar (same design as onboarding /
+          home) + dismissable dialog. The dialog's own sequence: Profile,
+          then every module the desktop sidebar shows, then account
+          settings — Profile isn't buried in a sub-menu here. */}
+      <MobileNavigationHeader
+        rightExtra={
+          <div style={{ position: "relative" }}>
+            <button type="button" className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+              <BellIcon disableHover className="sw-topbar-icon" />
+              {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
+            </button>
+            {notifOpen && (
+              <NotificationInbox
+                userId={profile.userId}
+                onOpen={(link) => navigate(link as Nav)}
+                onClose={() => setNotifOpen(false)}
+              />
+            )}
+          </div>
+        }
+      >
+        {mobileRow("profile", "Profile", <UserRound size={18} />)}
+        <div style={{ marginTop: 10 }}>
+          {PRIMARY_NAV.map((n) => mobileRow(n.id, n.label, n.icon))}
+          {mobileRow("messages", "Messages", <MessageCircle size={18} />, { badge: chatUnread })}
         </div>
-        <div className="sw-group-label">Platform</div>
-        {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
-        <div className="sw-nav-divider" role="separator" />
-        {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread, dotOnly: true })}
-        {navItem("subscription", "Subscription", <CreditCard size={NAV_ICON} />)}
-        {navItem("support", "Support", <LifeBuoy size={NAV_ICON} />)}
+        <div style={{ marginTop: 10 }}>
+          {mobileRow("subscription", "Payments", <CreditCard size={18} />)}
+          {mobileRow("settings", "Settings", <SettingsIcon size={18} />)}
+          {mobileRow("support", "Support", <LifeBuoy size={18} />)}
+        </div>
       </MobileNavigationHeader>
+
+      {/* Mobile-only floating chat launcher, WhatsApp-extension-style: fixed
+          bottom-right corner over the page. Hidden once already inside
+          Messages. */}
+      {nav !== "messages" && (
+        <button type="button" className={`sw-mobile-fab${chatUnread > 0 ? " unread" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
+          <ChatBubbleIcon disableHover className="sw-topbar-icon" />
+          {chatUnread > 0 && <span className="sw-mobile-fab-dot" aria-hidden />}
+        </button>
+      )}
 
     </div>
   );
