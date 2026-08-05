@@ -32,3 +32,41 @@ export function useDebugLog(): DebugEntry[] {
   }, []);
   return log;
 }
+
+/* ── One-at-a-time visual-effect toggles ──────────────────────────────────
+   Each flag maps to an `html.dbg-<flag>` class (see the CSS block flagged
+   "TEMPORARY DEBUG TOGGLES" near the end of globals.css) that neutralises one
+   specific effect with !important, so it can be flipped live on a real phone
+   without a redeploy. Never combine two at once while testing — the whole
+   point is isolating exactly one cause. */
+export const DEBUG_FLAGS = [
+  { key: "no-texture", label: "1. Chat texture/background" },
+  { key: "no-fixed-lock", label: "2. sw-content-full position:fixed (chat scroll-lock)" },
+  { key: "no-blobs", label: "3. filter:blur() sw-root corner blobs" },
+  { key: "no-mask", label: "4. -webkit-mask-image (background grid)" },
+  { key: "no-zoom", label: "5. chat-zoom (zoom/transform)" },
+  { key: "no-anim", label: "8. All CSS animations (global)" },
+  { key: "no-trans", label: "9. All CSS transitions (global)" },
+] as const;
+
+export type DebugFlagKey = typeof DEBUG_FLAGS[number]["key"];
+
+const flagListeners = new Set<() => void>();
+const activeFlags = new Set<DebugFlagKey>();
+
+export function toggleDebugFlag(key: DebugFlagKey) {
+  const el = document.documentElement;
+  if (activeFlags.has(key)) { activeFlags.delete(key); el.classList.remove(`dbg-${key}`); dbg(`flag OFF: ${key}`); }
+  else { activeFlags.add(key); el.classList.add(`dbg-${key}`); dbg(`flag ON: ${key}`); }
+  flagListeners.forEach((l) => l());
+}
+
+export function useActiveDebugFlags(): Set<DebugFlagKey> {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const l = () => force((v) => v + 1);
+    flagListeners.add(l);
+    return () => { flagListeners.delete(l); };
+  }, []);
+  return activeFlags;
+}
