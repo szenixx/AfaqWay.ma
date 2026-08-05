@@ -7,6 +7,8 @@ import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
 import { ChatEmpty, ChatDayDivider, isNewChatDay, isLastOfGroup, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import { ChatDebugOverlay } from "@/components/chat/ChatDebugOverlay";
+import { dbg } from "@/lib/chatDebug";
 import { Loader, Pill, Status, BrandLogo } from "@/components/ds";
 import { useAdvisorIdentity, lastSeenLabel } from "@/lib/advisor";
 import { firstUnreadId } from "@/lib/chatUnread";
@@ -53,20 +55,26 @@ export default function StudentChat({ userId, full, onNav }: {
   const fileRef = useRef<HTMLInputElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  dbg(`StudentChat RENDER msgs.len=${msgs.length}`);
+
+  const load = useCallback(async (reason: string) => {
+    dbg(`load() start (${reason})`);
     const { data } = await supabase.from("messages").select("id, sender, body, file_path, file_name, created_at, reply_to, pinned, emailed, meta, reactions, seen_at").eq("user_id", userId).order("created_at", { ascending: true });
+    dbg(`load() done (${reason}) -> ${(data ?? []).length} rows`);
     setMsgs((data ?? []) as Msg[]);
   }, [userId]);
 
   useEffect(() => {
-    void load();
+    dbg("StudentChat MOUNT effect (userId/load changed)");
+    void load("mount");
     requestNotify();
     const ch = supabase.channel(`stu-msgs-${userId}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${userId}` }, (payload) => {
-      void load();
+      dbg(`realtime stu-msgs event: ${payload.eventType}`);
+      void load(`realtime:${payload.eventType}`);
       const m = payload.new as { sender?: string; body?: string } | null;
       if (payload.eventType === "INSERT" && m?.sender === "admin") { notify("New message from AfaqWay", m.body?.slice(0, 90) || "You received a file"); void markMessagesSeen(userId); }
-    }).subscribe();
-    return () => { supabase.removeChannel(ch); };
+    }).subscribe((status) => dbg(`stu-msgs channel status: ${status}`));
+    return () => { dbg("StudentChat UNMOUNT effect cleanup"); supabase.removeChannel(ch); };
   }, [userId, load]);
 
   /* This component only mounts while the student is looking at the
@@ -85,9 +93,10 @@ export default function StudentChat({ userId, full, onNav }: {
      newest message, which is the bottom anyway. */
   useEffect(() => {
     const thread = threadRef.current;
-    if (!thread || msgs.length === 0) return;
+    if (!thread || msgs.length === 0) { dbg(`scroll-effect skipped: thread=${!!thread} msgs.len=${msgs.length}`); return; }
     const target = firstUnreadId(userId, msgs);
     const el = target ? thread.querySelector<HTMLElement>(`[data-msg="${target}"]`) : null;
+    dbg(`scroll-effect: target=${target ?? "none"} found=${!!el}`);
     if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
     else thread.scrollTop = thread.scrollHeight;
   }, [msgs, userId]);
@@ -110,7 +119,7 @@ export default function StudentChat({ userId, full, onNav }: {
     const url = await fileUrl(path, "update_files", name ?? undefined);
     if (url) { const a = document.createElement("a"); a.href = url; a.download = name ?? ""; document.body.appendChild(a); a.click(); a.remove(); }
   }
-  async function deleteMsg(m: Msg) { setMenu(null); if (m.sender !== "user") return; await supabase.from("messages").delete().eq("id", m.id); void load(); }
+  async function deleteMsg(m: Msg) { setMenu(null); if (m.sender !== "user") return; await supabase.from("messages").delete().eq("id", m.id); void load("deleteMsg"); }
 
   async function send() {
     if ((!body.trim() && !file) || sending || blocked) return;
@@ -125,7 +134,7 @@ export default function StudentChat({ userId, full, onNav }: {
       const { data, error } = await supabase.rpc("send_user_message", { p_body: body.trim(), p_file_path: fp, p_file_name: fn, p_reply_to: replyTo?.id ?? null });
       if (error) { setNotice({ kind: "error", text: "Could not send: " + error.message }); return; }
       const res = (data ?? {}) as { ok?: boolean; reason?: string };
-      if (res.ok) { setBody(""); setFile(null); setReplyTo(null); void load(); }
+      if (res.ok) { setBody(""); setFile(null); setReplyTo(null); void load("send"); }
       else if (res.reason === "banned") { setBlocked(true); setNotice({ kind: "error", text: "Your account is currently blocked. Please contact support." }); }
       else setNotice({ kind: "error", text: "Message not sent. Please try again." });
     } catch (e) { setNotice({ kind: "error", text: "Could not send: " + (e instanceof Error ? e.message : "error") }); } finally { setSending(false); setUploadingName(null); }
@@ -139,6 +148,7 @@ export default function StudentChat({ userId, full, onNav }: {
 
   return (
     <div className="chat-zoom" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <ChatDebugOverlay />
       <div className="chat-shell" style={{ gridTemplateColumns: "minmax(0,1fr) 272px", flex: 1, minHeight: 0 }}>
         {/* ── Conversation ── */}
         <div className="chat-col stu-chat-texture">

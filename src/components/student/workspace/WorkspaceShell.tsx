@@ -28,6 +28,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { AnimatedGridPattern } from "@/components/home/AnimatedGridPattern";
 import { NotificationInbox } from "./NotificationInbox";
 import SidebarCarousel from "./SidebarCarousel";
+import { dbg } from "@/lib/chatDebug"; // TEMPORARY, see chatDebug.ts
 import {
   Overview, Journey, Documents, Explore, Support,
   Subscription, Profile, Settings, type WsProfile,
@@ -64,6 +65,7 @@ export default function WorkspaceShell({
   onProgramRequest: (r: { program: string; university: string; reason: string }) => Promise<boolean>;
   onReload: () => Promise<void>;
 }) {
+  dbg(`WorkspaceShell RENDER nav=${nav} chatUnread=${chatUnread}`);
   const [menu, setMenu] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   /* Drives both the bell's red dot and its "keeps moving until read"

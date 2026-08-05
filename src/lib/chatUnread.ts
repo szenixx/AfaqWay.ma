@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { dbg } from "@/lib/chatDebug"; // TEMPORARY, see chatDebug.ts
 
 /* Unread advisor messages.
  *
@@ -61,12 +62,13 @@ export function useChatUnread(userId: string | null | undefined, active: boolean
 
   useEffect(() => {
     if (!userId) return;
+    dbg(`chat-unread effect (re)subscribing, active=${active}`);
     const channel = supabase
       .channel(`chat-unread-${userId.slice(0, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
-        () => { if (active) markSeen(); else void count(); });
-    channel.subscribe();
-    return () => { void supabase.removeChannel(channel); };
+        (payload) => { dbg(`chat-unread channel event: ${payload.eventType}, active=${active}`); if (active) markSeen(); else void count(); });
+    channel.subscribe((status) => dbg(`chat-unread channel status: ${status}`));
+    return () => { dbg("chat-unread channel cleanup"); void supabase.removeChannel(channel); };
   }, [userId, active, count, markSeen]);
 
   return unread;
