@@ -837,8 +837,12 @@ body {
 /* Fixed to the viewport (not the page), so it stays visible while the
    workspace content scrolls underneath it. */
 .mnav-header { display: none; align-items: center; justify-content: center; padding: calc(24px + env(safe-area-inset-top, 0px)) 16px 0; background: transparent; position: fixed; top: 0; left: 0; right: 0; z-index: 30; }
-.mnav-pill { display: flex; align-items: center; gap: 20px; max-width: calc(100vw - 32px); height: 64px; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow-card); padding: 10px 20px; }
-.mnav-brand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+/* Full-width bar, not a shrink-wrapped pill: it always fills the header's
+   own 16px side inset — on every phone size, not just the ones this was
+   tuned against — while keeping the same rounded/bordered/shadowed frame.
+   Brand pins left and pushes the bell + hamburger to the right edge. */
+.mnav-pill { display: flex; align-items: center; gap: 16px; width: 100%; height: 64px; box-sizing: border-box; background: var(--card); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow-card); padding: 10px 20px; }
+.mnav-brand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; }
 .mnav-brand-name { font: 700 22px/1 var(--font-sans); color: var(--ink); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mnav-trigger { position: relative; display: inline-flex; align-items: center; padding: 6px; margin: 0; border: none; background: none; color: var(--ink-soft); cursor: pointer; }
 .mnav-trigger:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; border-radius: 6px; }
@@ -847,20 +851,28 @@ body {
 .mnav-trigger[aria-expanded="true"] .mnav-ico-menu { opacity: 0; }
 .mnav-trigger[aria-expanded="true"] .mnav-ico-close { opacity: 1; }
 @keyframes afFadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* Pops from the hamburger button's own corner, not the centre of the
+   screen — reads as "this menu came from that button" the way a native
+   overflow menu does. */
+@keyframes afMenuPop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 
-/* Dropdown — same frame as the SiteHeader's mobile menu: a centred rounded
-   card below the bar, not a full-height side drawer. Each row keeps the
-   reference's own divider/chevron look; the only addition is a leading icon
-   per row, requested explicitly. */
+/* Dropdown — deliberately the same frame as the desktop avatar menu
+   (.sw-menu): same card, border, radius and shadow, and every row below
+   reuses .sw-menu-row itself, so mobile's menu is not a separate design,
+   just that same menu anchored under the hamburger instead of the avatar. */
 .mnav-dropdown-backdrop { position: fixed; inset: 0; z-index: 15; }
-.mnav-dropdown { position: fixed; top: var(--mnav-clear); left: 50%; transform: translateX(-50%); width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - var(--mnav-clear) - 16px); overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 10px 30px rgba(23,35,58,.12); padding: 8px 16px 16px; z-index: 20; animation: afFadeIn 180ms var(--ease); }
-.mnav-row { display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; border: none; border-bottom: 1px solid var(--line-soft); background: none; padding: 0; cursor: pointer; font: 500 15px/22px var(--font-sans); color: var(--ink); text-align: left; }
-.mnav-row-ico { display: flex; align-items: center; justify-content: center; flex: none; color: var(--ink-soft); }
-.mnav-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mnav-row-chev { flex: none; color: var(--ink-faint); }
-.mnav-row.active { color: var(--indigo-600); }
-.mnav-row.active .mnav-row-ico { color: var(--indigo-600); }
-.mnav-row-badge { flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--red); color: #fff; font: 700 10.5px/18px var(--font-sans); text-align: center; }
+.mnav-dropdown { position: fixed; top: var(--mnav-clear); right: 16px; transform-origin: top right; min-width: 232px; width: max-content; max-width: calc(100vw - 32px); max-height: calc(100dvh - var(--mnav-clear) - 16px); overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 48px rgba(23,35,58,.18); padding: 7px; z-index: 20; animation: afMenuPop 140ms var(--ease); }
+/* Account's own children — same MenuRow, indented under it with a
+   connecting rail (the reui Tree component's indent-guide motif, ported to
+   plain CSS with AfaqWay's own line colour — its own JS/state was not
+   adopted, only this visual language, and only inside this dropdown so the
+   desktop avatar menu's .sw-menu-row is untouched). */
+.mnav-subgroup { position: relative; display: flex; flex-direction: column; padding-left: 18px; margin-top: 2px; }
+.mnav-subgroup::before { content: ""; position: absolute; left: 8px; top: 2px; bottom: 12px; width: 1px; background: var(--indigo-line); }
+.mnav-dropdown .mnav-subgroup .sw-menu-row { position: relative; }
+.mnav-dropdown .mnav-subgroup .sw-menu-row::before { content: ""; position: absolute; left: -10px; top: 50%; width: 8px; height: 1px; background: var(--indigo-line); }
+.mnav-acct-chev { margin-left: auto; transition: transform 180ms var(--ease); color: var(--ink-faint); }
+.mnav-acct-toggle.open .mnav-acct-chev { transform: rotate(180deg); }
 @media (max-width: 1023px) {
   .mnav-header { display: flex; }
   .sw-header { display: none; }
@@ -996,8 +1008,10 @@ body {
 @media (max-width: 1023px) {
   .sw-withpanel { grid-template-columns: 1fr; height: auto; }
   .sw-withpanel > :first-child { height: auto; overflow: visible; padding: 0; }
-  .rp-panel { height: auto; overflow: visible; }
-  .rp-panel > .rp-card:last-child { flex: 0 0 auto; }
+  /* The right panel (university/calendar/journey/documents summary cards) is
+     desktop-only real estate — on mobile the same information lives in its
+     own module, so stacking it below just doubled the scroll. */
+  .sw-withpanel > .rp-panel { display: none; }
   .sw-content:has(.sw-withpanel) { overflow: visible; display: block; padding: 0 6px 24px 2px; }
 }
 @media (prefers-reduced-motion: reduce) { .rp-card { animation: none; } }
@@ -1183,7 +1197,19 @@ body {
    which action it is, and the title attribute names it. */
 .sch-quick-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1320px) { .sch-quick-label { display: none; } .sch-quick-btn { padding: 9px; } }
-@media (max-width: 720px) { .sch-quick { grid-template-columns: repeat(3, 1fr); } .sch-quick-label { display: block; } }
+/* Mobile: 3 + 2 layout — row one holds three equal cards, row two's two
+   cards stretch to fill the same full width rather than leaving a gap where
+   a third column would have been. A 6-column track lets each row-one card
+   span 2 (three per row) and each row-two card span 3 (two per row), both
+   summing to the full width; the grid's own auto-flow wraps card four onto
+   the next row since row one's three cards already fill all 6 columns. */
+@media (max-width: 720px) {
+  .sch-quick { grid-template-columns: repeat(6, 1fr); }
+  .sch-quick-label { display: block; text-align: center; }
+  .sch-quick-btn { grid-column: span 2; flex-direction: column; gap: 6px; padding: 12px 8px; border-radius: var(--radius-lg); }
+  .sch-quick-btn:nth-child(4), .sch-quick-btn:nth-child(5) { grid-column: span 3; }
+  .sch-quick-ico { width: 30px; height: 30px; }
+}
 .sch-quick-btn:hover { border-color: var(--indigo-line); transform: translateY(-1px); box-shadow: 0 10px 22px -18px rgba(22,46,140,.7); }
 .sch-quick-btn:active { transform: scale(.97); }
 .sch-quick-btn:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; }
@@ -2182,6 +2208,23 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .acc-a { padding: 0 16px 15px; font: 400 13px/21px var(--font-sans); color: var(--ink-soft);
   opacity: 0; transform: translateY(-4px); transition: opacity 260ms var(--ease) 60ms, transform 260ms var(--ease) 60ms; }
 .acc-item.open .acc-a { opacity: 1; transform: none; }
+
+/* ══ FAQ accordion (mobile) — reui/Base UI accordion primitive, restyled ═══
+   One shared frame instead of a stack of separate cards: rows divide with a
+   plain border, only the frame itself carries the card treatment. Desktop
+   keeps the existing .acc (separate-card) presentation untouched. */
+.af-faq { display: none; }
+.af-faq-desktop { display: block; }
+@media (max-width: 1023px) {
+  .af-faq { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .af-faq-desktop { display: none; }
+}
+.af-faq-item { border-bottom: 1px solid var(--line-soft) !important; }
+.af-faq-item:last-child { border-bottom: none !important; }
+.af-faq-trigger { padding: 14px 16px !important; font: 600 13.5px/20px var(--font-sans) !important; color: var(--ink) !important; border-radius: 0 !important; }
+.af-faq-trigger:hover { text-decoration: none !important; background: var(--subtle); }
+.af-faq-trigger [data-slot="accordion-trigger-icon"] { color: var(--ink-faint) !important; width: 17px !important; height: 17px !important; }
+.af-faq-content { padding: 0 16px 15px !important; font: 400 13px/21px var(--font-sans) !important; color: var(--ink-soft) !important; }
 
 /* ══ Marquee (CSS only) ═══════════════════════════════════════════════════ */
 .mq { --mq-duration: 55s; --mq-gap: 20px; --mq-direction: normal;

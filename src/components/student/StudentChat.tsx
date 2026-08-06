@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { notify, requestNotify } from "@/lib/notify";
 import { uploadUserFile, fileUrl } from "@/lib/storage/client";
 import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
 import { Download, FileText, Mail, Paperclip, Pin, Plus, Reply, Send, Trash2, X } from "lucide-react";
-import { ChatEmpty, ChatDayDivider, isNewChatDay, isLastOfGroup, MessageBubble, PanelCard, UploadingBubble } from "@/components/chat/parts";
+import { ChatEmpty, ChatDayDivider, isNewChatDay, isLastOfGroup, MessageBubble, PanelCard, UploadingBubble, ChatComposerInput } from "@/components/chat/parts";
 import { Loader, Pill, Status, BrandLogo } from "@/components/ds";
 import { useAdvisorIdentity, lastSeenLabel } from "@/lib/advisor";
 import { firstUnreadId } from "@/lib/chatUnread";
@@ -131,11 +131,14 @@ export default function StudentChat({ userId, full, onNav }: {
     } catch (e) { setNotice({ kind: "error", text: "Could not send: " + (e instanceof Error ? e.message : "error") }); } finally { setSending(false); setUploadingName(null); }
   }
 
-  const pinned = msgs.filter((m) => m.pinned);
-  const files = msgs.filter((m) => m.file_path);
+  /* Derived from msgs, not from anything typed in the composer — memoized so
+     typing a message doesn't re-filter/re-scan the whole thread on every
+     keystroke for no reason. */
+  const pinned = useMemo(() => msgs.filter((m) => m.pinned), [msgs]);
+  const files = useMemo(() => msgs.filter((m) => m.file_path), [msgs]);
   /* "Seen" renders once, under the newest message the student sent — not per
      row — the same place every consumer chat puts a single read receipt. */
-  const lastMineId = [...msgs].reverse().find((m) => m.sender === "user")?.id ?? null;
+  const lastMineId = useMemo(() => [...msgs].reverse().find((m) => m.sender === "user")?.id ?? null, [msgs]);
 
   return (
     <div className="chat-zoom" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
@@ -227,7 +230,12 @@ export default function StudentChat({ userId, full, onNav }: {
                 <Paperclip size={18} />
               </button>
               <input ref={fileRef} type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <input placeholder={blocked ? "Messaging is disabled" : "Type a message…"} value={body} disabled={blocked} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} className="af-composer-input" />
+              <ChatComposerInput
+                placeholder={blocked ? "Messaging is disabled" : "Type a message…"}
+                value={body} disabled={blocked}
+                onChange={setBody}
+                onSend={() => void send()}
+              />
               <button type="button" className="chat-send" disabled={sending || blocked} onClick={send}>
                 {sending ? <><Loader size={16} onDark />Sending</> : <><Send size={15} />Send</>}
               </button>

@@ -36,6 +36,7 @@ import {
   BtnPrimary, BtnGhost, StatusGlyph, IconChip, CompactCard,
   SectionTitle, InlineNote,
 } from "./parts";
+import { FaqAccordion } from "./FaqAccordion";
 
 /* The approved payment behind the user's subscription. Drives the verified
    badge, the service information card and the invoice. */
@@ -259,7 +260,12 @@ export function Support({ onNav }: { onNav: (id: string) => void }) {
 
       <section>
         <SectionTitle tone="indigo">Frequently asked questions</SectionTitle>
-        <Accordion items={FAQ.map((f) => ({ question: f.q, answer: f.a }))} />
+        {/* Desktop keeps the existing separate-card accordion; mobile shows
+            the same content in the reui-styled single-frame version. */}
+        <div className="af-faq-desktop">
+          <Accordion items={FAQ.map((f) => ({ question: f.q, answer: f.a }))} />
+        </div>
+        <FaqAccordion items={FAQ} />
       </section>
     </div>
   );

@@ -10,7 +10,7 @@ import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
    dropdown below it is that same header's own mobile menu shape too: a
    centred rounded card under the bar, not a full-height side drawer. */
 
-export const MobileNavigationHeader = ({ children, rightExtra }: PropsWithChildren<{ rightExtra?: ReactNode }>) => {
+export const MobileNavigationHeader = ({ children, rightExtra, activeKey }: PropsWithChildren<{ rightExtra?: ReactNode; activeKey?: string }>) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -19,6 +19,14 @@ export const MobileNavigationHeader = ({ children, rightExtra }: PropsWithChildr
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  /* Closes on any way the visible module can change — not just a click
+     inside the dropdown itself. The chat FAB and the notification popover
+     both sit above the dropdown's own backdrop (they need to stay usable
+     while it's open) and a real device's back/forward swipe changes the
+     route with no click at all, so a click-only close left the dropdown
+     stuck open behind whatever page it navigated to. */
+  useEffect(() => { setOpen(false); }, [activeKey]);
 
   return (
     <>

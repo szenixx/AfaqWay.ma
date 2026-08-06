@@ -427,7 +427,11 @@ select.af{border-radius:var(--radius-pill);padding-right:38px;cursor:pointer;}
    One definition shared by the student and admin chats. */
 .af-composer{display:flex;align-items:center;gap:4px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 5px 4px 8px;box-shadow:0 6px 18px rgba(23,35,58,.06);transition:border-color 140ms var(--ease),box-shadow 140ms var(--ease);}
 .af-composer:focus-within{border-color:var(--indigo-600);box-shadow:0 0 0 3px var(--indigo-100);}
-.af-composer-input{flex:1 1 auto;min-width:0;height:38px;border:none;background:transparent;outline:none;font:400 14.5px/1 var(--font-sans);color:var(--ink);}
+/* A real textarea now, not a single-line input: field-sizing grows it with
+   the message (Enter sends, Shift+Enter starts a new line — see
+   ChatComposerInput), capped so a long paste scrolls instead of pushing the
+   composer to take over the screen. */
+.af-composer-input{flex:1 1 auto;min-width:0;min-height:22px;max-height:110px;padding:8px 0;border:none;background:transparent;outline:none;resize:none;overflow-y:auto;field-sizing:content;font:400 14.5px/22px var(--font-sans);color:var(--ink);}
 .af-composer-input::placeholder{color:var(--ink-faint);}
 
 @media (prefers-reduced-motion:reduce){

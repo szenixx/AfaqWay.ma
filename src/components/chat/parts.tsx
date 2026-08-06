@@ -1,14 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Download, Paperclip, Reply, ArrowRight, MoreVertical, CheckCheck } from "lucide-react";
 import { UserAvatar, type UserAvatarUser, Loader } from "@/components/ds";
 import { parseAsk, QUICK_REACTIONS, type Reactions } from "@/lib/chat";
+import { Textarea } from "@/components/ui/textarea";
 
 /* Pieces shared by the admin console chat and the student workspace chat, so
    both sides are literally the same product: same bubbles, same panel cards,
    same empty states, same avatars. Visuals live in ds.css (.chat-*). */
+
+/* ── Composer input ───────────────────────────────────────────────────────── */
+
+/* The reui/Base UI Textarea primitive, restyled with .af-composer-input (see
+   ds.css) instead of its own default theme — same look as the input it
+   replaces, but a real multi-line field: Enter sends, Shift+Enter starts a
+   new line, and it grows with the message (capped, then scrolls) instead of
+   staying a fixed single line. Shared by the student and admin composers so
+   both keep behaving identically. */
+export function ChatComposerInput({ value, onChange, onSend, placeholder, disabled }: {
+  value: string; onChange: (value: string) => void; onSend: () => void;
+  placeholder?: string; disabled?: boolean;
+}) {
+  return (
+    <Textarea
+      rows={1}
+      value={value}
+      disabled={disabled}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); }
+      }}
+      className="af-composer-input"
+    />
+  );
+}
 
 /* ── Avatar with presence ─────────────────────────────────────────────────── */
 
@@ -232,7 +260,7 @@ function ReactionsRow({ reactions, viewerSide, onToggle }: { reactions: Reaction
   );
 }
 
-export function MessageBubble({
+function MessageBubbleImpl({
   msg, mine, quoted, quotedAuthor, onReply, onDownload, onViewFile, onContextMenu, footer, onAnswer, onOpenDecision,
   otherAvatar, isLastOfGroup = true, viewerSide, onReact, seen,
 }: {
@@ -365,6 +393,27 @@ export function MessageBubble({
     </div>
   );
 }
+
+/* Memoized: every keystroke in the composer (a sibling's state, not this
+   row's) used to re-render the whole thread — every bubble, every date
+   comparison, every regex parse — on a component that renders once per
+   message and can easily number in the hundreds. Cheap enough to be
+   invisible on a desktop CPU, slow enough to feel like real input lag on a
+   phone. The comparator only checks the props that actually determine what a
+   bubble looks like; the rest (onReply, onDownload, otherAvatar, ...) are
+   fresh closures/elements every render regardless, but they're all derived
+   from `msg` and stable setters, so they're behaviourally identical whenever
+   `msg` itself hasn't changed — comparing them would defeat the memo for no
+   benefit. */
+export const MessageBubble = memo(MessageBubbleImpl, (prev, next) =>
+  prev.msg === next.msg
+  && prev.mine === next.mine
+  && prev.quoted === next.quoted
+  && prev.quotedAuthor === next.quotedAuthor
+  && prev.isLastOfGroup === next.isLastOfGroup
+  && prev.viewerSide === next.viewerSide
+  && prev.seen === next.seen
+  && prev.footer === next.footer);
 
 const askOpt: CSSProperties = {
   border: "1px solid var(--indigo-line)", borderRadius: 10, padding: "7px 11px", background: "var(--card)",

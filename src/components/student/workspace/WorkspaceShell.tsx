@@ -66,6 +66,7 @@ export default function WorkspaceShell({
 }) {
   const [menu, setMenu] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [acctOpen, setAcctOpen] = useState(false);
   /* Drives both the bell's red dot and its "keeps moving until read"
      animation — the same live count the popover itself reads, so the two
      never disagree about whether something is still unread. */
@@ -111,15 +112,16 @@ export default function WorkspaceShell({
     </button>
   );
 
-  /* The mobile hamburger dropdown's own row — same frame as the marketing
-     site's mobile menu links (icon added, per that request). */
-  const mobileRow = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; badge?: number }) => (
-    <button key={id} type="button" className={`mnav-row${nav === id ? " active" : ""}`} onClick={opts?.onClick ?? (() => navigate(id))}>
-      <span className="mnav-row-ico">{icon}</span>
-      <span className="mnav-row-label">{label}</span>
-      {!!opts?.badge && <span className="mnav-row-badge">{opts.badge > 9 ? "9+" : opts.badge}</span>}
-      <ChevronRight size={16} className="mnav-row-chev" />
-    </button>
+  /* The mobile hamburger dropdown reuses MenuRow — the exact same row the
+     desktop avatar menu (.sw-menu) renders — so mobile's combined menu
+     looks and behaves like that same menu, not a separate design. Picking
+     an Account child also collapses Account back down, so the menu always
+     reopens fresh instead of remembering it was left expanded last time. */
+  const mobileRow = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; inAccount?: boolean }) => (
+    <MenuRow
+      key={id} icon={icon} label={label}
+      onClick={opts?.onClick ?? (() => { navigate(id); if (opts?.inAccount) setAcctOpen(false); })}
+    />
   );
 
   /* The mini calendar's upcoming event is the student's next Schedule entry —
@@ -289,10 +291,12 @@ export default function WorkspaceShell({
       </div>
 
       {/* Mobile navigation — floating pill bar (same design as onboarding /
-          home) + dismissable dialog. The dialog's own sequence: Profile,
-          then every module the desktop sidebar shows, then account
-          settings — Profile isn't buried in a sub-menu here. */}
+          home) + dismissable dialog. Messages is deliberately absent here:
+          it already has its own floating launcher (below) and top-bar icon.
+          Profile, Payments and Settings live inside the collapsible Account
+          card instead of as three more top-level rows. */}
       <MobileNavigationHeader
+        activeKey={nav}
         rightExtra={
           <div style={{ position: "relative" }}>
             <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
@@ -309,16 +313,36 @@ export default function WorkspaceShell({
           </div>
         }
       >
-        {mobileRow("profile", "Profile", <UserRound size={18} />)}
-        <div style={{ marginTop: 10 }}>
-          {PRIMARY_NAV.map((n) => mobileRow(n.id, n.label, n.icon))}
-          {mobileRow("messages", "Messages", <MessageCircle size={18} />, { badge: chatUnread })}
-        </div>
-        <div style={{ marginTop: 10 }}>
-          {mobileRow("subscription", "Payments", <CreditCard size={18} />)}
-          {mobileRow("settings", "Settings", <SettingsIcon size={18} />)}
-          {mobileRow("support", "Support", <LifeBuoy size={18} />)}
-        </div>
+        {/* Account first: Profile, Payments, Settings and Support live one
+            level down, indented under it, instead of four more top-level
+            rows — everything else is the exact same MenuRow the desktop
+            avatar menu uses. */}
+        <button
+          type="button"
+          className={`sw-menu-row mnav-acct-toggle${acctOpen ? " open" : ""}`}
+          aria-expanded={acctOpen}
+          onClick={(e) => { e.stopPropagation(); setAcctOpen((v) => !v); }}
+        >
+          <span style={{ display: "flex", color: "var(--ink-soft)" }}><UserRound size={17} /></span>
+          Account
+          <ChevronDown size={15} className="mnav-acct-chev" />
+        </button>
+        {acctOpen && (
+          <div className="mnav-subgroup">
+            {mobileRow("profile", "Profile", <UserRound size={17} />, { inAccount: true })}
+            {mobileRow("subscription", "Payments", <CreditCard size={17} />, { inAccount: true })}
+            {mobileRow("settings", "Settings", <SettingsIcon size={17} />, { inAccount: true })}
+            {mobileRow("support", "Support", <LifeBuoy size={17} />, { inAccount: true })}
+          </div>
+        )}
+
+        <div style={{ height: 1, background: "var(--line-soft)", margin: "5px 0" }} />
+
+        {PRIMARY_NAV.map((n) => mobileRow(n.id, n.label, n.icon))}
+
+        <div style={{ height: 1, background: "var(--line-soft)", margin: "5px 0" }} />
+
+        <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={onSignOut} />
       </MobileNavigationHeader>
 
       {/* Mobile-only floating chat launcher, WhatsApp-extension-style: fixed
