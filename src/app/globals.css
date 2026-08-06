@@ -2782,34 +2782,3 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .jr-step-title .ds-status { text-transform: none; letter-spacing: 0; flex: none; }
 /* The stage nav badge is the plain variant at the list's own small size. */
 .jr-navbadge { font-size: 9.5px; }
-
-/* ══ TEMPORARY DEBUG TOGGLES ═══════════════════════════════════════════════
-   Mobile chat white-flash investigation. Flipped live from ChatDebugOverlay
-   via a class on <html>, one at a time. Delete this whole block (and
-   chatDebug.ts / ChatDebugOverlay.tsx) once the cause is confirmed. */
-html.dbg-no-texture .stu-chat-texture { background: none !important; }
-html.dbg-no-texture .stu-chat-texture::before { display: none !important; }
-html.dbg-no-fixed-lock .sw-content-full { position: static !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important; height: auto !important; }
-html.dbg-no-blobs .sw-root::before, html.dbg-no-blobs .sw-root::after { display: none !important; }
-html.dbg-no-mask .af-grid { -webkit-mask-image: none !important; mask-image: none !important; }
-html.dbg-no-zoom .chat-zoom { zoom: 1 !important; transform: none !important; }
-html.dbg-no-anim *, html.dbg-no-anim *::before, html.dbg-no-anim *::after { animation: none !important; }
-html.dbg-no-trans *, html.dbg-no-trans *::before, html.dbg-no-trans *::after { transition: none !important; }
-
-/* Scenario A/B/C/D testing — force afChatMark / dsStatusPing independently of
-   whatever the shipped mobile default currently is. */
-html.dbg-chatmark-on .stu-chat-texture::before { animation: afChatMark 9s ease-in-out infinite !important; }
-html.dbg-chatmark-off .stu-chat-texture::before { animation: none !important; }
-html.dbg-statusping-on .chat-header > .ds-status { display: inline-flex !important; }
-html.dbg-statusping-off .chat-header > .ds-status { display: none !important; }
-/* Isolates the static filter:blur() from the animation entirely — tests
-   whether blur itself (independent of looping) is what Safari struggles
-   with, per the "interaction between properties, not the animation" theory. */
-html.dbg-no-texture-blur-only .stu-chat-texture::before { filter: none !important; }
-
-/* The other infinite, always-on animations on the list — none of these are
-   chat-exclusive, but toggleable for completeness. */
-html.dbg-no-grid-cell .af-grid-cell { animation: none !important; }
-html.dbg-no-chev .af-logo-chev1, html.dbg-no-chev .af-logo-chev2 { animation: none !important; }
-html.dbg-no-bell-anim .sw-iconbtn.unread .ai-bell-icon .clapper,
-html.dbg-no-bell-anim .sw-iconbtn.unread .ai-chat-bubble-icon .dot { animation: none !important; }

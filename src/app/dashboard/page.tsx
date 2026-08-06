@@ -18,7 +18,6 @@ import { deriveStudy, deriveAcademic } from "@/lib/studyApplication";
 import { useNotificationToasts } from "@/lib/notifications";
 import { useChatUnread } from "@/lib/chatUnread";
 import { useSingleSession } from "@/lib/useSingleSession";
-import { dbg } from "@/lib/chatDebug"; // TEMPORARY, see chatDebug.ts
 
 const NAV_VALUES: Nav[] = ["overview", "journey", "documents", "explore", "messages", "support", "subscription", "profile", "settings", "schedule"];
 
@@ -192,7 +191,6 @@ function NavAwareWorkspace({ profile, userId, onSignOut, onProgramRequest, onRel
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  dbg(`NavAwareWorkspace RENDER view=${searchParams.get("view")}`); // TEMPORARY, see chatDebug.ts
   /* The open module lives in the URL (?view=journey), not in React state, so
      the browser's own Back/Forward buttons move between modules the way they
      move between any two pages — each `setNav` below is a real navigation

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useOnlineUsers } from "@/lib/presence";
-import { dbg } from "@/lib/chatDebug"; // TEMPORARY, see chatDebug.ts
 
 /* Advisor identity.
  *
@@ -102,10 +101,10 @@ export function useAdvisorIdentity(userId: string | null | undefined): AdvisorId
       })
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
-        () => { dbg("advisor channel: postgres INSERT -> read()"); void read(); });
-    channel.subscribe((status) => dbg(`advisor channel status: ${status}`));
+        () => { void read(); });
+    channel.subscribe();
 
-    return () => { dbg("advisor channel cleanup"); cancelled = true; void supabase.removeChannel(channel); };
+    return () => { cancelled = true; void supabase.removeChannel(channel); };
   }, [userId]);
 
   return useMemo(() => ({
