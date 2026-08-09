@@ -49,7 +49,7 @@ const ACTION: Record<ReplyAction, {
 };
 
 export function ReplyDialog({
-  action, student, stageTitle, stepTitle, stepId, stageId, initialNote, whatsappNumber, onCancel, onConfirm,
+  action, student, stageTitle, stepTitle, stepId, stageId, initialNote, whatsappNumber, studentEmail, onCancel, onConfirm,
 }: {
   action: ReplyAction;
   student: string;
@@ -59,14 +59,18 @@ export function ReplyDialog({
   stageId: string;
   initialNote?: string;
   whatsappNumber?: string | null;
+  studentEmail?: string | null;
   onCancel: () => void;
-  onConfirm: (input: { message: string; note: string; sendWhatsApp: boolean }) => Promise<void> | void;
+  onConfirm: (input: { message: string; note: string; sendWhatsApp: boolean; sendEmail: boolean }) => Promise<void> | void;
 }) {
   const config = ACTION[action];
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [note, setNote] = useState(initialNote ?? "");
   const [sendWhatsApp, setSendWhatsApp] = useState(config.whatsapp && Boolean(whatsappNumber));
+  // Email is available on every outcome (unlike WhatsApp, approve-only) but
+  // defaults off across the board — an admin opts in per decision.
+  const [sendEmail, setSendEmail] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -80,7 +84,7 @@ export function ReplyDialog({
 
   const confirm = async () => {
     setBusy(true);
-    await onConfirm({ message: fullMessage, note, sendWhatsApp });
+    await onConfirm({ message: fullMessage, note, sendWhatsApp, sendEmail });
     setBusy(false);
   };
 
@@ -128,7 +132,9 @@ export function ReplyDialog({
           />
         </DialogCard>
 
-        {/* Delivery. WhatsApp is offered on approvals only. */}
+        {/* Delivery. WhatsApp is offered on approvals only; email is offered
+            on every outcome but starts off, so nothing goes out by email
+            unless the admin turns it on for this specific decision. */}
         <div className="rply-delivery">
           <span className="rply-chan"><Send size={13} />Platform chat</span>
           {config.whatsapp ? (
@@ -142,6 +148,14 @@ export function ReplyDialog({
             )
           ) : (
             <span className="rply-muted">WhatsApp is not used for this action</span>
+          )}
+          {studentEmail ? (
+            <label className="rply-check">
+              <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />
+              Also send by email to {studentEmail}
+            </label>
+          ) : (
+            <span className="rply-muted">No email address on this profile</span>
           )}
         </div>
 

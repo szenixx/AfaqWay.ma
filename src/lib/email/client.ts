@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase/client";
-import type { EmailChannel } from "@/config/email";
+import type { EmailChannel } from "./service";
 
 /* Asking the platform to send an email, from the browser.
  *
@@ -25,20 +25,29 @@ export type EmailResult = {
 
 const FAILED = (error: string): EmailResult => ({ ok: false, sent: 0, failed: 1, skipped: 0, error });
 
-async function post(body: unknown): Promise<EmailResult> {
+async function post(path: string, body: unknown): Promise<EmailResult> {
   try {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return FAILED("not signed in");
 
-    const res = await fetch("/api/email", {
+    const res = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(body),
     });
 
-    const payload = (await res.json().catch(() => ({}))) as Partial<EmailResult> & { error?: string };
+    const payload = (await res.json().catch(() => ({}))) as Partial<EmailResult> & { status?: string; error?: string };
     if (!res.ok) return FAILED(payload.error ?? `request failed (${res.status})`);
+
+    // /api/email returns {ok, sent, failed, skipped}; /api/email/* single-send
+    // routes return {ok, status}. Normalize both into the same EmailResult.
+    if (payload.status) {
+      const sent = payload.status === "sent" ? 1 : 0;
+      const skipped = payload.status === "skipped" ? 1 : 0;
+      const failed = payload.status === "failed" ? 1 : 0;
+      return { ok: Boolean(payload.ok), sent, failed, skipped, notConfigured: payload.status === "skipped" || undefined, error: payload.error };
+    }
 
     return {
       ok: Boolean(payload.ok), sent: payload.sent ?? 0, failed: payload.failed ?? 0,
@@ -55,7 +64,7 @@ export function emailAnnouncement(input: {
   subject: string;
   message: string;
 }): Promise<EmailResult> {
-  return post({ channel: "announcement" as EmailChannel, ...input });
+  return post("/api/email", { channel: "announcement" as EmailChannel, ...input });
 }
 
 /** An advisor writing to one student from the chat. */
@@ -64,7 +73,32 @@ export function emailAdvisorMessage(input: {
   subject: string;
   message: string;
 }): Promise<EmailResult> {
-  return post({ channel: "advisor" as EmailChannel, ...input });
+  return post("/api/email", { channel: "advisor" as EmailChannel, ...input });
+}
+
+/** Sent from PaymentReviews.tsx right after an admin approves a payment. */
+export function emailPaymentReceipt(input: {
+  to: string;
+  studentName?: string | null;
+  planName: string;
+  amount: string;
+  method?: string | null;
+  reference?: string | null;
+}): Promise<EmailResult> {
+  return post("/api/email/payment-receipt", input);
+}
+
+/** Sent from JourneyApprovals.tsx alongside notifyReview()'s chat/WhatsApp
+ *  delivery, for the same step decision event. */
+export function emailJourneyDecision(input: {
+  to: string;
+  studentName?: string | null;
+  outcome: "approved" | "rejected" | "changes_requested";
+  stageTitle: string;
+  stepTitle: string;
+  note?: string | null;
+}): Promise<EmailResult> {
+  return post("/api/email/journey-decision", input);
 }
 
 /** A short line describing an outcome, for the UI to show verbatim. */

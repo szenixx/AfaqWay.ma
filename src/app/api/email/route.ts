@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCaller } from "@/lib/storage/auth";
 import { storageErrorResponse } from "@/lib/storage/respond";
 import { StorageError } from "@/types/storage";
-import { sendBulkEmail, sendEmail, emailConfigured, providerName, verifyProvider } from "@/services/email.service";
+import { sendBulkEmail, sendEmail, emailConfigured, providerName, verifyProvider } from "@/lib/email/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,11 +81,12 @@ export async function GET(req: Request) {
 
     // Opens a connection and authenticates, without sending anything.
     const check = await verifyProvider();
+    const reachable = check.status === "sent";
     return NextResponse.json({
       configured: true,
       provider: providerName(),
-      reachable: check.ok,
-      ...(check.ok ? {} : { error: "error" in check ? check.error : "unavailable" }),
+      reachable,
+      ...(reachable ? {} : { error: "error" in check ? check.error : "unavailable" }),
     });
   } catch (err) {
     return storageErrorResponse(err);

@@ -12,6 +12,7 @@ import { ReviewModal, type ReviewTarget } from "./ReviewModal";
 import { ReplyDialog, type ReplyAction } from "./ReplyDialog";
 import { reviewStep } from "@/lib/journeyDb";
 import { notifyReview } from "@/lib/journeyNotify";
+import { emailJourneyDecision } from "@/lib/email/client";
 
 /* Journey review queue.
 
@@ -141,7 +142,7 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
   const ACTION_STATE = { approve: "completed", reject: "rejected", changes: "pending" } as const;
   const ACTION_OUTCOME = { approve: "approved", reject: "rejected", changes: "changes_requested" } as const;
 
-  const confirmAction = async (input: { message: string; note: string; sendWhatsApp: boolean }) => {
+  const confirmAction = async (input: { message: string; note: string; sendWhatsApp: boolean; sendEmail: boolean }) => {
     if (!action) return;
     const { row, kind } = action;
     setBusy(row.id);
@@ -155,6 +156,18 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
       // WhatsApp accompanies approvals only; notifyReview enforces it as well.
       { whatsapp: input.sendWhatsApp ? row.target.whatsapp ?? null : null },
     );
+    // Email is off by default on every outcome — only sent when the admin
+    // explicitly turns it on for this decision.
+    if (input.sendEmail && row.target.studentEmail) {
+      void emailJourneyDecision({
+        to: row.target.studentEmail,
+        studentName: row.student,
+        outcome: ACTION_OUTCOME[kind],
+        stageTitle: row.stage_title,
+        stepTitle: row.step_title,
+        note: input.note,
+      });
+    }
     setAction(null);
     await load();
     setBusy(null);
@@ -285,6 +298,7 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
           stepId={action.row.step_id}
           initialNote={action.row.target.advisorNote}
           whatsappNumber={action.row.target.whatsapp}
+          studentEmail={action.row.target.studentEmail}
           onCancel={() => setAction(null)}
           onConfirm={confirmAction}
         />

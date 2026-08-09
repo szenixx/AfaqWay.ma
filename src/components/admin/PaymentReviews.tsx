@@ -8,6 +8,7 @@ import { planById, methodById } from "@/lib/plans";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { fileUrl, deleteUserFile } from "@/lib/storage/client";
 import { Input, Select, MetricCard, trendBadge, fieldIcon } from "@/components/ds";
+import { emailPaymentReceipt } from "@/lib/email/client";
 
 type Payment = { id: string; user_id: string; plan: string; amount: number; currency: string; method: string; status: string; receipt_path: string | null; reference: string | null; rejection_comment: string | null; created_at: string; reviewed_at: string | null };
 /* Session-stable clock for the 30/60-day trend windows: the comparison must
@@ -124,6 +125,23 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
       }
     }
     await supabase.from("payments").update(patch).eq("id", r.id);
+
+    if (status === "approved") {
+      const u = users[r.user_id];
+      const plan = planById(r.plan);
+      const method = methodById(r.method);
+      if (u?.email) {
+        void emailPaymentReceipt({
+          to: u.email,
+          studentName: u.full_name,
+          planName: plan?.name ?? r.plan,
+          amount: `${r.amount.toLocaleString("en-US")} ${r.currency === "MAD" ? "DH" : r.currency}`,
+          method: method?.name ?? r.method,
+          reference: r.reference,
+        });
+      }
+    }
+
     setBusy(""); setRejectId(null); setComment("");
     void load();
   }
