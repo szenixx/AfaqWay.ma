@@ -222,7 +222,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="af-auth-main" style={{ height: "100vh", overflow: "hidden", background: "var(--paper)" }}>
+    <div className="af-auth-main af-desktop-zoom" style={{ overflow: "hidden", background: "var(--paper)" }}>
       {/* ── Left panel ── */}
       <div className="af-auth-left" onMouseMove={onPanelMove} style={{ position: "relative", borderRadius: 16, overflow: "hidden", background: "var(--indigo-100)", backgroundImage: "url(/roadmap-panel.webp)", backgroundSize: "cover", backgroundPosition: "center" }}>
         {/* mouse-reactive texture */}
@@ -374,8 +374,8 @@ export default function AuthPage() {
           <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)", marginTop: 5 }}>8 of 13 steps done</div>
         </div>
 
-        {/* motivating line, moved to the bottom-right corner */}
-        <div style={{ position: "absolute", bottom: 24, right: 24, maxWidth: "46%", textAlign: "right", zIndex: 3 }}>
+        {/* motivating line, bottom-centre */}
+        <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", width: "70%", textAlign: "center", zIndex: 3 }}>
           <div style={{ font: "600 15px/21px var(--font-sans)", color: "var(--ink)" }}>
             Thousands of students, one clear path abroad. You are next.
           </div>

@@ -48,6 +48,10 @@ const PRIMARY_NAV: { id: Nav; label: string; icon: React.ReactNode }[] = [
 
 const firstName = (n: string | null) => (n ? n.trim().split(" ")[0] : "there");
 
+/* The only pages the sidebar defaults to (and stays) expanded on — everywhere
+   else it starts collapsed and snaps back shut the moment a module is picked. */
+const SIDEBAR_EXPANDED_NAV = new Set<Nav>(["profile", "settings", "support", "subscription", "messages"]);
+
 /* Title shown next to the back/forward buttons in the top bar. */
 const MODULE_TITLE: Record<Nav, string> = {
   overview: "Overview", journey: "My Journey", documents: "Documents", explore: "Explore Lithuania", schedule: "Schedule",
@@ -71,7 +75,7 @@ export default function WorkspaceShell({
      animation — the same live count the popover itself reads, so the two
      never disagree about whether something is still unread. */
   const { unread: notifUnread } = useNotifications(profile.userId);
-  const [sidebarMini, setSidebarMini] = useState(false);
+  const [sidebarMini, setSidebarMini] = useState(() => !SIDEBAR_EXPANDED_NAV.has(nav));
   /* Announce this student as online for as long as the workspace is open. */
   usePresenceBroadcast(profile.userId, { name: profile.fullName, role: "student" });
   const full = profile.plan === "full_service";
@@ -97,6 +101,13 @@ export default function WorkspaceShell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   useEffect(() => { document.cookie = `sidebar_state=${!sidebarMini}; path=/; max-age=${60 * 60 * 24 * 7}`; }, [sidebarMini]);
+  /* Whatever the sidebar was doing before, picking a destination resets it to
+     that destination's own default: expanded on Profile/Settings/Support/
+     Subscription, collapsed everywhere else — so opening the sidebar to jump
+     to a module always snaps it back shut once you land, and it's not
+     re-litigated by how you got there (sidebar click, avatar menu, browser
+     back/forward, a notification link…), only by where you ended up. */
+  useEffect(() => { setSidebarMini(!SIDEBAR_EXPANDED_NAV.has(nav)); }, [nav]);
 
   const navItem = (id: Nav, label: string, icon: React.ReactNode, opts?: { onClick?: () => void; badge?: number; dotOnly?: boolean }) => (
     <button
@@ -173,7 +184,7 @@ export default function WorkspaceShell({
   })();
 
   return (
-    <div className="sw-root">
+    <div className="sw-root af-desktop-zoom">
       {/* Canvas: the home hero's own animated grid — same background across
           every module, not just the marketing page. */}
       <div aria-hidden style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
@@ -240,7 +251,7 @@ export default function WorkspaceShell({
                     something here is unread, with its own red dot. It only
                     settles once the popover (or the thing it links to) marks
                     the row read. */}
-                <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+                <button type="button" data-notif-trigger className={`sw-iconbtn${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
                   <BellIcon disableHover className="sw-topbar-icon" />
                   {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
                 </button>
@@ -252,13 +263,19 @@ export default function WorkspaceShell({
                   />
                 )}
               </div>
-              <button type="button" className={`sw-iconbtn plain${nav === "messages" ? " active" : ""}${chatUnread > 0 ? " unread" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
+              <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}${chatUnread > 0 ? " unread" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
                 <ChatBubbleIcon disableHover className="sw-topbar-icon" />
                 {chatUnread > 0 && nav !== "messages" && <span className="sw-dot">{chatUnread > 9 ? "9+" : chatUnread}</span>}
               </button>
               <div style={{ position: "relative" }}>
                 <button type="button" className="sw-profile" onClick={() => setMenu((v) => !v)} aria-label="Account menu">
-                  <UserAvatar size={40} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: profile.avatarSeed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
+                  {/* Same framed-ring treatment as the Profile page's own hero
+                      avatar (.pf-avatar) — a centred, lifted focal point
+                      instead of a bare flat circle, scaled down for the
+                      header. */}
+                  <span className="sw-profile-avatar">
+                    <UserAvatar size={40} user={{ id: profile.userId, name: profile.fullName, avatarUrl, gender: profile.gender, avatarSeed: profile.avatarSeed, avatarStyle: profile.avatarStyle, verified: profile.verified }} />
+                  </span>
                   <span className="sw-profile-meta">
                     <span className="sw-profile-name">{firstName(profile.fullName)}</span>
                     <span className="sw-profile-email">{profile.email || profile.profileId}</span>

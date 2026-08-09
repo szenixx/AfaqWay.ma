@@ -13,6 +13,45 @@ body {
   max-width: 100vw;
 }
 
+/* Desktop-only 10% scale-up (Homepage, Login/Signup). `zoom` rather than
+   `transform: scale` on purpose: it reflows layout like a real viewport
+   change (so nothing needs its own spacing recalculated) and, unlike
+   `transform`, doesn't turn the page into a new containing block for its
+   own `position: fixed` header — SiteHeader stays correctly pinned while
+   scrolling instead of scrolling away with the rest of the zoomed content. */
+@media (min-width: 1024px) {
+  .af-desktop-zoom { zoom: 1.1; }
+  /* .af-auth-main is a fixed height: 100vh, no-scroll layout (see .af-auth-left/
+     .af-auth-right above). `zoom` scales the rendered box AFTER that height is
+     computed against the real viewport, so left un-compensated the zoomed box
+     would render at 110vh — 10% taller than the screen — clipping the bottom of
+     the left illustration panel instead of showing it. Sizing it to 100vh / 1.1
+     first means the zoom scales it right back up to exactly 100vh on screen. */
+  .af-auth-main.af-desktop-zoom { height: calc(100vh / 1.1); }
+  /* Same fixed-viewport-height problem as .af-auth-main, but two elements
+     deep: .sw-root AND .sw-shell each independently size themselves to
+     100dvh (dvh always resolves against the true viewport, never against a
+     zoomed ancestor's box, so both need their own compensated height, not
+     just the outer one). */
+  .sw-root.af-desktop-zoom { height: calc(100dvh / 1.1); }
+  .sw-root.af-desktop-zoom .sw-shell { height: calc(100dvh / 1.1); }
+}
+
+/* Mobile-only: every workspace module fires its own entrance animation on
+   mount (.rp-card, .ex-stat, .ex-exp-body, .ex-city, .jr-stage-body), and
+   several of them land at once whenever switching modules mounts a batch of
+   them together — cheap on desktop, but on real phone hardware that batch of
+   simultaneous CSS animations competes with React's own mount/layout work
+   for the same frame budget, and reads as lag on every navigation. Content
+   still appears immediately either way — only the fade+rise entrance is
+   skipped. Also stops .ex-node.current's infinite box-shadow pulse, a
+   continuous repaint for as long as Explore stays open. Desktop keeps every
+   animation exactly as it was. */
+@media (max-width: 1023px) {
+  .rp-card, .ex-stat, .ex-exp-body, .ex-city, .jr-stage-body { animation: none; }
+  .ex-node.current { animation: none; }
+}
+
 body {
   background: var(--paper);
   color: var(--ink);
@@ -143,7 +182,7 @@ a {
 }
 
 /* Auth page split layout */
-.af-auth-main { display: flex; gap: 16px; padding: 16px; flex: 1; min-height: 0; }
+.af-auth-main { display: flex; gap: 16px; padding: 16px; flex: 1; min-height: 0; height: 100vh; }
 .af-auth-left { flex: 0 0 55%; }
 .af-auth-right { flex: 1; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 24px; }
 @media (max-width: 900px) {
@@ -549,7 +588,7 @@ a {
    highlight on hover + active, group labels that fade out when collapsed,
    badges pinned right, tooltips on the right while collapsed. */
 :root { --sw-side: 256px; --sw-side-icon: 60px; --sw-head: 56px; }
-.sw-sidebar { align-self: stretch; height: 100%; flex: none; width: var(--sw-side); display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,.8); backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; box-shadow: 0 20px 54px rgba(23,35,58,.12); padding: 14px 10px; overflow: hidden; transition: width 200ms linear; }
+.sw-sidebar { align-self: stretch; height: 100%; flex: none; width: var(--sw-side); display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,.8); backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; box-shadow: 0 20px 54px rgba(23,35,58,.12); padding: 14px 10px; overflow: hidden; transition: width 160ms var(--ease); }
 
 /* Header: logo mark + wordmark, centred on the sidebar itself. No card, no
    frame — the mark sits directly on the glass. The collapse control is pulled
@@ -601,7 +640,10 @@ a {
 .sw-sidebar.mini .sw-brandrow { flex-direction: column; justify-content: center; gap: 6px; height: auto; padding: 6px 0; }
 .sw-sidebar.mini .sw-sidebar-close { position: static; transform: none; }
 .sw-sidebar.mini .sw-sidebar-close:active { transform: scale(.9); }
-.sw-sidebar.mini .sw-navitem { justify-content: center; padding: 0; gap: 0; }
+.sw-sidebar.mini .sw-navitem { justify-content: center; padding: 8px 0; gap: 0; }
+/* Icon-only rows can afford a bigger glyph than the labelled ones — nothing
+   else in the row competes for space once the label is gone. */
+.sw-sidebar.mini .sw-navico > svg { width: 19px; height: 19px; }
 .sw-sidebar.mini .sw-navlabel, .sw-sidebar.mini .sw-navbadge, .sw-sidebar.mini .sw-carousel, .sw-sidebar.mini .sw-brand { display: none; }
 .sw-sidebar.mini .sw-group-label { margin-top: -32px; opacity: 0; pointer-events: none; }
 /* Label returns as a tooltip on the right. */
@@ -622,6 +664,10 @@ a {
 .sw-iconbtn, .sw-navbtn { position: relative; width: 42px; height: 42px; border-radius: 999px; border: 1px solid rgba(22,46,140,.07); background: rgba(255,255,255,.55); color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 200ms var(--ease), background 200ms var(--ease), box-shadow 200ms var(--ease), transform 200ms var(--ease); flex: none; box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 8px 20px -18px rgba(22,46,140,.24); }
 .sw-iconbtn:hover, .sw-navbtn:hover:not(:disabled) { color: var(--indigo-600); background: rgba(255,255,255,.85); transform: translateY(-1px); box-shadow: 0 1px 2px rgba(23,35,58,.05), 0 12px 24px -16px rgba(22,46,140,.42); }
 .sw-iconbtn.active { background: var(--indigo-600); color: #fff; border-color: var(--indigo-600); }
+/* Notification/chat: black at rest, blue on hover/click — and the same
+   diameter as the profile avatar's own ring (.sw-profile-avatar, 46px) so
+   the three circles in the header read as one consistent size. */
+.sw-iconbtn { width: 46px; height: 46px; color: var(--ink); }
 .sw-navbtn:disabled { opacity: .42; cursor: not-allowed; }
 /* Back / forward + current module name. */
 .sw-topnav { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -671,9 +717,13 @@ a {
 }
 .sw-avatar { width: 42px; height: 42px; border-radius: 14px; flex: none; background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700)); color: #fff; border: none; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); box-shadow: 0 6px 16px rgba(22,46,140,.32); }
 /* Profile capsule: avatar + name/email, white pill, thin border, soft shadow. */
-.sw-profile { display: inline-flex; align-items: center; gap: 11px; padding: 6px 12px 6px 6px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1px solid rgba(22,46,140,.07); box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 10px 24px -20px rgba(22,46,140,.24); cursor: pointer; transition: background 220ms var(--ease), box-shadow 220ms var(--ease), transform 220ms var(--ease); }
+.sw-profile { display: inline-flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1px solid rgba(22,46,140,.07); box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 10px 24px -20px rgba(22,46,140,.24); cursor: pointer; transition: background 220ms var(--ease), box-shadow 220ms var(--ease), transform 220ms var(--ease); }
 .sw-profile:hover { background: rgba(255,255,255,.9); transform: translateY(-1px); box-shadow: 0 1px 2px rgba(23,35,58,.05), 0 16px 30px -20px rgba(22,46,140,.4); }
 .sw-profile .sw-avatar { width: 36px; height: 36px; border-radius: 999px; font-size: 14px; }
+/* The Profile page's own "white ring lifts the avatar" treatment
+   (.pf-avatar), scaled down: the picture reads as a centred, framed focal
+   point rather than a flat circle flush with the pill's edge. */
+.sw-profile-avatar { flex: none; display: flex; border-radius: var(--radius-pill); padding: 3px; background: var(--card); box-shadow: 0 4px 12px -5px rgba(23,35,58,.4); line-height: 0; }
 .sw-profile-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .sw-profile-name { font: 700 13px/16px var(--font-sans); color: var(--ink); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sw-profile-email { font: 400 11px/15px var(--font-sans); color: var(--ink-faint); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -721,6 +771,7 @@ a {
   .sw-sidebar .sw-brand, .sw-sidebar .sw-navlabel, .sw-sidebar .sw-group-label, .sw-sidebar .sw-carousel-dots { display: none; }
   .sw-sidebar .sw-brandrow { justify-content: center; }
   .sw-sidebar .sw-navitem { justify-content: center; padding: 11px 0; gap: 0; }
+  .sw-sidebar .sw-navico > svg { width: 19px; height: 19px; }
   .sw-sidebar .sw-navbadge { position: absolute; top: 4px; right: 8px; min-width: 17px; height: 17px; padding: 0 4px; font-size: 10px; line-height: 17px; }
   .sw-sidebar .sw-navitem::after { content: attr(data-label); position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%) translateX(-4px); padding: 6px 10px; border-radius: 10px; background: var(--ink); color: #fff; font: 600 12px/16px var(--font-sans); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 160ms var(--ease), transform 160ms var(--ease); z-index: 5; }
   .sw-sidebar .sw-navitem:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
@@ -2748,16 +2799,22 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .pf-cover-mark { position: absolute; top: 50%; right: -46px; transform: translateY(-50%);
   color: #fff; opacity: .1; line-height: 0; pointer-events: none; }
 
-.pf-head { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap;
+/* Centred on every size, not just mobile: the avatar and name stack and
+   centre the same way the mobile layout always has (see the .pf-head
+   override notes below this used to live under — align-items: flex-end
+   anchored avatar/name/button to a shared bottom edge, which broke the
+   moment a long name or a wrapped badge row made .pf-id taller than the
+   avatar, pushing the name up into the cover's -46px overlap). */
+.pf-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
   padding: 0 28px 20px; margin-top: -46px; }
 /* A white ring lifts the avatar off the cover it overlaps. */
 .pf-avatar { flex: none; border-radius: var(--radius-pill); padding: 5px; background: var(--card);
   box-shadow: 0 8px 24px -10px rgba(23,35,58,.4); line-height: 0; }
-.pf-id { flex: 1; min-width: 0; padding-bottom: 4px; }
+.pf-id { min-width: 0; }
 .pf-name { margin: 0; font: 800 26px/32px var(--font-sans); color: var(--ink); letter-spacing: -.4px; }
-.pf-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 7px; }
+.pf-meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 7px; }
 .pf-handle { font: 500 13px/18px var(--font-sans); color: var(--ink-soft); }
-.pf-head > .af-btn, .pf-head > button { flex: none; margin-bottom: 4px; }
+.pf-head > .af-btn, .pf-head > button { flex: none; }
 
 /* Four figures across the foot of the identity card. */
 .pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line-soft); }
@@ -2777,18 +2834,7 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
   .pf-stats { grid-template-columns: repeat(2, 1fr); }
   .pf-stat:nth-child(2) { border-right: none; }
   .pf-stat:nth-child(-n+2) { border-bottom: 1px solid var(--line-soft); }
-  /* `align-items: flex-end` anchors avatar/name/button to a shared bottom
-     edge, which only stays clear of the cover because the avatar is
-     normally the tallest item. A long name or a wrapped badge row can make
-     .pf-id taller than the avatar instead, and its top — where the name
-     sits — then reaches up into the -46px overlap and renders on the cover.
-     Stacking the head vertically sidesteps that entirely: each item's
-     position only depends on what's above it, never on which sibling is
-     tallest. */
-  .pf-head { padding: 0 18px 18px; margin-top: -40px; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
-  .pf-id { padding-bottom: 0; }
-  .pf-meta { justify-content: center; }
-  .pf-head > .af-btn, .pf-head > button { margin-bottom: 0; }
+  .pf-head { padding: 0 18px 18px; margin-top: -40px; gap: 10px; }
   .pf-pad { padding: 20px 18px 22px; }
   .pf-name { font-size: 22px; line-height: 28px; }
 }
