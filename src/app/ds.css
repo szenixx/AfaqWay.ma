@@ -67,8 +67,6 @@
 
   /* ── Workspace background (v2: flat matte — no gradient, no colour blobs) ── */
   --sw-gradient:#F5F6F8; /* @kind other */ /* was a 135° indigo gradient; v2 background is matte and disappears behind content */
-  --blob-1:transparent;  /* v2: no ambient colour blobs */
-  --blob-2:transparent;
 
   /* ══ Expanded 50–950 scales ══════════════════════════════════════════════
      For SaaS-grade foundations work (dense tables, charts, hover ramps). The

@@ -577,11 +577,15 @@ a {
    Page = very subtle light surface; cards (.sw-tile) are the solid white surfaces. */
 /* v2: the workspace field is matte and flat — it disappears behind content,
    rather than competing with it. The 135° blue gradient and the two ambient
-   indigo blobs are retired; --sw-gradient and --blob-1/2 now carry the v2
-   values, so the surface follows the token contract instead of hardcoded hex. */
+   indigo blobs are retired; --sw-gradient carries the v2 value, so the
+   surface follows the token contract instead of hardcoded hex.
+   --blob-1/--blob-2 are permanently `transparent` (no theme ever sets them
+   otherwise) — confirmed on-device as the actual cause of the platform's
+   mobile lag: two fixed-position, 42–46vw circles each running a 64px CSS
+   `filter: blur()` on every paint, forcing their own GPU compositing layer,
+   to render nothing. Removed rather than mobile-gated — there is no visible
+   output to preserve on desktop either. */
 .sw-root { height: 100dvh; position: relative; background: var(--sw-gradient); overflow: hidden; }
-.sw-root::before { content: ""; position: fixed; width: 46vw; height: 46vw; left: -9vw; top: -12vw; border-radius: 50%; background: var(--blob-1); filter: blur(64px); pointer-events: none; z-index: 0; }
-.sw-root::after { content: ""; position: fixed; width: 42vw; height: 42vw; right: -7vw; bottom: -14vw; border-radius: 50%; background: var(--blob-2); filter: blur(64px); pointer-events: none; z-index: 0; }
 .sw-shell { position: relative; z-index: 1; display: flex; gap: 18px; padding: 18px; align-items: stretch; height: 100dvh; }
 /* ── Sidebar (shadcn "sidebar" variant geometry, AfaqWay tokens) ──────────
    Expanded 256px / icon-only 60px, 32px menu rows, 8px radius, flat accent
@@ -2871,33 +2875,3 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .jr-step-title .ds-status { text-transform: none; letter-spacing: 0; flex: none; }
 /* The stage nav badge is the plain variant at the list's own small size. */
 .jr-navbadge { font-size: 9.5px; }
-
-/* ══════════════════════════════════════════════════════════════════════════
-   TEMPORARY PERF DEBUG TOGGLES — see src/lib/perfDebug.ts and
-   src/components/PerfDebugPanel.tsx. Delete this whole block, that file, and
-   that component (plus its mount in layout.tsx) once the mobile-lag culprit
-   is found and permanently fixed. Every rule here is a same-effect override
-   gated on a class the debug panel toggles on <html> — !important because it
-   has to reliably beat rules from every breakpoint at once, on demand.
-   ══════════════════════════════════════════════════════════════════════════ */
-html.dbg-blob-blur .sw-root::before, html.dbg-blob-blur .sw-root::after { display: none !important; }
-html.dbg-grid-anim .af-grid-cell { animation: none !important; }
-html.dbg-sidebar-transition .sw-sidebar { transition: none !important; }
-html.dbg-mnav-pop .mnav-dropdown { animation: none !important; }
-html.dbg-notif-pop .sw-notifpop { animation: none !important; }
-html.dbg-loader-spin .af-loader-arc { animation: none !important; }
-html.dbg-skeleton-shimmer .ds-skel, html.dbg-skeleton-shimmer .af-skeleton,
-html.dbg-skeleton-shimmer .ua-skeleton, html.dbg-skeleton-shimmer .af-shimmer::after { animation: none !important; }
-html.dbg-journey-glass-blur .jr-nav, html.dbg-journey-glass-blur .jr-stage, html.dbg-journey-glass-blur .jr-head {
-  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-html.dbg-journey-locked-blur .jr-stage.locked { filter: none !important; }
-html.dbg-journey-entrance .jr-stage-body { animation: none !important; }
-html.dbg-rp-card-entrance .rp-card { animation: none !important; }
-html.dbg-explore-entrance .ex-stat, html.dbg-explore-entrance .ex-exp-body, html.dbg-explore-entrance .ex-city { animation: none !important; }
-html.dbg-explore-pulse .ex-node.current { animation: none !important; }
-html.dbg-explore-marquee .ex-marquee-track { animation: none !important; }
-html.dbg-chat-texture .stu-chat-texture::before { animation: none !important; }
-html.dbg-chat-unread-icons .sw-iconbtn.unread .ai-bell-icon .clapper,
-html.dbg-chat-unread-icons .sw-iconbtn.unread .ai-chat-bubble-icon .dot { animation: none !important; }
-html.dbg-typing-dots .chat-typing i { animation: none !important; }
-html.dbg-status-pulse .ds-status-dot.pulse, html.dbg-status-pulse .ds-status-dot.ping::after { animation: none !important; }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useActivePerfFlags } from "@/lib/perfDebug";
 
 /* Animated grid pattern — the hero background.
 
@@ -37,19 +36,15 @@ export function AnimatedGridPattern({ cells = 14, cell = 44, interval = 3200 }: 
   // Positions are produced in effects only, so render stays pure and the
   // server and client markup always agree.
   const [squares, setSquares] = useState<Cell[]>([]);
-  // TEMPORARY: see src/lib/perfDebug.ts — the reroll interval is JS, not
-  // CSS, so a class toggle alone can't stop it.
-  const noReroll = useActivePerfFlags().has("grid-reroll");
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     setSquares(roll(cells));
-    if (noReroll) return;
     // The interval is the external system driving this; the first roll goes
     // through it too, so nothing is set synchronously during the effect.
     const t = setInterval(() => setSquares(roll(cells)), interval);
     return () => clearInterval(t);
-  }, [cells, interval, noReroll]);
+  }, [cells, interval]);
 
   return (
     <div className="af-grid" aria-hidden style={{ backgroundSize: `${cell}px ${cell}px` }}>
