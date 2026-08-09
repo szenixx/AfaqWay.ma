@@ -38,7 +38,10 @@ export type NotifyInput = {
  */
 export const whatsappAllowed = (outcome: ReviewOutcome) => outcome === "approved";
 
-/** The exact text a student reads, in chat and on WhatsApp alike. */
+/** The exact text a student reads in chat — parsed back apart client-side
+ *  (see DecisionCard in components/chat/parts.tsx) into a title, a Stage →
+ *  Step line and, if present, the advisor's note, so this stays plain text
+ *  with no markup of its own to parse around. */
 export function reviewMessage(input: NotifyInput): string {
   const lines = [
     `${HEADLINE[input.outcome]}`,
@@ -46,6 +49,21 @@ export function reviewMessage(input: NotifyInput): string {
     `Step: ${input.stepTitle}`,
   ];
   if (input.message.trim()) lines.push("", input.message.trim());
+  return lines.join("\n");
+}
+
+/** Same content as reviewMessage(), formatted for WhatsApp's own markdown
+ *  instead — asterisks for bold, no separate "Stage:"/"Step:" lines. Kept
+ *  as its own function rather than reused for the in-app body: WhatsApp
+ *  markup in that shared text would show as literal asterisks in the chat
+ *  bubble, which parses reviewMessage()'s plain-text shape for its own
+ *  card. Not wired to a real WhatsApp send yet — whatsappAllowed() gates
+ *  it off until that's switched on. */
+export function whatsappMessage(input: NotifyInput): string {
+  const lines = [`*${HEADLINE[input.outcome]}*`];
+  const path = [input.stageTitle, input.stepTitle].filter(Boolean).join(" → ");
+  if (path) lines.push(path);
+  if (input.message.trim()) lines.push("", "*Advisor Note:*", input.message.trim());
   return lines.join("\n");
 }
 
@@ -106,8 +124,9 @@ export async function notifyReview(input: NotifyInput, options: { whatsapp?: str
   });
 
   if (viaWhatsApp && options.whatsapp) {
-    // Opens WhatsApp with the identical wording; nothing leaves silently.
-    window.open(whatsappLink(options.whatsapp, body), "_blank", "noopener,noreferrer");
+    // Same content as the chat message, WhatsApp's own bold markup instead
+    // of the chat card's styling — nothing leaves silently.
+    window.open(whatsappLink(options.whatsapp, whatsappMessage(input)), "_blank", "noopener,noreferrer");
   }
 
   return body;

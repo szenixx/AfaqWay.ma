@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Download, Paperclip, Reply, ArrowRight, MoreVertical, CheckCheck } from "lucide-react";
+import { Download, Paperclip, Reply, ArrowRight, MoreVertical, CheckCheck, CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import { UserAvatar, type UserAvatarUser, Loader } from "@/components/ds";
 import { parseAsk, QUICK_REACTIONS, type Reactions } from "@/lib/chat";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,6 +121,71 @@ export const decisionOf = (msg: ChatMsg): DecisionMeta | null =>
   msg.meta && msg.meta.outcome && DECISION_TONE[msg.meta.outcome] ? msg.meta : null;
 
 const seenTime = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+const DECISION_ICON: Record<string, typeof CircleCheck> = {
+  approved: CircleCheck, rejected: CircleX, changes_requested: TriangleAlert,
+};
+
+/** One row shaped exactly like a normal message row (same avatar-or-spacer
+ *  logic, same wrapping classes) but holding whatever bubble content it's
+ *  given — the two decision bubbles below reuse this instead of duplicating
+ *  the row markup twice. */
+function DecisionRow({ mine, showAvatar, otherAvatar, children }: {
+  mine: boolean; showAvatar: boolean; otherAvatar?: ReactNode; children: ReactNode;
+}) {
+  return (
+    <div className={`chat-row${mine ? " mine" : ""}`}>
+      <div className="chat-msgcol">
+        <div className="chat-bubblewrap">
+          {!mine && <span className={`chat-row-avatar${showAvatar ? "" : " spacer"}`}>{showAvatar ? otherAvatar : null}</span>}
+          <div className="chat-bubble-slot">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A review decision, rendered as a real chat bubble — same avatar, same
+ *  alignment, same frame as any other advisor message, just tinted to the
+ *  outcome, with the admin's note (if any) folded into the bottom of that
+ *  same bubble rather than as a separate message. reviewMessage()
+ *  (lib/journeyNotify) always writes "headline\nStage: …\nStep: …" then,
+ *  only if the admin left one, a blank line and the note — so the first
+ *  line is the title and everything after the first blank line is the
+ *  note, with no need to re-derive either from DecisionMeta. */
+function DecisionCard({ msg, decision, mine, otherAvatar, isLastOfGroup, onOpenDecision }: {
+  msg: ChatMsg; decision: DecisionMeta; mine: boolean; otherAvatar?: ReactNode; isLastOfGroup?: boolean;
+  onOpenDecision?: (decision: DecisionMeta) => void;
+}) {
+  const tone = DECISION_TONE[decision.outcome as string] ?? "indigo";
+  const Icon = DECISION_ICON[decision.outcome as string] ?? CircleCheck;
+  const [title, ...rest] = (msg.body ?? "").split("\n\n");
+  const note = rest.join("\n\n").trim();
+  const path = [decision.stageTitle, decision.stepTitle].filter(Boolean).join(" → ");
+
+  return (
+    <DecisionRow mine={mine} showAvatar={!!isLastOfGroup} otherAvatar={otherAvatar}>
+      <div className={`chat-bubble decision tone-${tone}`}>
+        <div className="chat-decision-head">
+          <Icon size={16} className="chat-decision-ico" />
+          <h4 className="chat-decision-title">{title.split("\n")[0]}</h4>
+          <span className="chat-decision-time">{seenTime(msg.created_at)}</span>
+        </div>
+        {path && <div className="chat-decision-info"><span className="chat-decision-path">{path}</span></div>}
+        {note && (
+          <div className="chat-decision-note">
+            <b className="chat-decision-note-label">Advisor Note</b> <span className="chat-decision-note-text">{note}</span>
+          </div>
+        )}
+        {onOpenDecision && (
+          <button type="button" className="chat-decision-btn" onClick={() => onOpenDecision(decision)}>
+            View step<ArrowRight size={11} />
+          </button>
+        )}
+      </div>
+    </DecisionRow>
+  );
+}
 
 /** "Today" / "Yesterday" / "5 March", each paired with the clock time of the
  *  first message that landed in that calendar day. */
@@ -299,6 +364,7 @@ function MessageBubbleImpl({
 }) {
   const ask = parseAsk(msg.body);
   const decision = decisionOf(msg);
+  if (decision) return <DecisionCard msg={msg} decision={decision} mine={mine} otherAvatar={otherAvatar} isLastOfGroup={isLastOfGroup} onOpenDecision={onOpenDecision} />;
   return (
     /* The id is on the row so the conversation can scroll straight to one
        message, e.g. the first unread when arriving from a notification. */
@@ -325,9 +391,7 @@ function MessageBubbleImpl({
       {/* Reactions anchor to and overlap the bubble's own bottom corner —
           BubbleReactions' idea — rather than sit in the meta flow below it. */}
       <div className="chat-bubble-slot">
-      <div className={`chat-bubble${msg.pinned ? " pinned" : ""}${decision ? ` decision tone-${DECISION_TONE[decision.outcome as string]}` : ""}`}>
-        {/* A thin bar across the top, and nothing else about the card changes. */}
-        {decision && <span className="chat-decision-bar" aria-hidden />}
+      <div className={`chat-bubble${msg.pinned ? " pinned" : ""}`}>
         {quoted && (
           <div style={{ borderLeft: `3px solid ${mine ? "rgba(255,255,255,.65)" : "var(--indigo-600)"}`, background: mine ? "rgba(255,255,255,.14)" : "rgba(22,46,140,.06)", borderRadius: 8, padding: "5px 9px", marginBottom: 7 }}>
             <span style={{ display: "block", font: "600 10.5px/14px var(--font-sans)", color: mine ? "rgba(255,255,255,.9)" : "var(--indigo-600)" }}>{quotedAuthor}</span>
@@ -356,13 +420,6 @@ function MessageBubbleImpl({
           </button>
         )}
 
-        {decision && onOpenDecision && (
-          <div className="chat-decision-cta">
-            <button type="button" className="chat-decision-link" onClick={() => onOpenDecision(decision)}>
-              Click Here<ArrowRight size={13} />
-            </button>
-          </div>
-        )}
       </div>
 
       {onReact && msg.reactions && Object.keys(msg.reactions).length > 0 && (

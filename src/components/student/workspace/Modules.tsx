@@ -24,7 +24,7 @@ import {
   Route, CircleCheckBig, Clock3, FileText, Upload, Download,
   Bell, MessageCircle, ArrowRight, Plus, Check, Pencil, Mail, Phone, MapPin,
   Calendar, CreditCard, UserRound, Send, LifeBuoy, Compass,
-  X, Sparkles, GraduationCap, Lock, Wallet, Ticket,
+  X, Sparkles, GraduationCap, Lock, Wallet, Ticket, BadgeCheck,
 } from "lucide-react";
 import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
 import { PAY_METHODS } from "@/lib/plans";
@@ -380,6 +380,11 @@ export function Subscription({ profile }: { profile: WsProfile }) {
 /* ── Profile (read-only) ──────────────────────────────────────────────────── */
 export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: string) => void }) {
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
+  const full = profile.plan === "full_service";
+  // Full Service reads as the platform's premium tier, so its badges get the
+  // richer purple; Self Service keeps the same neutral grey every other
+  // "plain" badge in the app uses.
+  const badgeTone = full ? "purple" : "grey";
   /* Real activity, from the rows the platform already writes. Never generated:
      an empty square means nothing happened that day. */
   const activity = useActivity(profile.userId);
@@ -421,10 +426,22 @@ export function Profile({ profile, onNav }: { profile: WsProfile; onNav: (id: st
           </span>
           <div className="pf-id">
             <h2 className="pf-name">{profile.fullName || "Student"}</h2>
+            {/* Verified + subscription: one badge pair, coloured by plan tier,
+                replacing the old green "Verified" status + plan pill combo so
+                the same fact isn't shown twice. Unverified students still see
+                their chosen plan below, just not as a "verified" claim. */}
+            {profile.verified ? (
+              <div className="pf-badges">
+                <Pill tone={badgeTone} icon={<BadgeCheck size={13} />}>Verified</Pill>
+                <Pill tone={badgeTone} icon={<Sparkles size={13} />}>{planById(profile.plan)?.name ?? "Plan"}</Pill>
+              </div>
+            ) : (
+              <div className="pf-meta">
+                <Pill tone={full ? "indigo" : "green"}>{planById(profile.plan)?.name ?? "No plan"}</Pill>
+              </div>
+            )}
             <div className="pf-meta">
               <span className="pf-handle">ID {profile.profileId}</span>
-              <Pill tone={profile.plan === "full_service" ? "indigo" : "green"}>{planById(profile.plan)?.name ?? "No plan"}</Pill>
-              {profile.verified && <Status state="success" label="Verified" />}
             </div>
           </div>
           <BtnGhost tone="blue" onClick={() => onNav("settings")}><Pencil size={15} />Edit profile</BtnGhost>

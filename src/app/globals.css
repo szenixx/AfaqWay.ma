@@ -2803,12 +2803,8 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .pf-cover-mark { position: absolute; top: 50%; right: -46px; transform: translateY(-50%);
   color: #fff; opacity: .1; line-height: 0; pointer-events: none; }
 
-/* Centred on every size, not just mobile: the avatar and name stack and
-   centre the same way the mobile layout always has (see the .pf-head
-   override notes below this used to live under — align-items: flex-end
-   anchored avatar/name/button to a shared bottom edge, which broke the
-   moment a long name or a wrapped badge row made .pf-id taller than the
-   avatar, pushing the name up into the cover's -46px overlap). */
+/* Mobile default: centred, stacked — avatar, name, badges, meta, button, each
+   its own line. Desktop overrides to a Facebook-inspired row below. */
 .pf-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
   padding: 0 28px 20px; margin-top: -46px; }
 /* A white ring lifts the avatar off the cover it overlaps. */
@@ -2816,9 +2812,28 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
   box-shadow: 0 8px 24px -10px rgba(23,35,58,.4); line-height: 0; }
 .pf-id { min-width: 0; }
 .pf-name { margin: 0; font: 800 26px/32px var(--font-sans); color: var(--ink); letter-spacing: -.4px; }
+/* Verified + subscription pair — same row, small gap, wraps if it has to. */
+.pf-badges { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .pf-meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 7px; }
 .pf-handle { font: 500 13px/18px var(--font-sans); color: var(--ink-soft); }
 .pf-head > .af-btn, .pf-head > button { flex: none; }
+
+@media (min-width: 901px) {
+  /* Facebook-style hierarchy: picture pinned to the left (independently
+     overlapping the cover via its own negative margin, not a shared one on
+     the row), name/badges/meta stacked left-aligned beside it, Edit profile
+     pinned to the far right. align-items: flex-start (not flex-end) is the
+     point — the identity block's top always starts a fixed distance below
+     the cover regardless of how tall it grows (name + a badge row + meta is
+     taller than the old single-line version), so a long name or a wrapped
+     badge row can never push back up into the cover the way a shared
+     bottom-edge alignment would. */
+  .pf-head { flex-direction: row; align-items: flex-start; text-align: left; gap: 20px; margin-top: 0; }
+  .pf-avatar { margin-top: -46px; }
+  .pf-id { flex: 1; padding-top: 6px; }
+  .pf-badges, .pf-meta { justify-content: flex-start; }
+  .pf-head > .af-btn, .pf-head > button { margin-left: auto; margin-top: 6px; }
+}
 
 /* Four figures across the foot of the identity card. */
 .pf-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line-soft); }

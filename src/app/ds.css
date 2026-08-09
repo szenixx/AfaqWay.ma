@@ -49,6 +49,7 @@
   --amber:#8A5A0C;  --amber-tint:#FBF0DA;  --amber-line:#E7C583;  /* pending, waiting, away */
   --red:#B23B27;    --red-tint:#FBE7E2;    --red-line:#EDB3A6;    /* rejected, failed, destructive */
   --grey:#8695AB;   --grey-tint:#F1F4F7;   --grey-line:#DCE2EA;   /* draft, cancelled, offline */
+  --purple:#6B4BA8; --purple-tint:#F3EEFF; --purple-line:#DCCFF2; /* full-service verified/subscription */
 
   /* Softened status — graphics/UI only (≥3.6:1), never text (text uses the darker values above). */
   --green-soft:#3F8C63; --amber-soft:#A8741B; --red-soft:#C25A44;
@@ -423,14 +424,17 @@ select.af{border-radius:var(--radius-pill);padding-right:38px;cursor:pointer;}
 .af-check-row{display:flex;align-items:flex-start;gap:10px;font:400 13px/20px var(--font-sans);color:var(--ink);cursor:pointer;}
 /* Message composer: the capsule IS the field, so the inner input is bare.
    One definition shared by the student and admin chats. */
-.af-composer{display:flex;align-items:center;gap:4px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 5px 4px 8px;box-shadow:0 6px 18px rgba(23,35,58,.06);transition:border-color 140ms var(--ease),box-shadow 140ms var(--ease);}
-.af-composer:focus-within{border-color:var(--indigo-600);box-shadow:0 0 0 3px var(--indigo-100);}
+.af-composer{display:flex;align-items:center;gap:4px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 5px 4px 8px;box-shadow:0 6px 18px rgba(23,35,58,.06);}
 /* A real textarea now, not a single-line input: field-sizing grows it with
    the message (Enter sends, Shift+Enter starts a new line — see
    ChatComposerInput), capped so a long paste scrolls instead of pushing the
    composer to take over the screen. */
 .af-composer-input{flex:1 1 auto;min-width:0;min-height:22px;max-height:110px;padding:8px 0;border:none;background:transparent;outline:none;resize:none;overflow-y:auto;field-sizing:content;font:400 14.5px/22px var(--font-sans);color:var(--ink);}
 .af-composer-input::placeholder{color:var(--ink-faint);}
+/* No focus ring — the textarea primitive's own focus-visible ring/border
+   utilities are overridden here since they're the actual visible "stroke"
+   this rule is meant to remove; still fully usable, just no ring. */
+.af-composer-input:focus,.af-composer-input:focus-visible{outline:none!important;box-shadow:none!important;border-color:transparent!important;}
 
 @media (prefers-reduced-motion:reduce){
   .af-toggle-thumb,.af-toggle-ico,.af-select-chev,.af-menu{transition:none;animation:none;}
@@ -913,18 +917,50 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
   .af-jelly:hover,.af-jelly:active{scale:1;}
 }
 
-/* Decision messages: a thin bar across the top says what happened. The card
-   keeps the platform's own background, border and shadow; only the bar changes
-   colour, and the action sits bottom-right. */
-.chat-bubble.decision{position:relative;padding-top:14px;overflow:hidden;}
-.chat-decision-bar{position:absolute;top:0;left:0;right:0;height:3px;background:var(--decision,var(--indigo-600));}
-.chat-bubble.decision.tone-green{--decision:var(--green);}
-.chat-bubble.decision.tone-red{--decision:var(--red);}
-.chat-bubble.decision.tone-amber{--decision:var(--amber);}
-.chat-decision-cta{display:flex;justify-content:flex-end;margin-top:8px;}
-.chat-decision-link{display:inline-flex;align-items:center;gap:5px;border:none;background:none;padding:0;cursor:pointer;
-  font:600 12px/17px var(--font-sans);color:var(--decision,var(--indigo-600));transition:gap 160ms var(--ease);}
-.chat-decision-link:hover{text-decoration:underline;gap:8px;}
+/* Decision messages: real chat bubbles — same .chat-bubble frame (padding,
+   radius, shadow, fit-content sizing) and same avatar/alignment as any other
+   advisor message (see DecisionRow) — just tinted per outcome instead of the
+   default card background, the soft tint/line pair Pill already uses
+   elsewhere, with the admin's note folded into the bottom of the same
+   bubble. The one full-strength tone colour is kept for the "Advisor Note"
+   label, so that's the part that stands out. */
+.chat-bubble.decision{background:var(--tone-tint,var(--indigo-tint));border-color:var(--tone-line,var(--indigo-line));
+  animation:chatDecisionIn 200ms var(--ease) both;}
+.chat-bubble.tone-green{--tone-tint:var(--green-tint);--tone-line:var(--green-line);--tone-dark:var(--green);}
+.chat-bubble.tone-red{--tone-tint:var(--red-tint);--tone-line:var(--red-line);--tone-dark:var(--red);}
+.chat-bubble.tone-amber{--tone-tint:var(--amber-tint);--tone-line:var(--amber-line);--tone-dark:var(--amber);}
+/* Line 1: icon + title + time, one row — the primary focus. */
+.chat-decision-head{display:flex;align-items:center;gap:5px;min-width:210px;}
+.chat-decision-ico{flex:none;color:var(--tone-dark,var(--indigo-600));}
+.chat-decision-title{margin:0;flex:1;min-width:0;font:800 13px/17px var(--font-sans);color:var(--ink);letter-spacing:-.1px;}
+.chat-decision-time{flex:none;font:500 10px/15px var(--font-sans);color:var(--ink-faint);}
+/* Line 2: Stage → Step, its own line now that the button has moved below. */
+.chat-decision-info{margin-top:4px;}
+.chat-decision-path{font:500 11.5px/16px var(--font-sans);color:var(--ink-soft);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Line 3: the note, folded into the same bubble, label inline with the text. */
+.chat-decision-note{margin-top:6px;}
+.chat-decision-note-label{font:700 10.5px/16px var(--font-sans);letter-spacing:.03em;text-transform:uppercase;
+  color:var(--tone-dark,var(--indigo-600));}
+.chat-decision-note-text{font:400 12.5px/18px var(--font-sans);color:var(--ink);}
+/* Line 4: the action — a plain underlined text link under the note, not a
+   button, so the note stays the visual weight of the card. */
+.chat-decision-btn{display:flex;align-items:center;gap:4px;width:fit-content;margin:8px 0 0 auto;border:none;
+  background:none;padding:0;cursor:pointer;color:var(--ink);font:600 11.5px/1 var(--font-sans);
+  text-decoration:underline;text-underline-offset:2px;}
+@keyframes chatDecisionIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+@media(prefers-reduced-motion:reduce){.chat-bubble.decision{animation:none;}}
+/* Mobile: the chat column is narrower, so the bubble goes slimmer still —
+   tighter padding, smaller type, no forced minimum width (a short title
+   like "Step Approved" can stay as narrow as the bubble naturally wants). */
+@media (max-width: 1023px) {
+  .chat-bubble.decision{padding:8px 11px;}
+  .chat-decision-head{min-width:0;gap:4px;}
+  .chat-decision-title{font-size:12.5px;line-height:16px;}
+  .chat-decision-time{font-size:9.5px;}
+  .chat-decision-path{font-size:11px;}
+  .chat-decision-note-text{font-size:12px;line-height:17px;}
+}
 
 /* ══ Pill ══════════════════════════════════════════════════════════════════
    The one label/badge/tag/chip. Colour arrives inline from the tone tokens;

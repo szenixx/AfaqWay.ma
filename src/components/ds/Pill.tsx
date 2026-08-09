@@ -13,7 +13,7 @@ import type { CSSProperties, ReactNode } from "react";
  *
  * Colour comes from the tone tokens in ds.css. No new palette. */
 
-export type PillTone = "grey" | "indigo" | "amber" | "red" | "green";
+export type PillTone = "grey" | "indigo" | "amber" | "red" | "green" | "purple";
 export type PillSize = "sm" | "md";
 
 const TONE: Record<PillTone, { text: string; tint: string; line: string }> = {
@@ -22,6 +22,7 @@ const TONE: Record<PillTone, { text: string; tint: string; line: string }> = {
   amber: { text: "var(--amber)", tint: "var(--amber-tint)", line: "var(--amber-line)" },
   red: { text: "var(--red)", tint: "var(--red-tint)", line: "var(--red-line)" },
   green: { text: "var(--green)", tint: "var(--green-tint)", line: "var(--green-line)" },
+  purple: { text: "var(--purple)", tint: "var(--purple-tint)", line: "var(--purple-line)" },
 };
 
 export type PillProps = {
