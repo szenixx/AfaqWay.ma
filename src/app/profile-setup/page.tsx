@@ -598,12 +598,15 @@ export default function ProfileSetup() {
     view === 1 ? <StepFooter saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />
     : isProgram ? (progSub === 0
         ? <StepFooter onBack={prevStep} saveState={saveState} right={<Button variant="primary" size="lg" onClick={progNext}>Continue</Button>} />
-        : <StepFooter onBack={() => setProgSub(0)} saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />)
+        // Back stays available so picking never traps the user, but Continue
+        // only activates once a program is actually chosen — nothing to
+        // advance with otherwise.
+        : <StepFooter onBack={() => setProgSub(0)} saveState={saveState} right={<Button variant="primary" size="lg" disabled={selectedPrograms.length === 0} onClick={goNext}>Continue</Button>} />)
     : (bStep && bStep.sections.length > 0) ? <StepFooter onBack={prevStep} saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />
     : <StepFooter right={isLast ? <Button variant="primary" size="lg" onClick={() => { if (!(agreeTerms && agreeRefund)) { setLegalError(true); return; } finish(); }}>Done</Button> : <Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />;
 
   return (
-    <div className="af-onboard-shell">
+    <div className={`af-onboard-shell${isProgram ? " af-onboard-noscale" : ""}`}>
       <MobileBar />
       <div className="af-onboard-grid">
         <aside className="af-onboard-left">

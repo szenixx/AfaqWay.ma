@@ -37,6 +37,17 @@ body {
   .sw-root.af-desktop-zoom .sw-shell { height: calc(100dvh / 1.1); }
 }
 
+/* Mobile-only 10% scale-up (Homepage, Login/Signup) — same mechanism and same
+   reasoning as the desktop block above, at the complementary breakpoint so
+   there's no dead zone between the two. Home has no fixed-viewport-height
+   section (Hero uses min-height, which is free to grow past one screen), so
+   only .af-auth-main — a real height:100vh, overflow:hidden, no-scroll box —
+   needs the compensated height. */
+@media (max-width: 1023px) {
+  .af-mobile-zoom { zoom: 1.1; }
+  .af-auth-main.af-mobile-zoom { height: calc(100vh / 1.1); }
+}
+
 /* Mobile-only: every workspace module fires its own entrance animation on
    mount (.rp-card, .ex-stat, .ex-exp-body, .ex-city, .jr-stage-body), and
    several of them land at once whenever switching modules mounts a batch of
@@ -242,12 +253,15 @@ a {
 .af-skeleton { background-color: var(--subtle); background-image: linear-gradient(90deg, var(--subtle), var(--card), var(--subtle)); background-size: 180px 100%; background-repeat: no-repeat; animation: afShimmer 1.4s ease-in-out infinite; }
 
 /* Onboarding two-panel shell: left 45% hero / right 55% form. No top bar.
-   Zoomed in 10% by default on desktop. `zoom` does not rescale viewport
-   units, so 100vh must be divided by the zoom factor first or the shell
-   falls short of the fold — same fix as the admin console's --adm-vh. Scoped
-   to desktop (min-width:861px, the mobile breakpoint's complement below):
-   phones already need every pixel for the step-3 program list (see the
-   sticky-footer fix nearby), zooming them in would only make that worse. */
+   Zoomed in 10% by default on both desktop and mobile. `zoom` does not
+   rescale viewport units, so 100vh must be divided by the zoom factor first
+   or the shell falls short of the fold — same fix as the admin console's
+   --adm-vh. Mobile switches .af-onboard-shell to height:auto (see the
+   860px block below), so --ob-vh's compensation only matters on desktop;
+   mobile just needs --ob-zoom itself. The Program step (.af-onboard-noscale,
+   set from ProfileSetup's isProgram) opts back out of the mobile zoom only —
+   its "pick your programs" list is already tight on space at 100%, zooming
+   it in would only make that worse. */
 .af-onboard-shell { --ob-zoom: 1; --ob-vh: 100vh; height: var(--ob-vh); zoom: var(--ob-zoom); display: flex; flex-direction: column; overflow: hidden; background: url(/hero-ambient.webp) center/cover no-repeat, var(--paper); }
 /* Onboarding-only: text inputs take the dropdown's own capsule radius and a
    slightly slimmer height, so the two field types read as one family on this
@@ -295,11 +309,15 @@ a {
 .af-frame-open .af-frame-footer { background: transparent; border-top: none; padding: 12px 2px 2px; }
 /* Roadmap step: 3D video fills the whole frame, including behind the Done button */
 .af-frame-video { background: transparent; }
-.af-roadmap-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+/* Rounded directly on the layer itself (not just clipped by .af-frame's own
+   radius): on mobile .af-frame switches to overflow:visible so the sticky
+   footer can work, which otherwise left this full-bleed video square-cornered
+   — nothing was clipping it to the card's shape anymore. */
+.af-roadmap-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; border-radius: 16px; }
 /* Dark-blue veil at very low opacity over a soft light wash: it calms the video
    without muddying it, and keeps the dark foreground text readable. */
 .af-roadmap-veil {
-  position: absolute; inset: 0; z-index: 1;
+  position: absolute; inset: 0; z-index: 1; border-radius: 16px;
   background: linear-gradient(0deg, rgba(23,35,58,.10), rgba(23,35,58,.10)), rgba(240,243,248,.42);
   backdrop-filter: blur(14px) saturate(1.08);
   -webkit-backdrop-filter: blur(14px) saturate(1.08);
@@ -386,7 +404,11 @@ a {
 .rst-separator[data-state="completed"] { background: var(--indigo-600); }
 @media (max-width: 860px) {
   html, body { overflow-x: hidden; }
-  .af-onboard-shell { height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: visible; }
+  /* height:auto here (not --ob-vh) is exactly why zoom is safe on mobile:
+     the shell already grows past one screen and scrolls instead of clipping,
+     so there's no fixed-viewport dimension for the zoom to overflow. */
+  .af-onboard-shell { --ob-zoom: 1.1; height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: visible; }
+  .af-onboard-shell.af-onboard-noscale { --ob-zoom: 1; }
   .af-onboard-grid { grid-template-columns: 1fr; }
   .af-onboard-left { display: none; }
   .af-onboard-right { padding: 16px 14px 56px; overflow: visible; max-width: 100vw; }

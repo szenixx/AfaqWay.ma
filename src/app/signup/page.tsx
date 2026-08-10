@@ -222,7 +222,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="af-auth-main af-desktop-zoom" style={{ overflow: "hidden", background: "var(--paper)" }}>
+    <div className="af-auth-main af-desktop-zoom af-mobile-zoom" style={{ overflow: "hidden", background: "var(--paper)" }}>
       {/* ── Left panel ── */}
       <div className="af-auth-left" onMouseMove={onPanelMove} style={{ position: "relative", borderRadius: 16, overflow: "hidden", background: "var(--indigo-100)", backgroundImage: "url(/roadmap-panel.webp)", backgroundSize: "cover", backgroundPosition: "center" }}>
         {/* mouse-reactive texture */}
