@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { useOnlineUsers } from "@/lib/presence";
 
@@ -90,21 +91,32 @@ export function useAdvisorIdentity(userId: string | null | undefined): AdvisorId
     void read();
 
     /* Typing is broadcast, never stored: it is true for a moment and worthless
-       afterwards, so it has no business in a table. */
+       afterwards, so it has no business in a table. One tracked timer, not
+       one per broadcast — the admin side sends roughly every 1.5s while
+       typing, well inside this 2.6s window, so an untracked timer per
+       message would keep resetting "typing" true then piling up expiries
+       that fire out of order. */
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel(`advisor-${userId.slice(0, 8)}`)
       .on("broadcast", { event: "typing" }, (payload) => {
+        if (cancelled) return;
         const from = (payload.payload as { role?: string } | null)?.role;
         if (from !== "admin") return;
         setTyping(true);
-        window.setTimeout(() => { if (!cancelled) setTyping(false); }, 2600);
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => { if (!cancelled) setTyping(false); }, 2600);
       })
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
         () => { void read(); });
     channel.subscribe();
 
-    return () => { cancelled = true; void supabase.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      if (hideTimer) clearTimeout(hideTimer);
+      void supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   return useMemo(() => ({
@@ -115,10 +127,45 @@ export function useAdvisorIdentity(userId: string | null | undefined): AdvisorId
   }), [adminId, online, lastSeen, typing]);
 }
 
-/** Tells the student's chat that an administrator is composing a reply. */
+/* Tells the student's chat that an administrator is composing a reply.
+ *
+ * Was creating a brand-new, never-subscribed channel on every keystroke
+ * (AdminChat calls this from the composer's own onChange, with no
+ * debounce) and sending on it unawaited. Broadcasting on a channel that
+ * hasn't finished joining is unreliable, and every one of those sends was a
+ * fire-and-forget promise with no .catch — on a student typing a real
+ * sentence that's dozens of unhandled rejections a second on the very
+ * socket connection the message list's own realtime subscription shares,
+ * which is exactly the kind of thing that leaves that subscription in a
+ * bad state until the page is reloaded.
+ *
+ * Fixed the same way presence.ts's shared channel is: one channel per
+ * student, created and subscribed once, reused after that — and throttled,
+ * since "the advisor is typing" doesn't need a message on every keystroke
+ * to stay true for the 2.6s window the receiving end holds it for. */
+const typingChannels = new Map<string, RealtimeChannel>();
+const lastTypingSentAt = new Map<string, number>();
+const TYPING_THROTTLE_MS = 1500;
+
+function typingChannel(userId: string): RealtimeChannel {
+  const key = userId.slice(0, 8);
+  let ch = typingChannels.get(key);
+  if (!ch) {
+    ch = supabase.channel(`advisor-${key}`);
+    ch.subscribe();
+    typingChannels.set(key, ch);
+  }
+  return ch;
+}
+
 export function broadcastAdvisorTyping(userId: string) {
-  const channel = supabase.channel(`advisor-${userId.slice(0, 8)}`);
-  void channel.send({ type: "broadcast", event: "typing", payload: { role: "admin" } });
+  const key = userId.slice(0, 8);
+  const now = Date.now();
+  if (now - (lastTypingSentAt.get(key) ?? 0) < TYPING_THROTTLE_MS) return;
+  lastTypingSentAt.set(key, now);
+  typingChannel(userId)
+    .send({ type: "broadcast", event: "typing", payload: { role: "admin" } })
+    .catch(() => { /* a missed typing ping is cosmetic; never let it surface as an error */ });
 }
 
 /** "Active now", or how long ago the advisor last wrote. */

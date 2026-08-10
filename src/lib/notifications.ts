@@ -50,17 +50,22 @@ export async function fetchNotifications(userId: string, limit = 50): Promise<No
   return error ? [] : ((data ?? []) as Notification[]);
 }
 
-export async function markRead(id: string, read = true): Promise<void> {
-  const { data } = await supabase.from("notifications").update({ read }).eq("id", id).select("user_id").maybeSingle();
-  // Every open useNotifications() for this user (the bell badge, this popover,
-  // an Overview card) refreshes right away, rather than each waiting on its
-  // own for the realtime round-trip to notice the same write it just made.
-  if (data) notifyLocal((data as { user_id: string }).user_id);
+export async function markRead(userId: string, id: string, read = true): Promise<void> {
+  // Instant, in this tab, before the network call even resolves — the bell's
+  // dot and ringing animation stop the moment the student acts, not once a
+  // round trip (or worse, a realtime one) comes back around.
+  applyLocal(userId, (items) => items.map((n) => (n.id === id ? { ...n, read } : n)));
+  const { error } = await supabase.from("notifications").update({ read }).eq("id", id);
+  // A blocked/failed write must never be left reading as read — reconcile
+  // with what the server actually has, which un-does the optimistic patch
+  // above if the write didn't really go through.
+  if (error) { console.warn("[notifications] markRead failed:", error.message); notifyLocal(userId); }
 }
 
 export async function markAllRead(userId: string): Promise<void> {
-  await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
-  notifyLocal(userId);
+  applyLocal(userId, (items) => items.map((n) => ({ ...n, read: true })));
+  const { error } = await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
+  if (error) { console.warn("[notifications] markAllRead failed:", error.message); notifyLocal(userId); }
 }
 
 export async function removeNotification(id: string): Promise<void> {
@@ -208,11 +213,36 @@ const listeners = new Map<string, Set<NotifListener>>();
 const channels = new Map<string, ReturnType<typeof supabase.channel>>();
 
 /** Tells every open useNotifications() for this user to re-fetch, the same
- *  way an incoming realtime event does — used right after this tab's own
- *  write (markRead/markAllRead), so it never has to wait on that event to
- *  come back around before the UI agrees with what it just did. */
+ *  way an incoming realtime event does — used to reconcile with the server
+ *  after a write this tab made itself fails, so a rejected update doesn't
+ *  leave the optimistic patch below showing something that never actually
+ *  happened. */
 function notifyLocal(userId: string): void {
   for (const fn of listeners.get(userId) ?? []) fn(null);
+}
+
+/* Optimistic local patches — separate from the realtime listeners above.
+ * Marking read must never wait on a network round trip (let alone a
+ * realtime one) before the bell's dot and animation stop: every open
+ * useNotifications() for this user registers its own setItems here, and
+ * markRead/markAllRead patch all of them synchronously, in this tab, the
+ * instant the student acts. */
+const localSetters = new Map<string, Set<(patch: (items: Notification[]) => Notification[]) => void>>();
+
+function registerLocal(userId: string, setter: (patch: (items: Notification[]) => Notification[]) => void): () => void {
+  let set = localSetters.get(userId);
+  if (!set) { set = new Set(); localSetters.set(userId, set); }
+  set.add(setter);
+  return () => {
+    const current = localSetters.get(userId);
+    if (!current) return;
+    current.delete(setter);
+    if (current.size === 0) localSetters.delete(userId);
+  };
+}
+
+function applyLocal(userId: string, patch: (items: Notification[]) => Notification[]): void {
+  for (const setter of localSetters.get(userId) ?? []) setter(patch);
 }
 
 function subscribeNotifications(userId: string, onChange: NotifListener): () => void {
@@ -264,6 +294,11 @@ export function useNotifications(userId: string | null | undefined) {
     if (!userId) return;
     return subscribeNotifications(userId, () => { void load(); });
   }, [userId, load]);
+
+  useEffect(() => {
+    if (!userId) return;
+    return registerLocal(userId, (patch) => setItems(patch));
+  }, [userId]);
 
   const unread = items.filter((n) => !n.read).length;
   return { items, unread, loading, reload: load };

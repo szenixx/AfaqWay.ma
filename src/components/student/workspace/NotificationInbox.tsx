@@ -61,7 +61,7 @@ export function NotificationInbox({ userId, onOpen, onClose }: {
   }, [onClose]);
 
   const open = async (n: Notification) => {
-    if (!n.read) { await markRead(n.id); void reload(); }
+    if (!n.read) { await markRead(userId, n.id); void reload(); }
     if (n.link) onOpen(n.link);
     onClose();
   };
