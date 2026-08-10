@@ -9,7 +9,7 @@ import Footer from "@/components/home/Footer";
 
 export default function Home() {
   return (
-    <main className="af-desktop-zoom af-mobile-zoom">
+    <main className="af-desktop-zoom">
       <Hero />
       <Statistics />
       <HowItWorks />

@@ -51,11 +51,16 @@ export async function fetchNotifications(userId: string, limit = 50): Promise<No
 }
 
 export async function markRead(id: string, read = true): Promise<void> {
-  await supabase.from("notifications").update({ read }).eq("id", id);
+  const { data } = await supabase.from("notifications").update({ read }).eq("id", id).select("user_id").maybeSingle();
+  // Every open useNotifications() for this user (the bell badge, this popover,
+  // an Overview card) refreshes right away, rather than each waiting on its
+  // own for the realtime round-trip to notice the same write it just made.
+  if (data) notifyLocal((data as { user_id: string }).user_id);
 }
 
 export async function markAllRead(userId: string): Promise<void> {
   await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
+  notifyLocal(userId);
 }
 
 export async function removeNotification(id: string): Promise<void> {
@@ -201,6 +206,14 @@ async function emailUpdate(input: { title: string; body: string }) {
 type NotifListener = (inserted: Notification | null) => void;
 const listeners = new Map<string, Set<NotifListener>>();
 const channels = new Map<string, ReturnType<typeof supabase.channel>>();
+
+/** Tells every open useNotifications() for this user to re-fetch, the same
+ *  way an incoming realtime event does — used right after this tab's own
+ *  write (markRead/markAllRead), so it never has to wait on that event to
+ *  come back around before the UI agrees with what it just did. */
+function notifyLocal(userId: string): void {
+  for (const fn of listeners.get(userId) ?? []) fn(null);
+}
 
 function subscribeNotifications(userId: string, onChange: NotifListener): () => void {
   let set = listeners.get(userId);

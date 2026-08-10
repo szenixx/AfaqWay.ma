@@ -2,7 +2,8 @@
 
 import { supabase } from "@/lib/supabase/client";
 import { saveEvent, deleteEvent } from "@/lib/scheduleDb";
-import type { StepMeta } from "@/lib/journeyDb";
+import { setStepState, logEvent, type StepMeta } from "@/lib/journeyDb";
+import type { JourneyStep } from "@/lib/journey";
 
 /* The journey's event bus.
  *
@@ -220,4 +221,47 @@ export async function noteStepOpened(userId: string, stepId: string, meta: StepM
   await supabase.from("notifications")
     .update({ pinned: false })
     .eq("user_id", userId).eq("pinned", true);
+}
+
+/**
+ * Uploading the last required document is, for most steps, the same action
+ * as pressing the step's own button — so it advances the step the same way
+ * that press would, without making the student go back to Journey and click
+ * it separately.
+ *
+ * Deliberately narrow: only the two paths that already complete on a single
+ * click with no dialog (JourneyRoadmap's startCompletion) are eligible.
+ * Anything that opens a dialog — a support request, a TRP decision, a VFS
+ * appointment, or a self-completable step with its own confirm/gate
+ * checklist — needs the student's explicit answer and is left alone here.
+ * Already-submitted, completed, rejected or skipped steps are left alone too
+ * — there is nothing left for an upload to advance.
+ */
+export async function autoAdvanceStepOnDocsComplete(
+  userId: string, step: JourneyStep, stageId: string, stageTitle: string,
+): Promise<boolean> {
+  if (step.support || step.completion === "decision" || step.capture === "vfs_appointment") return false;
+  if (step.state !== "pending" && step.state !== "rejected") return false;
+
+  if (step.completion === "self") {
+    if (step.confirm || step.gate.length > 0) return false; // needs the dialog's own answer
+    await setStepState(userId, step.id, "completed", undefined, step.meta);
+    await logEvent({
+      user_id: userId, step_id: step.id, stage_id: stageId, kind: "completed", actor: "student",
+      message: "Completed automatically after all required documents were uploaded.",
+    });
+    await emitJourneyEvent("step_completed", {
+      ctx: { step: step.title, stage: stageTitle }, stepId: step.id, stageId, once: `step-done:${step.id}`,
+    });
+    return true;
+  }
+
+  if (step.requirements.length === 0) return false; // nothing to upload, so no upload can trigger this
+
+  await setStepState(userId, step.id, "in_progress", "All required documents uploaded.");
+  await logEvent({
+    user_id: userId, step_id: step.id, stage_id: stageId, kind: "submitted", actor: "student",
+    message: "Submitted automatically after all required documents were uploaded.",
+  });
+  return true;
 }

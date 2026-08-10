@@ -17,8 +17,8 @@ import { StepBlocks } from "./StepBlocks";
 /* Journey step details.
 
    Deliberately plain: the title, the description, and two sections behind a
-   segmented bar. Required documents first, because that is what a student
-   usually came to do, then Learn, which reads like a guide.
+   segmented bar. Learn first, always, so a student reads the guidance before
+   diving into paperwork; Required Documents second.
 
    Uploading never happens here. The Documents module is the single upload
    location, and this modal hands the student over to it with the step already
@@ -54,8 +54,7 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
   const [loading, setLoading] = useState(true);
   const docs = stepDocuments(step, uploads);
   const banner = bannerKindFor(step);
-  // With no documents to upload, Learn is the only thing worth opening on.
-  const [tab, setTab] = useState<Tab>(step.requirements.length > 0 ? "docs" : "learn");
+  const [tab, setTab] = useState<Tab>("learn");
 
   const load = useCallback(async () => {
     setUploads(await fetchDocuments(userId, [step.id]));
@@ -89,17 +88,17 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenDocuments, 
 
         <nav className="stp-seg" role="tablist" aria-label="Step sections">
           <button
+            type="button" role="tab" aria-selected={tab === "learn"}
+            className={`stp-segbtn${tab === "learn" ? " active" : ""}`} onClick={() => setTab("learn")}
+          >
+            <BookOpen size={14} />Learn
+          </button>
+          <button
             type="button" role="tab" aria-selected={tab === "docs"}
             className={`stp-segbtn${tab === "docs" ? " active" : ""}`} onClick={() => setTab("docs")}
           >
             <FileText size={14} />Required Documents
             {docs.required > 0 && <span className="stp-segcount">{docs.verified}/{docs.required}</span>}
-          </button>
-          <button
-            type="button" role="tab" aria-selected={tab === "learn"}
-            className={`stp-segbtn${tab === "learn" ? " active" : ""}`} onClick={() => setTab("learn")}
-          >
-            <BookOpen size={14} />Learn
           </button>
         </nav>
       </header>

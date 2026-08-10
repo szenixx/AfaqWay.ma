@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  CircleCheckBig, Clock3, Download, ExternalLink, FileText, TriangleAlert, Upload,
+  CircleCheckBig, Clock3, Download, ExternalLink, FileText, Layers, TriangleAlert, Upload,
 } from "lucide-react";
 import { Loader, Status, Portal } from "@/components/ds";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
@@ -11,7 +11,8 @@ import {
   saveDocument, stepRequirements, subscribeJourney,
   type DbDocument, type DbStep, type DocRequirement, type DocStatus, type Plan,
 } from "@/lib/journeyDb";
-import { assembleRoadmap, DOC_STATUS } from "@/lib/journey";
+import { assembleRoadmap, DOC_STATUS, type JourneyStep } from "@/lib/journey";
+import { autoAdvanceStepOnDocsComplete } from "@/lib/journeyEvents";
 import { JrButton } from "../journey/parts";
 import { ReplaceDialog } from "./ReplaceDialog";
 import { DocumentViewer } from "@/components/admin/journey/DocumentViewer";
@@ -33,12 +34,15 @@ type Row = {
 };
 
 
-const FILTERS: { id: "all" | DocStatus; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "approved", label: "Verified" },
-  { id: "under_review", label: "Under review" },
-  { id: "needs_changes", label: "Needs changes" },
-  { id: "pending", label: "Not uploaded" },
+/* Icon and tone only show up in the mobile "quick action" card layout
+   (see .dm-segico in globals.css) — the desktop pill row stays exactly as
+   it was, text-only. */
+const FILTERS: { id: "all" | DocStatus; label: string; icon: React.ReactNode; color: string; tint: string }[] = [
+  { id: "all", label: "All", icon: <Layers size={15} />, color: "var(--indigo-600)", tint: "var(--indigo-tint)" },
+  { id: "approved", label: "Completed", icon: <CircleCheckBig size={15} />, color: "var(--green)", tint: "var(--green-tint)" },
+  { id: "under_review", label: "Under review", icon: <Clock3 size={15} />, color: "var(--amber)", tint: "var(--amber-tint)" },
+  { id: "needs_changes", label: "Needs changes", icon: <TriangleAlert size={15} />, color: "var(--red)", tint: "var(--red-tint)" },
+  { id: "pending", label: "Not uploaded", icon: <FileText size={15} />, color: "var(--ink-faint)", tint: "var(--subtle)" },
 ];
 
 export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id: string) => void }) {
@@ -55,6 +59,11 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
      administrator reviews them with, so the student sees their file
      exactly as it will be read. */
   const [preview, setPreview] = useState<DbDocument | null>(null);
+  // The assembled step behind each row (state, completion rules) — kept in a
+  // ref rather than state, since it's read right after load() resolves, not
+  // rendered from directly.
+  const stepsRef = useRef<Map<string, JourneyStep>>(new Map());
+  const activeStageRef = useRef<{ id: string; title: string } | null>(null);
 
   const load = useCallback(async () => {
     const plan = (profile.plan ?? "self_service") as Plan;
@@ -72,21 +81,31 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
     });
     const active = roadmap.find((st) => st.state === "current" || st.state === "waiting_approval") ?? roadmap[0];
     const activeSteps = (steps as DbStep[]).filter((st) => st.stage_id === active?.id);
+    // A step's own completion state, from the assembled roadmap — the raw
+    // DbStep list above has no notion of "done", only what was configured.
+    const assembledById = new Map((active?.steps ?? []).map((s) => [s.id, s]));
+    stepsRef.current = assembledById;
+    activeStageRef.current = active ? { id: active.id, title: active.title } : null;
 
     const byKey = new Map(uploads.map((u) => [`${u.step_id}:${u.doc_key}`, u]));
     const list: Row[] = [];
     for (const step of activeSteps) {
       for (const requirement of stepRequirements(step)) {
         const upload = byKey.get(`${step.id}:${requirement.key}`) ?? null;
-        list.push({
-          requirement, step, stageTitle: active?.title ?? "",
-          upload, status: (upload?.status ?? "pending") as DocStatus,
-        });
+        const stepState = assembledById.get(step.id)?.state;
+        // The step being done is the stronger signal: once an advisor has
+        // moved a step past pending, its documents read as resolved here
+        // too, rather than lingering as "Not uploaded" for a step that
+        // didn't need one, or "Under review" after the step itself closed.
+        const status = (stepState === "completed" || stepState === "skipped")
+          ? "approved" : ((upload?.status ?? "pending") as DocStatus);
+        list.push({ requirement, step, stageTitle: active?.title ?? "", upload, status });
       }
     }
     setRows(list);
     setStage(active ? { index: active.index, title: active.title } : null);
     setLoading(false);
+    return list;
   }, [profile.plan, profile.userId, profile.tester, profile.academic?.targetDegree]);
   // Fetching from Supabase is the "subscribe to an external system" case; the
   // state set here is the query result, not derived render state.
@@ -123,7 +142,22 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
         user_id: profile.userId, step_id: row.step.id, stage_id: row.step.stage_id,
         kind: "document_uploaded", actor: "student", message: `Uploaded ${row.requirement.name || row.requirement.key}.`,
       });
-      await load();
+      const freshRows = await load();
+
+      // Every required document for this step now has something uploaded —
+      // advance the step the same way its own button would, without making
+      // the student go back to Journey to press it.
+      const stillMissing = freshRows.some((r) =>
+        r.step.id === row.step.id && r.requirement.required && !r.upload);
+      if (!stillMissing) {
+        const step = stepsRef.current.get(row.step.id);
+        const stage = activeStageRef.current;
+        if (step && stage) {
+          const advanced = await autoAdvanceStepOnDocsComplete(profile.userId, step, stage.id, stage.title);
+          if (advanced) await load();
+        }
+      }
+
       setReplacing(null);
       setBusy(null);
 
@@ -175,7 +209,11 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
             onClick={() => setFilter(f.id)}
             className={`dm-segbtn${filter === f.id ? " active" : ""}`}
           >
-            {f.label}
+            {/* Desktop-hidden — only the mobile "quick action" card layout
+                (globals.css) shows this icon; the desktop pill row is
+                unchanged, text + count only. */}
+            <span className="dm-segico" style={{ color: f.color, background: f.tint }}>{f.icon}</span>
+            <span className="dm-seglabel">{f.label}</span>
             <span className="dm-segcount">{f.id === "all" ? rows.length : count(f.id as DocStatus)}</span>
           </button>
         ))}
