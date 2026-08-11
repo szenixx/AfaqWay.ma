@@ -11,9 +11,9 @@ import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, Route, FileText, Compass, MessageCircle, LifeBuoy,
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
-  ChevronLeft, ChevronRight, CalendarDays,
+  ChevronLeft, ChevronRight, CalendarDays, Bell,
 } from "lucide-react";
-import { BellIcon, ChatBubbleIcon } from "@svg-animated-icons/react";
+import { ChatBubbleIcon } from "@svg-animated-icons/react";
 import { MobileNavigationHeader } from "./MobileNavigationHeader";
 import RightPanel from "./RightPanel";
 import Schedule from "./schedule/Schedule";
@@ -246,13 +246,12 @@ export default function WorkspaceShell({
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
               <div style={{ position: "relative" }}>
                 {/* Every notification still reaches the student as a toast
-                    and lives in the conversation, but the bell itself now
-                    keeps moving — not just a hover flourish — for as long as
-                    something here is unread, with its own red dot. It only
-                    settles once the popover (or the thing it links to) marks
-                    the row read. */}
+                    and lives in the conversation, but the bell itself still
+                    rings gently for as long as something here is unread, with
+                    its own dot. It only settles once the popover (or the
+                    thing it links to) marks the row read. */}
                 <button type="button" data-notif-trigger className={`sw-iconbtn${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
-                  <BellIcon disableHover className="sw-topbar-icon" />
+                  <span className="sw-bell-ico"><Bell size={22} /></span>
                   {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
                 </button>
                 {notifOpen && (
@@ -317,7 +316,7 @@ export default function WorkspaceShell({
         rightExtra={
           <div style={{ position: "relative" }}>
             <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
-              <BellIcon disableHover className="sw-topbar-icon" />
+              <span className="sw-bell-ico"><Bell size={22} /></span>
               {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
             </button>
             {notifOpen && (

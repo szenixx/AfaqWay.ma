@@ -63,14 +63,29 @@ export async function resendSend(payload: ResendPayload): Promise<ResendCallResu
 }
 
 /** A cheap, side-effect-free authenticated GET, to confirm the key itself
- *  actually works rather than just being present. */
+ *  actually works rather than just being present.
+ *
+ *  Resend API keys can be scoped to "Sending access" only — the right,
+ *  least-privilege choice for a production key that only ever needs to call
+ *  POST /emails — and a key scoped that way is correctly refused on GET
+ *  /domains with a 401 `restricted_api_key`. That response proves the key
+ *  IS valid (an actually-invalid key gets a different error), so it's
+ *  treated as a pass here rather than "unreachable" — this check exists to
+ *  catch a genuinely dead or wrong key, not to demand a permission the
+ *  production key deliberately doesn't have. Once this misread the second
+ *  case as the first, since this endpoint was the only thing this function
+ *  ever tried, and every restricted key looked exactly like a broken one. */
 export async function resendVerify(): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const res = await fetch("https://api.resend.com/domains", {
       headers: { Authorization: `Bearer ${apiKey()}` },
     });
-    if (!res.ok) return { ok: false, error: `resend responded ${res.status}` };
-    return { ok: true };
+    if (res.ok) return { ok: true };
+
+    const detail = await res.json().catch(() => null) as { name?: string; message?: string } | null;
+    if (res.status === 401 && detail?.name === "restricted_api_key") return { ok: true };
+
+    return { ok: false, error: `resend responded ${res.status}${detail?.message ? `: ${detail.message}` : ""}` };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "resend verify failed" };
   }

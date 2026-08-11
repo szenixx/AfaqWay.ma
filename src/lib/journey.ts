@@ -123,7 +123,7 @@ export type JourneyStage = {
   planLocked: boolean;
 };
 
-const TONES: JourneyStage["tone"][] = ["purple", "green", "amber", "blue", "pink", "teal"];
+const TONES: JourneyStage["tone"][] = ["purple", "pink", "amber", "blue", "green", "teal"];
 
 
 /** Overall roadmap completion, shared with the right panel and the sidebar. */
@@ -432,7 +432,14 @@ export function assembleRoadmap(
       done,
       total,
       pct: total ? Math.round((done / total) * 100) : 0,
-      tone: (stage.tone as JourneyStage["tone"]) || TONES[i % TONES.length],
+      // Stage 2 is pink, always — the imported row already has its own
+      // "green" stored in journey_stages.tone (scripts/import-journey.mjs's
+      // STAGE_TONES, at the time the DB was seeded), which otherwise wins
+      // over this function's own fallback below and made that fallback a
+      // no-op for every already-imported stage. Forced by position rather
+      // than by re-importing, since nothing here can reach the live table
+      // to update the stored value directly.
+      tone: i === 1 ? "pink" : ((stage.tone as JourneyStage["tone"]) || TONES[i % TONES.length]),
       unlock,
       planLocked,
     };

@@ -380,7 +380,7 @@ const q = (value) => `'${String(value).replace(/'/g, "''")}'`;
 const j = (value) => `${q(JSON.stringify(value))}::jsonb`;
 
 const STAGE_ICONS = ["landmark", "graduation-cap", "file-text", "plane", "route"];
-const STAGE_TONES = ["purple", "green", "amber", "blue", "teal"];
+const STAGE_TONES = ["purple", "pink", "amber", "blue", "teal"];
 
 /**
  * The whole journey as one JSON document.

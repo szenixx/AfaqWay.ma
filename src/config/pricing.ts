@@ -19,8 +19,8 @@ export const CURRENCY_SHORT = "DH";
 
 export const PRICES: Record<DestinationCode, Record<PlanId, number>> = {
   LT: {
-    self_service: 2900,
-    full_service: 6700,
+    self_service: 1790,
+    full_service: 4490,
   },
 };
 
@@ -31,7 +31,7 @@ export function priceOf(plan: PlanId, destination: DestinationCode = DEFAULT_DES
   return PRICES[destination]?.[plan] ?? PRICES[DEFAULT_DESTINATION][plan];
 }
 
-/** "2,900 DH" — the one place amounts are formatted for display. */
+/** "1,790 DH" — the one place amounts are formatted for display. */
 export function formatPrice(amount: number, currency: string = CURRENCY_SHORT): string {
   return `${amount.toLocaleString("en-US")} ${currency}`;
 }

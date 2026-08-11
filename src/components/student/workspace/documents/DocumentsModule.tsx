@@ -93,12 +93,21 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
       for (const requirement of stepRequirements(step)) {
         const upload = byKey.get(`${step.id}:${requirement.key}`) ?? null;
         const stepState = assembledById.get(step.id)?.state;
+        const rawStatus = (upload?.status ?? "pending") as DocStatus;
         // The step being done is the stronger signal: once an advisor has
         // moved a step past pending, its documents read as resolved here
         // too, rather than lingering as "Not uploaded" for a step that
         // didn't need one, or "Under review" after the step itself closed.
-        const status = (stepState === "completed" || stepState === "skipped")
-          ? "approved" : ((upload?.status ?? "pending") as DocStatus);
+        // Submitting the step (mark as done) is the same signal one notch
+        // earlier: the upload itself only ever starts life as "uploaded" —
+        // nothing sets it to "under_review" until an admin opens
+        // UserDetails and changes it by hand — so without this, a document
+        // the student just submitted sat outside every filter but "All"
+        // until an admin happened to look at it.
+        const status: DocStatus =
+          (stepState === "completed" || stepState === "skipped") ? "approved"
+          : (stepState === "submitted" && rawStatus === "uploaded") ? "under_review"
+          : rawStatus;
         list.push({ requirement, step, stageTitle: active?.title ?? "", upload, status });
       }
     }

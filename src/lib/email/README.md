@@ -209,6 +209,18 @@ See `.env.example` for the authoritative list. Summary:
 | `SUPABASE_SERVICE_ROLE_KEY` | no | without it, `email_log` writes are skipped (warned once); sending is unaffected |
 | `RESEND_WEBHOOK_SECRET` | no | without it, `/api/email/webhook` rejects every event (503) — the safe default for an unverified inbound endpoint |
 
+`RESEND_API_KEY` should be a **Sending access** scoped key, not Full access —
+it only ever needs to call `POST /emails`. This is deliberately supported,
+not tolerated: `resend/client.ts`'s `resendVerify()` calls `GET /domains` to
+confirm the key works, and a Sending-access key correctly gets refused there
+with a 401 `restricted_api_key` — that response is treated as a pass (it
+proves the key is valid; an actually-dead key gets a different error), not a
+failure. If a future change to Resend's error shape ever breaks that check
+again, sending itself is unaffected either way: `sendViaResend()` never calls
+`verifyProvider()`, so a false "unreachable" from the diagnostics route
+(`GET /api/email`) is never a reason mail actually stopped going out — check
+`email_log` for real send outcomes before assuming the integration is down.
+
 ## Analytics: what's real vs. what's a gap
 
 - **Delivery status, failed-delivery logging** — real. Every `send()` call

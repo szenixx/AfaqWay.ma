@@ -5,7 +5,8 @@ import {
   ChevronDown, CircleCheck, Clock3, FileText, FlaskConical, GraduationCap, Landmark, Lock,
   Plane, Route, SkipForward,
 } from "lucide-react";
-import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep } from "@/lib/journey";
+import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep, type StepState } from "@/lib/journey";
+import { iconForStep } from "@/lib/journeyStepIcons";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
   mergeStepMeta, requestStageApproval, setStepState, subscribeJourney,
@@ -33,6 +34,20 @@ import { InfoCard, JrButton } from "./parts";
    administrator's edit appears without a refresh. */
 
 const STAGE_ICONS = [Landmark, GraduationCap, Route, FileText, Plane, Clock3];
+
+/* Each step's icon badge tints by the same four states everywhere else in
+ * the journey uses: grey while it's still on the student (pending, or
+ * locked behind an earlier one), amber once it's with an advisor, red if
+ * it came back needing changes, green once it's settled — completed or
+ * skipped, both nothing more to do. */
+const STEP_ICON_TONE: Record<StepState, "grey" | "amber" | "red" | "green"> = {
+  pending: "grey",
+  locked: "grey",
+  submitted: "amber",
+  rejected: "red",
+  completed: "green",
+  skipped: "green",
+};
 
 export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile; onNav: (id: string) => void; isAdmin?: boolean }) {
   const [stages, setStages] = useState<JourneyStage[]>([]);
@@ -405,9 +420,14 @@ const docs = stepDocuments(step, uploads);
       || (step.completion === "decision" ? "Report my decision"
         : step.completion === "self" ? "Mark as Completed" : "Mark as Done");
 
+    const StepIcon = iconForStep(step.title);
+    const iconTone = STEP_ICON_TONE[step.state] ?? "grey";
+
     return (
       <li key={step.id} className={`jr-step ${step.state}`}>
+        <span aria-hidden className={`jr-step-bg tone-${iconTone}`}><StepIcon size={110} /></span>
         <div className="jr-step-main">
+          <span className={`jr-step-ico tone-${iconTone}`}><StepIcon size={16} /></span>
           <div className="jr-step-body">
             {/* The step's state is the shared Status, not a
                 bespoke glyph: the word is always rendered, so
