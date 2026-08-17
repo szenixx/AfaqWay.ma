@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
 import { UserAvatar, DataTable, type Column } from "@/components/ds";
+import { EmailHealthButton } from "./EmailHealthButton";
 
 const PALETTE = ["#3B5BDB", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
 // per-stat accent colours so the KPI row isn't a monochrome block
@@ -101,12 +102,17 @@ export function SuperAdminBar() {
           </div>
         </div>
       </div>
-      <div style={{ textAlign: "right", flex: "none" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 6 }}>
-          <span style={{ font: "800 clamp(24px,3.6vh,38px)/1 var(--font-sans)", letterSpacing: "-.5px", background: "linear-gradient(135deg,#3B5BDB,#20C997)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontVariantNumeric: "tabular-nums" }}>{time || "—"}</span>
-          <span style={{ font: "700 clamp(11px,1.5vh,15px)/1 var(--font-sans)", color: "var(--indigo-600)" }}>{ampm}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: "none" }}>
+        {/* Super-admin-only tools live here: this bar already only renders
+            for a super admin, so nothing extra gates them. */}
+        <EmailHealthButton />
+        <div style={{ textAlign: "right" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 6 }}>
+            <span style={{ font: "800 clamp(24px,3.6vh,38px)/1 var(--font-sans)", letterSpacing: "-.5px", background: "linear-gradient(135deg,#3B5BDB,#20C997)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontVariantNumeric: "tabular-nums" }}>{time || "—"}</span>
+            <span style={{ font: "700 clamp(11px,1.5vh,15px)/1 var(--font-sans)", color: "var(--indigo-600)" }}>{ampm}</span>
+          </div>
+          <div style={{ font: "500 10.5px/14px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>{date} · Casablanca, Morocco</div>
         </div>
-        <div style={{ font: "500 10.5px/14px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>{date} · Casablanca, Morocco</div>
       </div>
     </div>
   );

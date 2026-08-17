@@ -8,7 +8,7 @@ import { StorageError } from "@/types/storage";
    makes runs under the caller's own RLS policies and can never read another
    user's rows. */
 
-export type Caller = { id: string; email: string | null; isAdmin: boolean };
+export type Caller = { id: string; email: string | null; isAdmin: boolean; isSuperAdmin: boolean };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -33,10 +33,13 @@ export async function authenticate(req: Request): Promise<{ caller: Caller; supa
 
   // RLS applies, so this lookup can only ever return the caller's own row.
   let isAdmin = false;
+  let isSuperAdmin = false;
   if (data.user.email) {
     const { data: admin } = await supabase.from("admins").select("role, banned").eq("email", data.user.email.toLowerCase()).maybeSingle();
-    isAdmin = !!admin && !(admin as { banned?: boolean }).banned;
+    const row = admin as { role?: string; banned?: boolean } | null;
+    isAdmin = !!row && !row.banned;
+    isSuperAdmin = isAdmin && row?.role === "superadmin";
   }
 
-  return { caller: { id: data.user.id, email: data.user.email ?? null, isAdmin }, supabase };
+  return { caller: { id: data.user.id, email: data.user.email ?? null, isAdmin, isSuperAdmin }, supabase };
 }
