@@ -7,10 +7,13 @@
  * and a table-based HTML email. */
 
 export const emailColors = {
-  indigo600: "#162E8C",
-  indigo500: "#2544A8",
-  indigoTint: "#E8EEFF",
-  indigoLine: "#C4CEEE",
+  /* Brand triad, mirroring ds.css: primary #3B41C9, secondary white (`card`
+   * below), tertiary #1C328B for deep accents and gradient ends. */
+  indigo600: "#3B41C9",
+  indigo500: "#494ECD",
+  indigoTint: "#E2E3F8",
+  indigoLine: "#B6B8EA",
+  tertiary: "#1C328B",
   ink: "#17233A",
   inkSoft: "#5A6B85",
   inkFaint: "#8695AB",

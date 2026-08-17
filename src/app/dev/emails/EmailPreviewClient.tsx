@@ -47,8 +47,8 @@ export function EmailPreviewClient() {
                 style={{
                   display: "block", width: "100%", textAlign: "left", padding: "9px 20px",
                   border: "none", cursor: "pointer", fontSize: 13.5,
-                  background: selected === e.id ? "#E8EEFF" : "transparent",
-                  color: selected === e.id ? "#162E8C" : "#17233A",
+                  background: selected === e.id ? "var(--indigo-tint)" : "transparent",
+                  color: selected === e.id ? "var(--indigo-text)" : "var(--ink)",
                   fontWeight: selected === e.id ? 700 : 500,
                 }}
               >

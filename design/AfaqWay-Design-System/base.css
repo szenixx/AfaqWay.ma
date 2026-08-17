@@ -14,7 +14,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 
 /* Card-role shared hover (info/feature/action/compact/stat). */
 .af-card{transition:box-shadow 180ms var(--ease),transform 180ms var(--ease),border-color 180ms var(--ease);}
-.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(22,46,140,.5);transform:translateY(-1px);}
+.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(59,65,201,.5);transform:translateY(-1px);}
 
 /* ── Legacy pill helper (kept for parity; prefer <Pill>) ── */
 .pill{font:600 10.5px/1 var(--font-sans);letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid;display:inline-flex;align-items:center;gap:6px;}

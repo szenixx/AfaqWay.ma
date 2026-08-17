@@ -134,18 +134,6 @@ export function StatusGlyph({ status, size = 20 }: { status: "done" | "active" |
 
 export { TriangleAlert };
 
-// Explore section icon resolver.
-const EXPLORE_ICONS: Record<string, typeof GraduationCap> = {
-  GraduationCap, Building2, Home, Wallet, Bus, HeartPulse, Landmark, Users, Lightbulb,
-};
-export function exploreIcon(name: string, size = 20) {
-  const Ico = EXPLORE_ICONS[name] ?? Lightbulb;
-  return <Ico size={size} />;
-}
-
-/* Section titles carry a colour so a long page reads as distinct sections
-   rather than one wall. The tones are the design system's own accents, used at
-   label weight so they stay subtle. */
 export type SectionTone = "blue" | "purple" | "orange" | "green" | "indigo" | "grey";
 
 export function SectionTitle({ tone = "blue", sub, children }: {

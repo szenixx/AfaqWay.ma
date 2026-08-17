@@ -13,13 +13,14 @@ import { fileUrl } from "@/lib/storage/client";
 import { setAvatarUrl } from "@/lib/avatar";
 import { loadAvatarFieldsFor } from "@/lib/avatarProfile";
 import WorkspaceShell, { type Nav } from "@/components/student/workspace/WorkspaceShell";
+import { DEVICE_ADVICE_KEY } from "@/components/student/workspace/DeviceAdvice";
 import type { WsProfile, WsPayment } from "@/components/student/workspace/Modules";
 import { deriveStudy, deriveAcademic } from "@/lib/studyApplication";
 import { useNotificationToasts } from "@/lib/notifications";
 import { useChatUnread } from "@/lib/chatUnread";
 import { useSingleSession } from "@/lib/useSingleSession";
 
-const NAV_VALUES: Nav[] = ["overview", "journey", "documents", "explore", "messages", "support", "subscription", "profile", "settings", "schedule"];
+const NAV_VALUES: Nav[] = ["overview", "journey", "documents", "messages", "support", "subscription", "profile", "settings", "schedule"];
 
 export default function Dashboard() {
   const router = useRouter();
@@ -147,7 +148,13 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, [router, buildProfile]);
 
-  async function signOut() { await supabase.auth.signOut(); router.replace("/signup"); }
+  async function signOut() {
+    // Session-scoped UI dismissals reset with the session, so the next
+    // sign-in starts clean rather than inheriting the last person's.
+    try { sessionStorage.removeItem(DEVICE_ADVICE_KEY); } catch { /* storage blocked */ }
+    await supabase.auth.signOut();
+    router.replace("/signup");
+  }
 
   async function onProgramRequest(r: { program: string; university: string; reason: string }) {
     if (!profile) return false;

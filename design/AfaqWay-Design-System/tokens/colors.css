@@ -1,4 +1,6 @@
 /* AfaqWay colour system — copied verbatim from src/app/ds.css (the token contract).
+   v3 brand: primary #3B41C9, secondary #FFFFFF, tertiary #1C328B (the former
+   primary). Every brand state is a step on the --primary-* ramp.
    Never invent a colour: add it here first, then use it. RGB given in design.md. */
 :root{
   /* ── Surfaces ── */
@@ -17,16 +19,34 @@
   --line-soft:#EFF0F2;  /* dividers, internal separators — v2: barely-there */
   --card-border:1px solid rgba(15,23,42,.045); /* @kind other */ /* the card hairline — should almost disappear */
 
-  /* ── Brand — Indigo (primary) ── */
-  --indigo-700:#0F256F; /* pressed */
-  --indigo-600:#162E8C; /* primary / default — buttons, links, active icons */
-  --indigo-500:#1230A6; /* hover */
-  --indigo-100:#E8EEFF; /* focus glow, ghost hover */
-  --indigo-50:#F6F8FF;  /* palest surface */
-  --indigo-text:#162E8C;/* text on indigo tint */
-  --indigo-tint:#E8EEFF;/* pill / callout background */
-  --indigo-line:#C4CEEE;/* pill / callout border, hover border */
-  --focus-ring:rgba(22,46,140,.25);
+  /* ── Brand — the AfaqWay triad ─────────────────────────────────────────
+     Primary   #3B41C9  the brand blue. Buttons, links, active states, focus,
+                        selection, progress — the majority of interactive ink.
+     Secondary #FFFFFF  white. The neutral the whole system is built on; it is
+                        --card / --brand-secondary, not a third accent.
+     Tertiary  #1C328B  the deeper supporting blue (the former primary). Kept
+                        for secondary emphasis, deep/pressed accents, gradient
+                        ends, outlines and ink on branded surfaces — never as
+                        the default interactive colour.
+
+     Every state below is a tonal step off the primary (see the --primary-*
+     ramp), never the same hex reused at a different opacity. */
+  --brand-primary:#3B41C9;
+  --brand-secondary:#FFFFFF;
+  --brand-tertiary:#1C328B;
+
+  /* The --indigo-* names are what ~150 components already render with, so the
+     migration is a value swap here rather than a rename across the app. They
+     now resolve to the new primary ramp. */
+  --indigo-700:#262CA3; /* pressed */
+  --indigo-600:#3B41C9; /* primary / default — buttons, links, active icons */
+  --indigo-500:#494ECD; /* hover */
+  --indigo-100:#E2E3F8; /* focus glow, ghost hover */
+  --indigo-50:#F5F5FD;  /* palest surface */
+  --indigo-text:#262CA3;/* text on indigo tint — 8.4:1 on --indigo-tint */
+  --indigo-tint:#E2E3F8;/* pill / callout background */
+  --indigo-line:#B6B8EA;/* pill / callout border, hover border */
+  --focus-ring:rgba(59,65,201,.28);
 
   /* ── Status: text · tint · line per family ── */
   --green:#256B49;  --green-tint:#E3F0E9;  --green-line:#9CCBB2;  /* success, approved, paid, online */
@@ -41,13 +61,30 @@
   --scrim:rgba(23,35,58,.42);          /* modal scrim (+ blur 6px) */
   --scrim-strong:rgba(23,35,58,.55);   /* celebration scrim */
   --shadow-ink:rgba(23,35,58,1);       /* the single shadow hue */
-  --shadow-brand:rgba(22,46,140,1);    /* hover lift on indigo elements */
+  --shadow-brand:rgba(59,65,201,1);    /* hover lift on indigo elements */
 
   /* ── Semantic aliases ── */
   --text-body:var(--ink); --text-secondary:var(--ink-soft); --text-hint:var(--ink-faint);
   --surface-page:var(--paper); --surface-card:var(--card); --surface-input:var(--subtle);
   --border-default:var(--line); --border-divider:var(--line-soft);
   --accent:var(--indigo-600); --accent-hover:var(--indigo-500); --accent-pressed:var(--indigo-700); --accent-tint:var(--indigo-100);
+
+  /* ── Interactive states ──────────────────────────────────────────────────
+     Reach for these, not a hex. Hover lightens off the primary, pressed
+     deepens, selected/subtle sit on the pale end, and disabled drops to the
+     neutral ramp — a faded brand blue reads as "still clickable". */
+  --brand-hover:var(--primary-500);
+  --brand-pressed:var(--primary-700);
+  --brand-active:var(--primary-600);
+  --brand-selected:var(--primary-100);
+  --brand-subtle:var(--primary-50);
+  --brand-border:var(--indigo-line);
+  --brand-on:var(--brand-secondary);   /* text and icons ON a primary fill */
+  --brand-deep:var(--tertiary-600);    /* tertiary emphasis: gradient ends, deep ink */
+  --brand-disabled:var(--neutral-300);
+  --brand-disabled-on:var(--neutral-500);
+  --brand-focus:var(--focus-ring);
+
 
   /* ── Workspace background (v2: flat matte — no gradient, no colour blobs) ── */
   --sw-gradient:#F5F6F8; /* @kind other */ /* was a 135° indigo gradient; v2 background is matte and disappears behind content */
@@ -60,12 +97,23 @@
      with — 600/700 here are IDENTICAL to --indigo-600/700, so nothing already
      built shifts colour. Never hand-pick a new hex outside this ramp. */
 
-  /* Primary — Indigo (same hue as --indigo-*, extended both directions). */
-  --primary-50:#EEF1FB; --primary-100:#D6DDF4; --primary-200:#ADBAE8; --primary-300:#7C90D8;
-  --primary-400:#4C63C4; --primary-500:#2A45AC; --primary-600:#162E8C; --primary-700:#0F256F;
-  --primary-800:#0B1D57; --primary-900:#081540; --primary-950:#050D2B;
+  /* Primary — the brand blue (same hue as --indigo-*, extended both ways).
+     600 IS #3B41C9, the canonical brand primary; every other step is a tonal
+     derivation of it, so states never need a hand-picked hex. Contrast on
+     white: 400 5.2:1 · 500 6.5:1 · 600 7.5:1 · 700 10.7:1. */
+  --primary-50:#F5F5FD; --primary-100:#E2E3F8; --primary-200:#C1C2EE; --primary-300:#878BDE;
+  --primary-400:#5B60D2; --primary-500:#494ECD; --primary-600:#3B41C9; --primary-700:#262CA3;
+  --primary-800:#1B1F83; --primary-900:#111562; --primary-950:#0A0C43;
 
-  /* Secondary — a desaturated slate-blue for quiet secondary actions (never a new brand hue). */
+  /* Tertiary — the deeper supporting blue. 600 IS #1C328B, the former primary,
+     kept for secondary emphasis, deep states, gradient ends and outlines. */
+  --tertiary-50:#EFF1FB; --tertiary-100:#D6DCF5; --tertiary-200:#A9B6EA; --tertiary-300:#6C82DA;
+  --tertiary-400:#2E4BC2; --tertiary-500:#233DA6; --tertiary-600:#1C328B; --tertiary-700:#162872;
+  --tertiary-800:#101E59; --tertiary-900:#0B1642; --tertiary-950:#060D2A;
+  --tertiary:var(--tertiary-600); --tertiary-tint:var(--tertiary-50); --tertiary-line:var(--tertiary-200);
+
+  /* Secondary — the brand's secondary is white (--brand-secondary); this ramp
+     is the desaturated slate for quiet secondary CONTROLS, not a brand hue. */
   --secondary-50:#F2F4F9; --secondary-100:#E4E8F1; --secondary-200:#C9D0E1; --secondary-300:#A9B3CB;
   --secondary-400:#8089AA; --secondary-500:#5F6890; --secondary-600:#4A5175; --secondary-700:#393F5C;
   --secondary-800:#2A2F45; --secondary-900:#1C1F30; --secondary-950:#10121C;

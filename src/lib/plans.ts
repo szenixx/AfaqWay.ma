@@ -125,7 +125,7 @@ const AFAQ_ACCOUNT = { beneficiary: "Abel SARL", rib: "007201000814730040057065"
 export const PAY_METHODS: PayMethod[] = [
   { id: "cashplus", name: "Cash Plus", desc: "Pay cash at any Cash Plus agency", kind: "manual", available: true, recommended: true, logoSrc: "/pay/cashplus.png", color: "#F58220", account: { beneficiary: "Abderrahmane Almoustansir" } },
   { id: "attijari", name: "Attijariwafa Bank", desc: "Bank transfer or deposit", kind: "manual", available: true, logoSrc: "/pay/attijari.png", color: "#E9761E", account: AFAQ_ACCOUNT },
-  { id: "simple", name: "Simple", desc: "Transfer via Simple", kind: "manual", available: true, logoSrc: "/pay/simple.png", color: "#162E8C", account: AFAQ_ACCOUNT },
+  { id: "simple", name: "Simple", desc: "Transfer via Simple", kind: "manual", available: true, logoSrc: "/pay/simple.png", color: "#3B41C9", account: AFAQ_ACCOUNT },
   { id: "bank", name: "Bank Transfer", desc: "Transfer from any bank", kind: "manual", available: true, logoSrc: "/pay/bank.png", color: "#3A6EA5", account: AFAQ_ACCOUNT },
   { id: "paypal", name: "PayPal", desc: "Instant online payment", kind: "instant", available: false, logoSrc: "/pay/paypal.svg", color: "#003087" },
   { id: "card", name: "Credit / Debit Card", desc: "Visa or Mastercard", kind: "instant", available: false, logoSrc: "/pay/card.png", color: "#1A1F71" },

@@ -8,6 +8,9 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
    wins the cascade tie rather than the imported component's own theme. */
 import "./tailwind.css";
 import "./globals.css";
+/* The dashboard's own sheet. Imported here rather than @import-ed from
+   globals.css so Turbopack tracks it as its own entry and hot-reloads it. */
+import "./dashboard.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 

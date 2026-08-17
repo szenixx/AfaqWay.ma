@@ -140,7 +140,7 @@ export default function OnboardingHeroPanel({ steps, view, reached, onJump }: Pr
                 <div key={step} style={{ display: "flex", gap: 16 }}>
                   {/* icon + connector column */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                    <span style={{ width: 40, height: 40, borderRadius: 999, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", background: active || done ? "var(--indigo-600)" : "rgba(255,255,255,.75)", color: active || done ? "#fff" : "var(--ink-faint)", border: upcoming ? "1px solid var(--line)" : "none", font: "600 15px/1 var(--font-sans)", boxShadow: active ? "0 6px 16px rgba(22,46,140,.35)" : "none" }}>
+                    <span style={{ width: 40, height: 40, borderRadius: 999, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", background: active || done ? "var(--indigo-600)" : "rgba(255,255,255,.75)", color: active || done ? "#fff" : "var(--ink-faint)", border: upcoming ? "1px solid var(--line)" : "none", font: "600 15px/1 var(--font-sans)", boxShadow: active ? "0 6px 16px rgba(59,65,201,.35)" : "none" }}>
                       {done ? <Icon name="check" size={18} /> : step}
                     </span>
                     {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 26, borderRadius: 999, background: reached > step ? "var(--indigo-600)" : "var(--line)", margin: "3px 0" }} />}

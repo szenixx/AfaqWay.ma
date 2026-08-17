@@ -3503,7 +3503,7 @@ function Sidebar({
       height: 34,
       borderRadius: 999,
       background: "linear-gradient(180deg,#EEF2F9,#E1E8F3)",
-      border: "1px solid rgba(22,46,140,.1)",
+      border: "1px solid rgba(59,65,201,.1)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",

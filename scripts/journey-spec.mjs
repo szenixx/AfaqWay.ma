@@ -48,7 +48,12 @@ export const SPEC = {
        The Learn cell reads "link of the program page" — a note to the author
        describing what belongs there, not text for a student. The programme
        block supplies the real content, so the cell itself is not rendered. */
-    "Explore Your Program": { program: "url", ignoreLearn: true },
+    /* Reading about your own programme is not something an advisor can
+       verify or has any reason to gate, so the student closes it
+       themselves. Kept in sync with the live row's rules.completion —
+       without it here, the next re-import would quietly put the approval
+       back. */
+    "Explore Your Program": { program: "url", ignoreLearn: true, completion: "self" },
 
     /* "list only the English language certificates accepted by that
        university/program, based on the program requirements stored in the
@@ -122,16 +127,32 @@ export const SPEC = {
     },
   },
 
-  /* ── Stage 2 · University Admission ────────────────────────────────────── */
+  /* ── Stage 2 · University Admission ──────────────────────────────────────
+     Strictly sequential: this stage's steps depend on each other in the real
+     world — there is no acceptance letter before the review, no agreement to
+     sign before the letter, and no tuition to pay before the agreement is
+     signed. requiresSteps holds each one shut until every earlier step in
+     the stage is approved. Kept in sync with the live rows' rules. */
   "University Admission": {
+    /* The student confirms this one themselves — there is nothing for an
+       advisor to verify, so waiting on a review would stall the whole stage
+       behind a rubber stamp. completion: "self" is read by the UI AND by the
+       journey_progress_guard trigger, so the server agrees. */
     "University Review": {
+      requiresSteps: true,
+      completion: "self",
       replaceLearn: {
         full_service:
           "Our team has already submitted your application and we are waiting for the university's admission decision. You do not need to take any action at this stage. If the university requests additional documents, an interview, or any other information, our support team will contact you immediately.",
       },
     },
 
+    /* No behaviour of its own beyond the gate — it exists here only so a
+       re-import keeps the sequence intact. */
+    "Acceptance Letter": { requiresSteps: true },
+
     "E-Sign Agreement of Studies": {
+      requiresSteps: true,
       replaceLearn: {
         full_service:
           "Our team has already reviewed the Agreement of Studies with the university. You only need to review the agreement carefully and complete the electronic signature when requested. Your tuition fee payment can only be completed after the Agreement of Studies has been successfully signed. If you have any questions about the agreement, or you notice incorrect information, contact our support team before signing.",
@@ -140,7 +161,7 @@ export const SPEC = {
 
     /* "retrieve the Tuition Fee from the Programs Excel database … Display the
        tuition fee above the Learn section." */
-    "Pay Tuition Fees": { program: "tuition" },
+    "Pay Tuition Fees": { program: "tuition", requiresSteps: true },
   },
 
   /* ── Stage 3 · Migration Application Preparation ───────────────────────── */
@@ -558,12 +579,18 @@ export const TEMPLATES = {
       priority: "high",
     },
     chat: {
+      /* The approval is also the one moment a student is most willing to
+         say how the journey actually went, so the congratulations carries
+         the ask. Deliberately optional in its wording: a testimonial that
+         reads as a demand sours the moment it is trying to celebrate. */
       body: [
         "🎉 Congratulations on receiving your Lithuanian Temporary Residence Permit!",
         "",
         "We are incredibly happy for you and proud to have been part of your journey.",
         "",
         "Your next stage is preparing for your arrival in Lithuania. If you need any assistance, our team is here to help.",
+        "",
+        "One last thing, and only if you feel like it: could you send us a short voice message here telling us how the platform was for you? What helped, and what did not. We read every one, and it is how AfaqWay gets better for the students coming after you. 🎙️",
       ].join("\n"),
     },
     whatsapp: {
@@ -575,6 +602,8 @@ export const TEMPLATES = {
         "We wish you safe travels and every success in your studies.",
         "",
         "Welcome to the AfaqWay family! 🇱🇹💙",
+        "",
+        "And if you have a moment: send us a short voice note telling us how the platform was for you. It is how we make AfaqWay better for the next student. 🎙️",
       ].join("\n"),
     },
     email: {

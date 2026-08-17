@@ -32,7 +32,7 @@ export function Header({ variant = "light", eyebrow, tagline }: {
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: dark ? "#C4CEEE" : emailColors.inkFaint,
+            color: dark ? "#B6B8EA" : emailColors.inkFaint,
           }}
         >
           {eyebrow}

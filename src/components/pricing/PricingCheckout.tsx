@@ -54,7 +54,7 @@ function GlassPlanCard({ plan, onChoose, onSeeAll }: { plan: Plan; onChoose: () 
             <span style={{ font: "700 22px/28px var(--font-sans)", color: "var(--ink-faint)" }}>{plan.currency}</span>
           </div>
           <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginBottom: 18 }}>{plan.tagline}</div>
-          <button type="button" onClick={onChoose} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 20px", borderRadius: 12, border: "none", cursor: "pointer", font: "600 14px/1 var(--font-sans)", background: "var(--indigo-600)", color: "#fff", boxShadow: "0 6px 16px rgba(22,46,140,.28)" }}>
+          <button type="button" onClick={onChoose} style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8, height: 44, padding: "0 20px", borderRadius: 12, border: "none", cursor: "pointer", font: "600 14px/1 var(--font-sans)", background: "var(--indigo-600)", color: "#fff", boxShadow: "0 6px 16px rgba(59,65,201,.28)" }}>
             Buy now
             <ChevronRight size={15} />
           </button>

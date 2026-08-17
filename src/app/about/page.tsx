@@ -87,7 +87,7 @@ export default function AboutPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14, marginTop: 6 }}>
               {TEAM.map((m, i) => (
                 <div key={i} style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 14, boxShadow: "var(--shadow-card)", padding: "20px 18px", textAlign: "center" }}>
-                  <span style={{ width: 60, height: 60, borderRadius: 20, background: "linear-gradient(135deg,#3B5BDB,#845EF7)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", font: "800 24px/1 var(--font-sans)" }}>{m.name.charAt(0)}</span>
+                  <span style={{ width: 60, height: 60, borderRadius: 20, background: "linear-gradient(135deg,#3B41C9,#845EF7)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", font: "800 24px/1 var(--font-sans)" }}>{m.name.charAt(0)}</span>
                   <div style={{ font: "600 14.5px/20px var(--font-sans)", color: "var(--ink)", marginTop: 12 }}>{m.name}</div>
                   <div style={{ font: "400 12.5px/17px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>{m.role}</div>
                 </div>

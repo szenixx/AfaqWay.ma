@@ -123,7 +123,7 @@ export default function OurService() {
                 <div style={{ padding: "16px 18px", display: "flex", gap: 9, font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)" }}>
                   <StatusCircle size={22} tone="red"><XGlyph /></StatusCircle>{r.agency}
                 </div>
-                <div style={{ padding: "16px 18px", display: "flex", gap: 9, font: "500 13px/19px var(--font-sans)", color: "var(--ink)", background: "rgba(22,46,140,.035)" }}>
+                <div style={{ padding: "16px 18px", display: "flex", gap: 9, font: "500 13px/19px var(--font-sans)", color: "var(--ink)", background: "rgba(59,65,201,.035)" }}>
                   <StatusCircle size={22} tone="green"><IconCheck size={13} /></StatusCircle>{r.afaq}
                 </div>
               </div>
@@ -156,7 +156,7 @@ export default function OurService() {
       {/* CTA */}
       <section style={{ padding: "80px 24px" }}>
         <Container width={760}>
-          <div style={{ background: "linear-gradient(135deg, var(--indigo-600), #4263C7)", borderRadius: 22, padding: "48px 32px", textAlign: "center", boxShadow: "0 20px 50px rgba(22,46,140,.28)" }}>
+          <div style={{ background: "linear-gradient(135deg, var(--indigo-600), var(--tertiary))", borderRadius: 22, padding: "48px 32px", textAlign: "center", boxShadow: "0 20px 50px rgba(59,65,201,.28)" }}>
             <h2 style={{ font: "800 var(--font-sans)", fontSize: "clamp(26px, 3.4vw, 36px)", lineHeight: 1.2, color: "#fff", margin: 0 }}>Ready to start your roadmap?</h2>
             <p style={{ font: "400 15px/24px var(--font-sans)", color: "rgba(255,255,255,.9)", maxWidth: 480, margin: "14px auto 0" }}>
               Build your profile, see your personalized plan, and take the first guided step toward your European campus.

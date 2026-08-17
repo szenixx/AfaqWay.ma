@@ -11,9 +11,9 @@ import { planById } from "@/lib/plans";
 import { UserAvatar, DataTable, type Column } from "@/components/ds";
 import { EmailHealthButton } from "./EmailHealthButton";
 
-const PALETTE = ["#3B5BDB", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
+const PALETTE = ["#3B41C9", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
 // per-stat accent colours so the KPI row isn't a monochrome block
-export const ACCENTS = ["#3B5BDB", "#20C997", "#F76707", "#845EF7", "#F06595", "#0CA678"];
+export const ACCENTS = ["#3B41C9", "#20C997", "#F76707", "#845EF7", "#F06595", "#0CA678"];
 
 // ── Base card ───────────────────────────────────────────────────────────────
 export function DashCard({ title, subtitle, action, children, bodyScroll, style }: { title?: string; subtitle?: string; action?: ReactNode; children: ReactNode; bodyScroll?: boolean; style?: CSSProperties }) {
@@ -52,7 +52,7 @@ function useCountUp(value: number) {
   return n;
 }
 
-export function StatCard({ label, value, prefix, suffix, delta, icon, loading, accent = "#3B5BDB" }: { label: string; value: number; prefix?: string; suffix?: string; delta?: number; icon?: ReactNode; loading?: boolean; accent?: string }) {
+export function StatCard({ label, value, prefix, suffix, delta, icon, loading, accent = "#3B41C9" }: { label: string; value: number; prefix?: string; suffix?: string; delta?: number; icon?: ReactNode; loading?: boolean; accent?: string }) {
   const n = useCountUp(loading ? 0 : value);
   return (
     <div className="dash-card dash-stat" style={{ borderTop: `3px solid ${accent}` }}>
@@ -97,7 +97,7 @@ export function SuperAdminBar() {
         <div style={{ minWidth: 0 }}>
           <div style={{ font: "700 clamp(15px,2vh,18px)/1.2 var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{me?.name ?? "Super Admin"}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-            <span style={{ font: "600 9.5px/1 var(--font-sans)", letterSpacing: ".06em", textTransform: "uppercase", color: "#fff", background: "linear-gradient(135deg,#3B5BDB,#845EF7)", borderRadius: 999, padding: "3px 8px" }}>Super Admin</span>
+            <span style={{ font: "600 9.5px/1 var(--font-sans)", letterSpacing: ".06em", textTransform: "uppercase", color: "#fff", background: "linear-gradient(135deg,#3B41C9,#845EF7)", borderRadius: 999, padding: "3px 8px" }}>Super Admin</span>
             <span style={{ font: "600 11px/1 var(--font-sans)", color: "var(--indigo-600)" }}>{shortId}</span>
           </div>
         </div>
@@ -108,7 +108,7 @@ export function SuperAdminBar() {
         <EmailHealthButton />
         <div style={{ textAlign: "right" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: 6 }}>
-            <span style={{ font: "800 clamp(24px,3.6vh,38px)/1 var(--font-sans)", letterSpacing: "-.5px", background: "linear-gradient(135deg,#3B5BDB,#20C997)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontVariantNumeric: "tabular-nums" }}>{time || "—"}</span>
+            <span style={{ font: "800 clamp(24px,3.6vh,38px)/1 var(--font-sans)", letterSpacing: "-.5px", background: "linear-gradient(135deg,#3B41C9,#20C997)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontVariantNumeric: "tabular-nums" }}>{time || "—"}</span>
             <span style={{ font: "700 clamp(11px,1.5vh,15px)/1 var(--font-sans)", color: "var(--indigo-600)" }}>{ampm}</span>
           </div>
           <div style={{ font: "500 10.5px/14px var(--font-sans)", color: "var(--ink-soft)", marginTop: 3 }}>{date} · Casablanca, Morocco</div>

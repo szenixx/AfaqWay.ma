@@ -5,14 +5,14 @@ import { useRef, type HTMLAttributes, type PointerEvent, type ReactNode } from "
 /* SpotlightCard — ported from the godui spotlight-card effect: a soft radial
    glow follows the pointer across the card, plus a matching highlight masked
    to the 1px border ring. The glow colour is the platform's primary blue at
-   low opacity (rgba of --indigo-600 #162E8C), per the design system; nothing
+   low opacity (rgba of --indigo-600 #3B41C9), per the design system; nothing
    here introduces a new colour.
 
    Implemented with a plain CSS custom property written on pointer move rather
    than React state, so a pointer sweep never triggers a re-render. */
 
-const GLOW = "rgba(22,46,140,.14)";
-const BORDER_GLOW = "rgba(22,46,140,.42)";
+const GLOW = "rgba(59,65,201,.14)";
+const BORDER_GLOW = "rgba(59,65,201,.42)";
 
 export function SpotlightCard({
   children, className, style, glowColor = GLOW, radius = 350, border = true, ...props

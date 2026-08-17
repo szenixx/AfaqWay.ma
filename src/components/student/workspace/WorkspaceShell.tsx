@@ -9,13 +9,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Route, FileText, Compass, MessageCircle, LifeBuoy,
+  House, Map as MapIcon, FileText, LifeBuoy,
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
   ChevronLeft, ChevronRight, CalendarDays, Bell,
 } from "lucide-react";
 import { ChatBubbleIcon } from "@svg-animated-icons/react";
 import { MobileNavigationHeader } from "./MobileNavigationHeader";
+import { DeviceAdvice } from "./DeviceAdvice";
 import RightPanel from "./RightPanel";
+import { DashboardWorkspace } from "./dashboard/DashboardWorkspace";
 import Schedule from "./schedule/Schedule";
 import StudentChat from "@/components/student/StudentChat";
 import { planById } from "@/lib/plans";
@@ -23,28 +25,36 @@ import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
 import { nextScheduleEvent } from "@/lib/schedule";
 import { useNotifications } from "@/lib/notifications";
-import { UserAvatar, BrandLogo } from "@/components/ds";
+import { UserAvatar, BrandLogo, AnimatedModal, DialogHead, DialogFoot } from "@/components/ds";
+import { JrButton } from "./journey/parts";
 import { Toaster as SonnerToaster } from "sonner";
 import { AnimatedGridPattern } from "@/components/home/AnimatedGridPattern";
 import { NotificationInbox } from "./NotificationInbox";
-import SidebarCarousel from "./SidebarCarousel";
 import {
-  Overview, Journey, Documents, Explore, Support,
+  Journey, Documents, Support,
   Subscription, Profile, Settings, type WsProfile,
 } from "./Modules";
 
 export type Nav =
-  | "overview" | "journey" | "documents" | "explore"
+  | "overview" | "journey" | "documents"
   | "messages" | "support" | "subscription" | "profile" | "settings" | "schedule";
 
 const NAV_ICON = 20;
 const PRIMARY_NAV: { id: Nav; label: string; icon: React.ReactNode }[] = [
-  { id: "overview", label: "Overview", icon: <LayoutDashboard size={NAV_ICON} /> },
-  { id: "journey", label: "My Journey", icon: <Route size={NAV_ICON} /> },
+  { id: "overview", label: "Overview", icon: <House size={NAV_ICON} /> },
+  { id: "journey", label: "My Journey", icon: <MapIcon size={NAV_ICON} /> },
   { id: "documents", label: "Documents", icon: <FileText size={NAV_ICON} /> },
   { id: "schedule", label: "Schedule", icon: <CalendarDays size={NAV_ICON} /> },
-  { id: "explore", label: "Explore Lithuania", icon: <Compass size={NAV_ICON} /> },
 ];
+
+/* The collapsed sidebar's nav, in render order. The sliding active pill is
+   positioned from an index into this list, so it stays correct as long as
+   this matches what the nav actually renders — hence one list, used for
+   both. */
+/* Messages is deliberately absent: it is reached from the top-bar icon and
+   the mobile launcher, not from the rail, so the sliding pill only has to
+   track the primary destinations. */
+const MINI_NAV: Nav[] = PRIMARY_NAV.map((n) => n.id);
 
 const firstName = (n: string | null) => (n ? n.trim().split(" ")[0] : "there");
 
@@ -54,7 +64,7 @@ const SIDEBAR_EXPANDED_NAV = new Set<Nav>(["profile", "settings", "support", "su
 
 /* Title shown next to the back/forward buttons in the top bar. */
 const MODULE_TITLE: Record<Nav, string> = {
-  overview: "Overview", journey: "My Journey", documents: "Documents", explore: "Explore Lithuania", schedule: "Schedule",
+  overview: "Overview", journey: "My Journey", documents: "Documents", schedule: "Schedule",
   messages: "Messages", support: "Support",
   subscription: "Subscription", profile: "Profile", settings: "Settings",
 };
@@ -69,6 +79,7 @@ export default function WorkspaceShell({
   onReload: () => Promise<void>;
 }) {
   const [menu, setMenu] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
   /* Drives both the bell's red dot and its "keeps moving until read"
@@ -79,6 +90,9 @@ export default function WorkspaceShell({
   /* Announce this student as online for as long as the workspace is open. */
   usePresenceBroadcast(profile.userId, { name: profile.fullName, role: "student" });
   const full = profile.plan === "full_service";
+  /* -1 when the current page has no collapsed-nav entry (Profile, Settings…),
+     which hides the pill rather than parking it on an unrelated item. */
+  const miniActiveIndex = MINI_NAV.indexOf(nav);
   const avatarUrl = useAvatarUrl(profile.avatarUrl);
   const router = useRouter();
 
@@ -168,12 +182,14 @@ export default function WorkspaceShell({
 
   const content = (() => {
     switch (nav) {
-      case "overview": return <Overview profile={profile} onNav={(n) => navigate(n as Nav)} />;
+      /* The dashboard is its own Application Workspace: it brings its own
+         centre column AND its own right utility panel, so it does not go
+         through withPanel like Journey and Documents do. */
+      case "overview": return <DashboardWorkspace profile={profile} onNav={(n) => navigate(n as Nav)} />;
       // Journey and Documents share the reusable right panel.
       case "journey": return withPanel(<Journey profile={profile} onNav={(n) => navigate(n as Nav)} />, "journey");
       case "documents": return withPanel(<Documents profile={profile} onNav={(id) => onNav(id as Nav)} />, "documents");
       case "schedule": return <Schedule profile={profile} onNav={(n) => navigate(n as Nav)} />;
-      case "explore": return <Explore />;
       case "support": return <Support onNav={(n) => navigate(n as Nav)} />;
       case "subscription": return <Subscription profile={profile} />;
       case "profile": return <Profile profile={profile} onNav={(n) => navigate(n as Nav)} />;
@@ -203,12 +219,17 @@ export default function WorkspaceShell({
       <div className="sw-shell">
         {/* Sidebar */}
         <aside className={`sw-sidebar${sidebarMini ? " mini" : ""}`}>
-          {/* Logo and wordmark, centred on the sidebar itself — no frame, no
-              card. The collapse control floats at the edge as a bare icon. */}
+          {/* Mark and wordmark side by side, centred on the sidebar itself —
+              no frame, no card. The collapse control is a real item in the same
+              row rather than floating over it, so the lockup can never grow
+              underneath it. */}
           <div className="sw-brandrow">
-            {sidebarMini ? <BrandLogo size={32} /> : (
+            {/* Sized to the rail rather than to a generic icon scale: the
+                collapsed mark fills most of the 80px column, and the rail is
+                zoomed out, so a smaller mark reads as lost in it. */}
+            {sidebarMini ? <BrandLogo size={44} /> : (
               <Link href="/" className="sw-brand" aria-label="AfaqWay home">
-                <BrandLogo size={32} />
+                <BrandLogo size={44} />
                 <span className="sw-brand-name">AfaqWay</span>
               </Link>
             )}
@@ -218,16 +239,32 @@ export default function WorkspaceShell({
             >{sidebarMini ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</button>
           </div>
           <nav className="sw-nav">
-            <div className="sw-group-label">Platform</div>
-            {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
-            {/* Everything above is a place in the journey; below is everything
-                waiting for the student's attention. Notifications has no nav
-                entry of its own — the bell in the top bar (with its popover)
-                is the only way to reach them now. */}
-            <div className="sw-nav-divider" role="separator" />
-            {navItem("messages", "Messages", <MessageCircle size={NAV_ICON} />, { badge: chatUnread, dotOnly: true })}
+            {/* The items live in their own shrink-wrapped box, and the pill is
+                positioned inside THAT rather than inside the nav. The nav is
+                vertically centred, so a pill anchored to the nav would sit at
+                its top edge while the items sat in the middle — the offset
+                only has a fixed relationship to the first item here. */}
+            <div className="sw-nav-items" style={{ "--sw-active-i": miniActiveIndex } as React.CSSProperties}>
+              {/* One pill that slides between items instead of each item
+                  painting its own background, so switching module reads as
+                  movement rather than a hard swap. */}
+              {miniActiveIndex >= 0 && <span className="sw-nav-pill" aria-hidden />}
+              {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
+              {/* Everything above is a place in the journey; below is
+                  everything waiting for the student's attention.
+                  Notifications has no nav entry of its own — the bell in the
+                  top bar (with its popover) is the only way to reach them. */}
+            </div>
           </nav>
-          <SidebarCarousel />
+          {/* Always last, always the same target size as a nav item, and
+              pushed to the floor by the flexible space above it. */}
+          <button
+            type="button" className="sw-navitem sw-logout" onClick={() => setConfirmSignOut(true)}
+            title={sidebarMini ? "Sign out" : undefined} aria-label="Sign out"
+          >
+            <span className="sw-navico"><LogOut size={NAV_ICON} /></span>
+            <span className="sw-navlabel">Sign out</span>
+          </button>
         </aside>
 
         {/* Main */}
@@ -311,6 +348,19 @@ export default function WorkspaceShell({
           it already has its own floating launcher (below) and top-bar icon.
           Profile, Payments and Settings live inside the collapsible Account
           card instead of as three more top-level rows. */}
+      {confirmSignOut && (
+        <AnimatedModal open onClose={() => setConfirmSignOut(false)} className="dlg" ariaLabel="Sign out">
+          <DialogHead title="Sign out of AfaqWay?">
+            You will need to sign in again to reach your workspace. Nothing you have uploaded or
+            sent is lost.
+          </DialogHead>
+          <DialogFoot>
+            <JrButton tone="quiet" size="md" onClick={() => setConfirmSignOut(false)}>Stay signed in</JrButton>
+            <JrButton tone="danger" size="md" icon={<LogOut size={15} />} onClick={onSignOut}>Sign out</JrButton>
+          </DialogFoot>
+        </AnimatedModal>
+      )}
+
       <MobileNavigationHeader
         activeKey={nav}
         rightExtra={
@@ -360,6 +410,11 @@ export default function WorkspaceShell({
 
         <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={onSignOut} />
       </MobileNavigationHeader>
+
+      {/* Sits directly under the mobile bar. Rendered unconditionally; the
+          CSS hides it above the mobile breakpoint, so there is no second
+          source of truth for "is this a phone". */}
+      <DeviceAdvice />
 
       {/* Mobile-only floating chat launcher, WhatsApp-extension-style: fixed
           bottom-right corner over the page. Hidden once already inside

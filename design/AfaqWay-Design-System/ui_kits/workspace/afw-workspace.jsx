@@ -75,7 +75,7 @@ function Sidebar({ nav, setNav, collapsed }) {
       <div style={{ marginTop: "auto" }}>
         {!collapsed && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderTop: "1px solid var(--line-soft)" }}>
-            <span style={{ width: 34, height: 34, borderRadius: 999, background: "linear-gradient(180deg,#EEF2F9,#E1E8F3)", border: "1px solid rgba(22,46,140,.1)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 13px/1 var(--font-sans)", color: "var(--indigo-600)" }}>AE</span>
+            <span style={{ width: 34, height: 34, borderRadius: 999, background: "linear-gradient(180deg,#EEF2F9,#E1E8F3)", border: "1px solid rgba(59,65,201,.1)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 13px/1 var(--font-sans)", color: "var(--indigo-600)" }}>AE</span>
             <div style={{ minWidth: 0 }}>
               <div style={{ font: "600 12.5px/16px var(--font-sans)", color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Amine El Fassi</div>
               <div style={{ font: "400 10.5px/14px var(--font-sans)", color: "var(--ink-faint)" }}>Kaunas · VMU</div>

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ChevronDown, CircleCheck, Clock3, FileText, FlaskConical, GraduationCap, Landmark, Lock,
-  Plane, Route, SkipForward,
+  ChevronDown, CircleCheck, Clock3, Eye, FileText, FlaskConical, GraduationCap, Landmark, Lock,
+  Plane, Play, Route, SkipForward,
 } from "lucide-react";
 import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep, type StepState } from "@/lib/journey";
 import { iconForStep } from "@/lib/journeyStepIcons";
@@ -83,7 +83,18 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
     });
     setStages(built);
     setUploads(docs);
-    setExpanded((cur) => cur ?? built.find((s) => s.state === "current" || s.state === "waiting_approval")?.id ?? built[0]?.id ?? null);
+    setExpanded((cur) => {
+      const inPlay = built.find((s) => s.state === "current" || s.state === "waiting_approval");
+      /* Nothing left to work on and the only thing still ahead is a stage this
+         plan excludes: a Self Service student who has just finished Stage 4 has
+         reached the end of their journey, so Stage 5 opens itself rather than
+         sitting shut under a padlock they have to think to click. */
+      if (!inPlay) {
+        const upsell = built.find((s) => s.planLocked && s.total > 0);
+        if (upsell) return upsell.id;
+      }
+      return cur ?? inPlay?.id ?? built[0]?.id ?? null;
+    });
     setLoading(false);
   }, [profile.plan, profile.userId, profile.tester, profile.academic?.targetDegree]);
   // Fetching from Supabase is the "subscribe to an external system" case; the
@@ -200,15 +211,6 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
   }, [stages]);
 
   const overall = roadmapProgress(stages);
-
-  const openDocuments = (stage: JourneyStage, step: JourneyStep) => {
-    // Hand the Documents module the exact step so nothing has to be searched for.
-    try {
-      sessionStorage.setItem("af.journey.focus", JSON.stringify({ stageId: stage.id, stepId: step.id, stepTitle: step.title }));
-    } catch { /* storage blocked */ }
-    setDetail(null);
-    onNav("documents");
-  };
 
   /* A student submits work; an administrator approves it. */
   const submitStep = async (stage: JourneyStage, step: JourneyStep, comment: string) => {
@@ -406,25 +408,26 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
      "use the same mini-step component used throughout the Journey", and a
      second copy is how the two quietly stop matching. */
   const renderStep = (stage: JourneyStage, step: JourneyStep) => {
-const docs = stepDocuments(step, uploads);
+    const docs = stepDocuments(step, uploads);
     const blocked = docs.missingRequired > 0;
-    const actionable = step.state === "pending" || step.state === "rejected";
+    /* Held shut by the stage's own order (rules.requiresSteps): an earlier
+       step in this stage is not approved yet. Distinct from `blocked`
+       above, which is only about missing uploads on THIS step. */
+    const gated = step.blockedBy.length > 0;
+    const actionable = (step.state === "pending" || step.state === "rejected") && !gated;
     /* Full Service never reports the residence permit outcome:
        "hide the Mark as Completed button … the application
        status is managed entirely by administrators." */
     const adminOnly = step.completion === "decision" && profile.plan !== "self_service";
-    /* A step may name its own button. Stage 5's first step is
-       "Chat with Support" and must never read "Done": the
-       student is asking for help, not reporting work. */
-    const label = step.cta
-      || (step.completion === "decision" ? "Report my decision"
-        : step.completion === "self" ? "Mark as Completed" : "Mark as Done");
+    /* A step that names its own button ("Chat with Support") carries that
+       wording on the action inside the module, not out here — the card's
+       job is only to get you in. See JourneyStepModal's footer. */
 
     const StepIcon = iconForStep(step.title);
     const iconTone = STEP_ICON_TONE[step.state] ?? "grey";
 
     return (
-      <li key={step.id} className={`jr-step ${step.state}`}>
+      <li key={step.id} className={`jr-step ${step.state}${gated ? " gated" : ""}`}>
         <span aria-hidden className={`jr-step-bg tone-${iconTone}`}><StepIcon size={110} /></span>
         <div className="jr-step-main">
           <span className={`jr-step-ico tone-${iconTone}`}><StepIcon size={16} /></span>
@@ -472,17 +475,42 @@ const docs = stepDocuments(step, uploads);
         </div>
 
         <div className="jr-step-acts">
-          {actionable && !adminOnly && (
-            <JrButton
-              tone="primary" disabled={busy === step.id || blocked}
-              title={blocked ? "Complete document upload first." : undefined}
-              onClick={() => (blocked ? undefined : startCompletion(stage, step))}
-            >
-              {busy === step.id ? "Saving…" : label}
+          {/* One way in. Everything the student does with a step — reading
+              it, uploading to it, finishing it — happens inside the module
+              this opens, so the card carries a single obvious action
+              instead of a row of competing ones.
+
+              Start and View are opposite invitations, so they get opposite
+              weight: a step with work waiting reads as a solid call to
+              action, one that is merely readable reads as quiet. Rendering
+              both as the same solid primary is what made them feel
+              interchangeable. */}
+          {gated ? (
+            /* Not startable yet. The real Start button is still rendered, then
+               blurred out behind a crisp lock: the student sees the action that
+               is coming and that it is held shut, rather than a button that
+               simply is not there. The lock sits in its own layer so the blur
+               never touches it. */
+            <span className="jr-locked-act" title={`Finish first: ${step.blockedBy.join(", ")}`}>
+              <JrButton tone="primary" size="md" icon={<Play size={15} />} disabled>
+                Start
+              </JrButton>
+              <span className="jr-locked-badge" aria-hidden><Lock size={16} /></span>
+            </span>
+          ) : actionable && !adminOnly ? (
+            <JrButton tone="primary" size="md" icon={<Play size={15} />} onClick={() => setDetail({ stage, step })}>
+              {step.state === "rejected" ? "Fix it" : "Start"}
+            </JrButton>
+          ) : (
+            <JrButton tone="outline" size="md" icon={<Eye size={15} />} onClick={() => setDetail({ stage, step })}>
+              View
             </JrButton>
           )}
-          {/* An appointment can be moved after it is booked;
-              the reminders and the calendar event follow it. */}
+
+          {/* Secondary, and deliberately still on the card: each one is a way
+              OUT of a state the module itself cannot offer — undoing a
+              submission, moving a booked appointment, skipping an optional
+              step. Small, so the primary action stays unmistakable. */}
           {step.capture === "vfs_appointment" && step.state === "completed" && (
             <JrButton
               disabled={busy === step.id}
@@ -501,7 +529,6 @@ const docs = stepDocuments(step, uploads);
               Skip
             </JrButton>
           )}
-          <JrButton tone="outline" onClick={() => setDetail({ stage, step })}>View Details</JrButton>
         </div>
       </li>
     );
@@ -558,14 +585,21 @@ const docs = stepDocuments(step, uploads);
       <nav className="jr-nav" aria-label="Stages">
         {stages.map((s, i) => {
           const Icon = STAGE_ICONS[i % STAGE_ICONS.length];
+          /* A stage excluded by plan is locked exactly like a stage locked by
+             sequence: one locked treatment, no special case. The upgrade lives
+             on the stage card further down, not up here. */
           const locked = s.state === "locked";
           return (
             <button
               key={s.id} type="button" disabled={locked}
-              className={`jr-navcard ${s.state}${expanded === s.id ? " open" : ""}`}
+              className={`jr-navcard ${s.state}${s.planLocked ? " plan-locked" : ""}${expanded === s.id ? " open" : ""}`}
               onClick={() => !locked && setExpanded(expanded === s.id ? null : s.id)}
-              aria-label={`Stage ${s.index}: ${s.title}`}
+              aria-label={`Stage ${s.index}: ${s.title}${s.planLocked ? " — Full Service only" : ""}`}
             >
+              {/* Locked like any other locked stage, but locked for a different
+                  reason: this one never opens with time, only with a plan. The
+                  badge is the only thing that says so up here. */}
+              {s.planLocked && <span className="jr-navplan" aria-hidden>Full Service</span>}
               <span className="jr-navtop">
                 <span className={`jr-navico tone-${s.tone}`}>{locked ? <Lock size={15} /> : <Icon size={17} />}</span>
                 <span className="jr-navnum">Stage {String(s.index).padStart(2, "0")}</span>
@@ -592,11 +626,21 @@ const docs = stepDocuments(step, uploads);
           /* A stage the plan excludes is shown, not hidden: the header stays
              sharp so a Self Service student can read what Stage 5 covers, and
              the steps behind it are blurred with the upgrade over them. Hiding
-             it would make the roadmap look shorter than it is. */
+             it would make the roadmap look shorter than it is.
+
+             It collapses like every other stage, and starts closed: the upgrade
+             pitch is something a student opens, not something that sits open at
+             the foot of the page. It shares the one `expanded` slot, so opening
+             it closes whatever stage was open — the same rule as the rest. */
           if (stage.planLocked) {
+            const openLocked = expanded === stage.id;
             return (
-              <section key={stage.id} className="jr-stage plan-locked">
-                <div className="jr-stage-head as-static">
+              <section key={stage.id} className={`jr-stage plan-locked${openLocked ? " open" : ""}`}>
+                <button
+                  type="button" className="jr-stage-head"
+                  onClick={() => setExpanded(openLocked ? null : stage.id)}
+                  aria-expanded={openLocked}
+                >
                   <span className={`jr-stage-ico tone-${stage.tone}`}><Icon size={20} /></span>
                   <span className="jr-stage-meta">
                     <span className="jr-stage-num">Stage {stage.index}</span>
@@ -604,9 +648,10 @@ const docs = stepDocuments(step, uploads);
                   </span>
                   <Status state="neutral" label="Locked" />
                   <Lock size={16} className="jr-stage-lock" />
-                </div>
+                  <ChevronDown size={17} className="jr-stage-chev" />
+                </button>
 
-                <div className="jr-planlock">
+                <div className="jr-planlock" hidden={!openLocked}>
                   {/* Inert and hidden from assistive technology: it is a texture
                       showing there is something here, not readable content. */}
                   <ol className="jr-planlock-ghost" aria-hidden inert>
@@ -620,13 +665,14 @@ const docs = stepDocuments(step, uploads);
 
                   <div className="jr-planlock-card">
                     <span className="jr-planlock-ico"><Lock size={20} /></span>
-                    <p className="jr-planlock-title">Only available with the Full Service Plan.</p>
+                    <p className="jr-planlock-title">Not included in Self Service</p>
                     <p className="jr-planlock-text">
-                      {stage.total} steps that help you settle in Lithuania after you arrive: accommodation,
-                      registration, banking, healthcare, transport and university life.
+                      This stage is available only with the Full Service plan. {stage.total} steps that help
+                      you settle in Lithuania after you arrive: accommodation, registration, banking,
+                      healthcare, transport and university life.
                     </p>
                     <JrButton tone="primary" size="md" onClick={() => onNav("subscription")}>
-                      See Full Service
+                      Upgrade to Full Service
                     </JrButton>
                   </div>
                 </div>
@@ -724,8 +770,14 @@ const docs = stepDocuments(step, uploads);
         <JourneyStepModal
           stage={detail.stage} step={detail.step} open userId={profile.userId}
           plan={profile.plan} study={profile.study}
-          onClose={() => setDetail(null)} onOpenDocuments={openDocuments}
+          onClose={() => setDetail(null)}
           onOpenChat={() => { setDetail(null); onNav("messages"); }}
+          /* Delegates to the same router the card used to call, so a step
+             with its own dialog (appointment, TRP decision, support
+             request) still gets that dialog rather than a bare submit. */
+          onMarkDone={() => { const d = detail; setDetail(null); startCompletion(d.stage, d.step); }}
+          onChanged={() => { void load(); }}
+          highlightChat={detail.stage.index === stages.length}
         />
       )}
 

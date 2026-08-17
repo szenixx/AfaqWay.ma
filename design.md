@@ -164,20 +164,71 @@ Aliases: `--text-body`, `--text-secondary`, `--text-hint`.
 
 Aliases: `--border-default`, `--border-divider`.
 
-## Brand — Indigo (primary)
+## Brand — the AfaqWay triad
+
+| Role | Token | HEX | RGB | Use |
+| --- | --- | --- | --- | --- |
+| **Primary** | `--brand-primary` | `#3B41C9` | 59 65 201 | The brand blue. Buttons, links, active states, focus, selection, progress — the majority of interactive ink. 7.5:1 on white. |
+| **Secondary** | `--brand-secondary` | `#FFFFFF` | 255 255 255 | White. The neutral the system is built on, and the ink ON a primary fill (`--brand-on`). Not a third accent. |
+| **Tertiary** | `--brand-tertiary` | `#1C328B` | 28 50 139 | The deeper supporting blue (the former primary). Secondary emphasis, deep/pressed accents, gradient ends, outlines, ink on branded surfaces. **Never the default interactive colour.** |
+
+### Rendering tokens
+
+The `--indigo-*` names are what components already render with; they resolve to
+the primary ramp, so the rebrand was a value swap rather than a rename.
 
 | Token | HEX | RGB | Use |
 | --- | --- | --- | --- |
-| `--indigo-700` | `#0F256F` | 15 37 111 | **Pressed** |
-| `--indigo-600` | `#162E8C` | 22 46 140 | **Primary / default** — buttons, links, active icons |
-| `--indigo-500` | `#1230A6` | 18 48 166 | **Hover** |
-| `--indigo-100` | `#E8EEFF` | 232 238 255 | Focus glow, ghost hover |
-| `--indigo-50` | `#F6F8FF` | 246 248 255 | Palest surface |
-| `--indigo-tint` | `#E8EEFF` | 232 238 255 | Pill / callout background |
-| `--indigo-line` | `#C4CEEE` | 196 206 238 | Pill / callout border, hover border |
-| `--indigo-text` | `#162E8C` | 22 46 140 | Text on indigo tint |
+| `--indigo-700` | `#262CA3` | 38 44 163 | **Pressed** |
+| `--indigo-600` | `#3B41C9` | 59 65 201 | **Primary / default** — buttons, links, active icons |
+| `--indigo-500` | `#494ECD` | 73 78 205 | **Hover** |
+| `--indigo-100` | `#E2E3F8` | 226 227 248 | Focus glow, ghost hover |
+| `--indigo-50` | `#F5F5FD` | 245 245 253 | Palest surface |
+| `--indigo-tint` | `#E2E3F8` | 226 227 248 | Pill / callout background |
+| `--indigo-line` | `#B6B8EA` | 182 184 234 | Pill / callout border, hover border |
+| `--indigo-text` | `#262CA3` | 38 44 163 | Text on indigo tint — 8.4:1 on `--indigo-tint` |
 
 Aliases: `--accent`, `--accent-hover`, `--accent-pressed`, `--accent-tint`.
+
+### Interactive states
+
+Reach for these rather than a hex. Hover lightens off the primary, pressed
+deepens, selected/subtle sit on the pale end, and disabled drops to the neutral
+ramp — a faded brand blue still reads as clickable.
+
+| Token | Resolves to | Use |
+| --- | --- | --- |
+| `--brand-hover` | `--primary-500` `#494ECD` | Hover on a primary fill |
+| `--brand-pressed` | `--primary-700` `#262CA3` | Pressed / active |
+| `--brand-active` | `--primary-600` `#3B41C9` | Selected nav, active tab, checked control |
+| `--brand-selected` | `--primary-100` `#E2E3F8` | Selected row, chosen option background |
+| `--brand-subtle` | `--primary-50` `#F5F5FD` | Palest brand surface |
+| `--brand-border` | `--indigo-line` `#B6B8EA` | Brand-tinted borders |
+| `--brand-on` | `--brand-secondary` `#FFFFFF` | Text and icons ON a primary fill |
+| `--brand-deep` | `--tertiary-600` `#1C328B` | Tertiary emphasis, gradient ends, deep ink |
+| `--brand-disabled` | `--neutral-300` | Disabled fill |
+| `--brand-disabled-on` | `--neutral-500` | Disabled label |
+| `--brand-focus` | `--focus-ring` `rgba(59,65,201,.28)` | Focus ring |
+
+### Ramps
+
+`--primary-50…950` walks the brand hue (237.5°) end to end; `600` **is**
+`#3B41C9`. `--tertiary-50…950` does the same for `#1C328B` at `600`. Never
+hand-pick a blue outside these two ramps.
+
+| Step | Primary | on white | Tertiary | on white |
+| --- | --- | --- | --- | --- |
+| 50 | `#F5F5FD` | 1.1 | `#EFF1FB` | 1.1 |
+| 100 | `#E2E3F8` | 1.3 | `#D6DCF5` | 1.4 |
+| 200 | `#C1C2EE` | 1.7 | `#A9B6EA` | 2.0 |
+| 300 | `#878BDE` | 3.1 | `#6C82DA` | 3.6 |
+| 400 | `#5B60D2` | 5.2 | `#2E4BC2` | 7.2 |
+| 500 | `#494ECD` | 6.5 | `#233DA6` | 9.2 |
+| **600** | **`#3B41C9`** | **7.5** | **`#1C328B`** | **11.2** |
+| 700 | `#262CA3` | 10.7 | `#162872` | 13.3 |
+| 800 | `#1B1F83` | 13.4 | `#101E59` | 15.5 |
+| 900 | `#111562` | 16.1 | `#0B1642` | 17.4 |
+| 950 | `#0A0C43` | 18.3 | `#060D2A` | 19.1 |
 
 ## Status
 
@@ -188,7 +239,7 @@ Each family is a **text colour**, a **tint**, and a **line**.
 | Success | `--green` `#256B49` | `--green-tint` `#E3F0E9` | `--green-line` `#9CCBB2` | Completed, approved, paid, online |
 | Warning | `--amber` `#8A5A0C` | `--amber-tint` `#FBF0DA` | `--amber-line` `#E7C583` | Pending, waiting, away |
 | Danger | `--red` `#B23B27` | `--red-tint` `#FBE7E2` | `--red-line` `#EDB3A6` | Rejected, failed, destructive |
-| Info | `--indigo-text` `#162E8C` | `--indigo-tint` | `--indigo-line` | Processing, submitted, refunded |
+| Info | `--indigo-text` `#3B41C9` | `--indigo-tint` | `--indigo-line` | Processing, submitted, refunded |
 | Neutral | `--grey` `#8695AB` | `--grey-tint` `#F1F4F7` | `--grey-line` `#DCE2EA` | Draft, cancelled, offline |
 
 ### Softened variants — graphics only
@@ -211,7 +262,7 @@ Each family is a **text colour**, a **tint**, and a **line**.
 | Hover (border) | `--indigo-line` |
 | Hover (ghost bg) | `--indigo-100` |
 | Pressed | `--indigo-700`; buttons also `transform: scale(.97)` |
-| Focus ring | `--focus-ring` `rgba(22,46,140,.25)`; fields use `0 0 0 3px var(--indigo-100)` |
+| Focus ring | `--focus-ring` `rgba(59,65,201,.25)`; fields use `0 0 0 3px var(--indigo-100)` |
 | Focus visible | `2.5px solid var(--indigo-600)`, `outline-offset: 2px` |
 | Disabled | `background: var(--subtle)`, `color: var(--ink-faint)`, `opacity: .7` (controls) / `.45` (toggle, checkbox) |
 | Invalid | border `--red-line`; focus ring `0 0 0 3px var(--red-tint)` |
@@ -223,14 +274,14 @@ Each family is a **text colour**, a **tint**, and a **line**.
 | Modal scrim | `rgba(23,35,58,.42)` + `backdrop-filter: blur(6px)` |
 | Celebration scrim | `rgba(23,35,58,.55)` + `blur(6px)` |
 | Shadow ink | `rgba(23,35,58,…)` — the single shadow hue |
-| Brand shadow | `rgba(22,46,140,…)` — hover lifts on indigo elements |
+| Brand shadow | `rgba(59,65,201,…)` — hover lifts on indigo elements |
 
 ## Workspace background gradient
 
 ```css
 .sw-root { background: linear-gradient(135deg, #E7ECF7 0%, #EDF1F9 52%, #E8EEF9 100%); }
 ```
-Plus two fixed blurred blobs: `rgba(22,46,140,.10)` top-left, `rgba(61,99,180,.08)`
+Plus two fixed blurred blobs: `rgba(59,65,201,.10)` top-left, `rgba(61,99,180,.08)`
 bottom-right, both `filter: blur(64px)`, `z-index: 0`.
 
 > ⚠️ **Flagged literals.** `#E8F7EE` / `#1E7A4E` (completed step icon),
@@ -398,12 +449,12 @@ a *surface* is 12–28px.
 | Modal | `0 30px 80px rgba(23,35,58,.3)` |
 | Chat bubble | `0 2px 10px rgba(23,35,58,.05)` → hover `0 6px 18px rgba(23,35,58,.09)` |
 | Composer | `0 6px 18px rgba(23,35,58,.06)` |
-| Card-role hover | `0 10px 26px -18px rgba(22,46,140,.5)` — *brand*-hued |
-| Send button hover | `0 8px 20px -10px rgba(22,46,140,.8)` |
+| Card-role hover | `0 10px 26px -18px rgba(59,65,201,.5)` — *brand*-hued |
+| Send button hover | `0 8px 20px -10px rgba(59,65,201,.8)` |
 | Toggle thumb | `0 2px 6px rgba(23,35,58,.22)` |
 
 **Rule:** shadows are `rgba(23,35,58,…)` (ink) except *hover* on interactive
-brand elements, which uses `rgba(22,46,140,…)` (indigo).
+brand elements, which uses `rgba(59,65,201,…)` (indigo).
 
 ---
 
@@ -765,7 +816,7 @@ radius and weight.
 | `ActionCard` | Prompts a decision | Title, body, primary action |
 
 Shared hover (`.af-card-*`): `border-color: --indigo-line`,
-`box-shadow: 0 10px 26px -18px rgba(22,46,140,.5)`, `translateY(-1px)`.
+`box-shadow: 0 10px 26px -18px rgba(59,65,201,.5)`, `translateY(-1px)`.
 
 ## Base `.card`
 
@@ -1007,11 +1058,12 @@ auto. **Any new animation must be added to a reduced-motion block.**
 --ink:#17233A; --ink-soft:#5A6B85; --ink-faint:#8695AB;
 /* Borders */
 --line:#DCE2EA; --line-soft:#E7ECF1; --card-border:1px solid rgba(23,35,58,.05);
-/* Brand */
---indigo-700:#0F256F; --indigo-600:#162E8C; --indigo-500:#1230A6;
---indigo-100:#E8EEFF; --indigo-50:#F6F8FF;
---indigo-text:#162E8C; --indigo-tint:#E8EEFF; --indigo-line:#C4CEEE;
---focus-ring:rgba(22,46,140,.25);
+/* Brand triad */
+--brand-primary:#3B41C9; --brand-secondary:#FFFFFF; --brand-tertiary:#1C328B;
+--indigo-700:#262CA3; --indigo-600:#3B41C9; --indigo-500:#494ECD;
+--indigo-100:#E2E3F8; --indigo-50:#F5F5FD;
+--indigo-text:#262CA3; --indigo-tint:#E2E3F8; --indigo-line:#B6B8EA;
+--focus-ring:rgba(59,65,201,.28);
 /* Status */
 --amber:#8A5A0C; --amber-tint:#FBF0DA; --amber-line:#E7C583;
 --red:#B23B27;   --red-tint:#FBE7E2;   --red-line:#EDB3A6;

@@ -12,7 +12,7 @@
   --elev-2:0 16px 40px -14px rgba(15,23,42,.07);         /* default card */
   --elev-3:0 28px 64px -18px rgba(15,23,42,.10);         /* prominent */
   --elev-hover:0 22px 48px -16px rgba(15,23,42,.09);     /* card hover */
-  --shadow-brand-hover:0 16px 36px -18px rgba(22,46,140,.35); /* hover on brand elements — softened */
+  --shadow-brand-hover:0 16px 36px -18px rgba(59,65,201,.35); /* hover on brand elements — softened */
 
   --shadow-xs:var(--shadow-card);
   --shadow-sm:var(--elev-1);

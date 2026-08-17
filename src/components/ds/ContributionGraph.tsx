@@ -23,7 +23,7 @@ import type { ActivityDay } from "@/lib/activity";
    Each step clears 1.28:1 against the one below it, measured — the first step
    in particular, because "one action" and "none" are the pair a reader most
    needs to tell apart. */
-const LEVELS = ["var(--subtle)", "#CBD8FF", "#A9BAF2", "#5A78D8", "var(--indigo-600)"];
+const LEVELS = ["var(--subtle)", "var(--primary-200)", "var(--primary-300)", "var(--primary-400)", "var(--indigo-600)"];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_LABEL = ["Mon", "", "Wed", "", "Fri", "", ""];
