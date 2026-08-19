@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Loader } from "@/components/ds";
 import { fetchAdminRole, type AdminRole } from "@/lib/admin";
-import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { LogoMark } from "@/components/ds/LogoMark";
 import PaymentReviews from "@/components/admin/PaymentReviews";
 import AdminManagement from "@/components/admin/AdminManagement";
 import PaymentMethodsAdmin from "@/components/admin/PaymentMethodsAdmin";

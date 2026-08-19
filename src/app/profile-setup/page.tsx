@@ -1,459 +1,92 @@
 "use client";
 
-import { titleCase } from "@/lib/text";
-import { Info } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Card, Icon, Flag, Select, Checkbox, iconForLabel, fieldIcon, Loader, Pill } from "@/components/ds";
-import { Stepper, StepperNav, StepperItem, StepperIndicator, StepperSeparator } from "@/components/ds/Stepper";
-import { Confetti } from "@/components/ds/Confetti";
-import { GENDER_OPTIONS, type Gender } from "@/lib/avatarIdentity";
-import { ensureGeneratedAvatar } from "@/lib/avatarProfile";
-import OnboardingHeroPanel, { LogoMark } from "@/components/hero/OnboardingHeroPanel";
-import ProgramMatch from "@/components/programs/ProgramMatch";
-import PricingCheckout from "@/components/pricing/PricingCheckout";
-import { planById } from "@/lib/plans";
-import type { StudentProfile } from "@/lib/programs/types";
-import { fetchAdminRole } from "@/lib/admin";
-import { LegalDocModal } from "@/components/legal/LegalContent";
-import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
-import { useSingleSession } from "@/lib/useSingleSession";
-import { getCountryFlow } from "@/lib/onboarding/countryFlows";
-import type { CountryFlow, CountryFlowStep, FieldDef } from "@/lib/onboarding/countryFlows/types";
+import { Button, Checkbox } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
+import { fetchAdminRole } from "@/lib/admin";
+import { useSingleSession } from "@/lib/useSingleSession";
+import { ensureGeneratedAvatar } from "@/lib/avatarProfile";
+import type { Gender } from "@/lib/avatarIdentity";
+import { countryByCode } from "@/components/profile-setup/countries";
+import { getCountryFlow } from "@/lib/onboarding/countryFlows";
+import {
+  EMPTY_PERSONAL, cfaFromJson, cfaToJson, hasCfaData, personalFromRow, personalPatch, str,
+  type Cfa, type Personal,
+} from "@/lib/onboarding/profileState";
+import {
+  applyForceRules, buildScreens, groupLabels, readSlot, screenAnswered,
+  type Screen, type Slot,
+} from "@/lib/onboarding/journey";
+import { Emoji } from "@/components/onboarding/Emoji";
+import type { EmojiName } from "@/lib/onboarding/emoji";
+import { Answer, PhoneAnswer } from "@/components/onboarding/Answer";
+import { BackButton, BrandMark, Footer, Head, Progress, SaveNote, Stage, TopUtilities } from "@/components/onboarding/OnboardingShell";
+import ProgramPicker from "@/components/onboarding/ProgramPicker";
+import { PlanStep } from "@/components/onboarding/PlanPicker";
+import { BlueprintGrid } from "@/components/godui/blueprint-grid";
+import PaymentStep from "@/components/onboarding/PaymentStep";
+import { LegalDocModal } from "@/components/legal/LegalContent";
+import { PROGRAMS } from "@/lib/programs/catalog";
+import { planById } from "@/lib/plans";
+import { intakeByValue } from "@/config/intakes";
+import type { StudentProfile } from "@/lib/programs/types";
 
-/* Onboarding = Phase A (universal: personal details + destination) then Phase B
-   (per-country steps sourced from the flow registry). onboarding_step is the
-   index within onboarding_phase. Adding a country never touches this file. */
+/* ── AfaqWay onboarding ────────────────────────────────────────────────
+   One question per screen. The screen list is derived from the SAME country
+   flow registry the platform has always used (src/lib/onboarding/countryFlows)
+   and writes the SAME columns — this file only decides how a question is put
+   to a student, never which questions exist or where the answer goes.
 
-type Personal = {
-  full_name: string;
-  gender: string;
-  date_of_birth: string;
-  city: string;
-  whatsapp_country_code: string;
-  whatsapp_number: string;
-  destination_country: string;
-  has_passport: string; // yes | no
-};
-const EMPTY_P: Personal = { full_name: "", gender: "", date_of_birth: "", city: "", whatsapp_country_code: "+212", whatsapp_number: "", destination_country: "", has_passport: "" };
-type Cfa = Record<string, Record<string, string>>;
+   The previous wizard is still live at /profile-setup/classic, on the same
+   profile row, so the two can be compared against one account.
 
-// Longer per-step descriptions for the desktop hero panel (keyed by step label).
-const HERO_CAPTIONS: Record<string, string> = {
-  Personal: "Your name, birth date, city and WhatsApp, so we can reach you and prepare your file.",
-  Studies: "Your last diploma, grade and when you want to start, so we only match programs you can get into.",
-  Program: "Your field, budget and English, then we rank real Lithuanian programs by how well they fit you.",
-  Pricing: "Choose how much help you want, self service or full service. You can change this later.",
-  Roadmap: "A step by step plan from application to arrival, generated from everything you told us.",
-};
+   Position is persisted the way it always was (onboarding_phase +
+   onboarding_step, one entry per flow step), but re-entry does not trust it
+   blindly: it lands on the first screen that is genuinely unanswered, so a
+   half-finished step resumes where it stopped rather than at its top. */
 
-const str = (v: unknown) => (typeof v === "string" ? v : "");
-const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
-
-function personalFromRow(r: Record<string, unknown>): Personal {
-  return {
-    full_name: str(r.full_name), gender: str(r.gender), date_of_birth: str(r.date_of_birth), city: str(r.city),
-    whatsapp_country_code: str(r.whatsapp_country_code) || "+212", whatsapp_number: str(r.whatsapp_number),
-    destination_country: str(r.destination_country), has_passport: str(r.has_passport),
-  };
-}
-function personalPatch(p: Personal) {
-  return {
-    full_name: p.full_name || null, gender: p.gender || null, date_of_birth: p.date_of_birth || null, city: p.city || null,
-    whatsapp_country_code: p.whatsapp_country_code || null, whatsapp_number: p.whatsapp_number || null,
-    destination_country: p.destination_country || null, has_passport: p.has_passport || null,
-  };
-}
-function cfaFromJson(json: unknown): Cfa {
-  const out: Cfa = {};
-  if (json && typeof json === "object") {
-    for (const [stepId, vals] of Object.entries(json as Record<string, unknown>)) {
-      out[stepId] = {};
-      if (vals && typeof vals === "object") for (const [k, v] of Object.entries(vals as Record<string, unknown>)) out[stepId][k] = v == null ? "" : String(v);
-    }
-  }
-  return out;
-}
-function cfaToJson(flow: CountryFlow | null, cfa: Cfa) {
-  if (!flow) return {};
-  const out: Record<string, Record<string, string | number>> = {};
-  for (const step of flow.steps) {
-    const vals = cfa[step.id];
-    if (!vals) continue;
-    const numericKeys = new Set<string>();
-    for (const sec of step.sections) for (const f of sec.fields) if (f.numeric) numericKeys.add(f.key);
-    const obj: Record<string, string | number> = {};
-    // preserve every stored key (incl. non-field keys like selected_programs)
-    for (const [k, v] of Object.entries(vals)) {
-      if (v === undefined || v === "") continue;
-      obj[k] = numericKeys.has(k) ? Number(v) : v;
-    }
-    if (Object.keys(obj).length) out[step.id] = obj;
-  }
-  return out;
-}
-const hasCfaData = (cfa: Cfa) => Object.values(cfa).some((s) => Object.values(s).some((v) => v !== ""));
-
-function validatePersonal(p: Personal): boolean {
-  if (!p.full_name.trim() || !p.gender || !p.date_of_birth || !p.city.trim()) return false;
-  if (!/^\d{6,15}$/.test(p.whatsapp_number.replace(/\s/g, ""))) return false;
-  const c = countryByCode(p.destination_country);
-  return !!(c && c.available);
-}
-function validateField(f: FieldDef, v: string): boolean {
-  if (v === "") return !f.required;
-  if (f.pattern && !new RegExp(f.pattern).test(v)) return false;
-  if (f.numeric || f.min != null || f.max != null) {
-    const n = Number(v);
-    if (Number.isNaN(n)) return false;
-    if (f.min != null && n < f.min) return false;
-    if (f.max != null && n > f.max) return false;
-  }
-  if ((f.kind === "select" || f.kind === "segmented") && f.options && !f.options.some((o) => o.value === v)) return false;
-  return true;
-}
-function fieldVisible(f: FieldDef, vals: Record<string, string>): boolean {
-  if (!f.showWhen) return true;
-  const conds = Array.isArray(f.showWhen) ? f.showWhen : [f.showWhen];
-  return conds.every((c) => {
-    if (c.equals !== undefined) return vals[c.field] === c.equals;
-    if (c.notEquals !== undefined) return vals[c.field] !== c.notEquals;
-    return true;
-  });
-}
-function fieldInvalid(f: FieldDef, value: string, vals: Record<string, string>): boolean {
-  if (!fieldVisible(f, vals)) return false;
-  if (f.required && (value === "" || value == null)) return true;
-  return value !== "" && !validateField(f, value);
-}
-function validateStep(step: CountryFlowStep, vals: Record<string, string> = {}): boolean {
-  for (const sec of step.sections) for (const f of sec.fields) {
-    if (!fieldVisible(f, vals)) continue;
-    const v = vals[f.key] ?? "";
-    if (f.required && v === "") return false;
-    if (v !== "" && !validateField(f, v)) return false;
-  }
-  return true;
-}
 const numOrNull = (v: string | undefined) => { const n = parseFloat(v ?? ""); return Number.isNaN(n) ? null : n; };
-/* Roadmap background video.
-
-   Slower than real time so the motion reads as calm rather than busy, and looped
-   by hand: the browser's own loop cuts on the last frame, which is the jump you
-   see. Restarting a moment early, behind a short opacity dip, makes the seam
-   invisible. */
-const ROADMAP_VIDEO_RATE = 0.4;
-const LOOP_LEAD = 0.45; // seconds before the end to restart
-
-function onRoadmapVideoTime(e: React.SyntheticEvent<HTMLVideoElement>) {
-  const v = e.currentTarget;
-  if (!v.duration || Number.isNaN(v.duration)) return;
-  const nearEnd = v.currentTime >= v.duration - LOOP_LEAD;
-  if (nearEnd && !v.classList.contains("looping")) {
-    v.classList.add("looping");
-    window.setTimeout(() => { v.currentTime = 0; window.setTimeout(() => v.classList.remove("looping"), 60); }, 360);
-  }
-}
-
-function sanitize(f: FieldDef, raw: string): string {
-  let v = raw;
-  if (f.sanitize === "digits") v = v.replace(/[^\d]/g, "");
-  else if (f.sanitize === "titlecase") v = titleCase(v);
-  else if (f.sanitize === "decimal") {
-    v = v.replace(/,/g, ".").replace(/[^\d.]/g, ""); // phone keyboards often type "," for the decimal point
-    const i = v.indexOf(".");
-    if (i !== -1) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, ""); // keep only the first "."
-  }
-  if (f.maxLength) v = v.slice(0, f.maxLength);
-  return v;
-}
-function groupFields(fields: FieldDef[]): FieldDef[][] {
-  const groups: FieldDef[][] = [];
-  for (const f of fields) {
-    const last = groups[groups.length - 1];
-    if (f.row != null && last && last[0].row === f.row) last.push(f);
-    else groups.push([f]);
-  }
-  return groups;
-}
-
-/* @reui/c-input-5's own destructive red — explicit hex, not var(--red):
-   this validation styling is deliberately kept off the platform design
-   system, so it can't reach for a DS token either. Used only for the two
-   hand-rolled invalid borders (multiselect/segmented) that can't go through
-   the scoped CSS override in globals.css because they're inline styles,
-   which always beat a class selector. */
-const REUI_RED = "#DC2626";
-
-const eyebrow: CSSProperties = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-faint)" };
-const sectionTitle: CSSProperties = { font: "600 18px/24px var(--font-sans)", color: "var(--ink)", margin: "4px 0 16px" };
-const fieldLabel: CSSProperties = { font: "500 13px/20px var(--font-sans)", color: "var(--ink)", marginBottom: 6 };
-const divider = <div style={{ height: 1, background: "var(--line-soft)", margin: "24px 0" }} />;
-
-/* ── Sub-components ─────────────────────────────────────────────────── */
-
-// Options rendered as separate, spaced choice cards (clear gap between them).
-function Segmented({ options, value, onChange }: { options: { value: string; label: string; disabled?: boolean }[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div role="radiogroup" style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-      {options.map((o) => {
-        const active = value === o.value;
-        return (
-          <button key={o.value} type="button" role="radio" aria-checked={active} disabled={o.disabled} onClick={() => !o.disabled && onChange(o.value)}
-            /* Solid when chosen — the same idea as a primary button, not the
-               pale tint used for hover/secondary states — so "which one is
-               picked" reads at a glance. --primary-400, the DS's lighter
-               indigo step (the 600 default read as too dark/heavy here,
-               unbalanced against the rest of the page). */
-            style={{ flex: "0 1 auto", minWidth: 96, height: 36, padding: "0 16px", borderRadius: "var(--radius-pill)", border: active ? "1px solid var(--primary-400)" : "1px solid var(--line)", cursor: o.disabled ? "not-allowed" : "pointer", font: "600 13px/1 var(--font-sans)", background: active ? "var(--primary-400)" : "var(--card)", color: active ? "#fff" : o.disabled ? "var(--ink-faint)" : "var(--ink)", opacity: o.disabled ? 0.5 : 1, boxShadow: active ? "0 4px 12px rgba(76,99,196,.24)" : "none", transition: "border-color 120ms cubic-bezier(.4,0,.2,1), background 120ms cubic-bezier(.4,0,.2,1), box-shadow 120ms cubic-bezier(.4,0,.2,1)" }}>
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function SaveIndicator({ state }: { state: "idle" | "saving" | "saved" | "error" }) {
-  if (state === "idle") return <span />;
-  if (state === "saving") return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}><Loader size={16} />Saving…</span>;
-  if (state === "saved") return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "400 13px/20px var(--font-sans)", color: "var(--ink-faint)" }}><Icon name="check" size={14} style={{ color: "var(--green)" }} />Saved just now</span>;
-  return <span style={{ font: "400 13px/20px var(--font-sans)", color: "var(--red)" }}>{"Couldn’t save, retrying"}</span>;
-}
-
-/* c-input-5's own point: an invalid field says *why*, not just a red edge.
-   One template covers every flow-config field instead of hand-writing a
-   message per key — "{label} is required." reads fine for all of them
-   (text/select/segmented ask for one value; multiselect for "at least one"). */
-function fieldErrorText(field: FieldDef): string {
-  if (field.kind === "multiselect") return `Please choose at least one ${field.label.toLowerCase()}.`;
-  return `${field.label} is required.`;
-}
-
-function FlowField({ field, value, stepValues, onChange, onFlush, invalid }: { field: FieldDef; value: string; stepValues: Record<string, string>; onChange: (v: string) => void; onFlush: () => void; invalid?: boolean }) {
-  if (field.kind === "text") {
-    return <Field label={field.label} icon={iconForLabel(field.label)} hint={field.hint} placeholder={field.placeholder} required={field.required} inputMode={field.inputMode} maxLength={field.maxLength} value={value} aria-invalid={invalid || undefined} error={invalid ? fieldErrorText(field) : undefined} onChange={(e) => onChange(sanitize(field, e.target.value))} onBlur={onFlush} />;
-  }
-  if (field.kind === "select") {
-    return (
-      <div>
-        <span className="af-label">{field.label}{field.hint && <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}> · {field.hint}</span>}</span>
-        <Select
-          value={value}
-          onChange={(v) => { onChange(v); onFlush(); }}
-          options={(field.options ?? []).map((o) => ({ value: o.value, label: o.label }))}
-          icon={iconForLabel(field.label)}
-          placeholder={field.placeholder ?? "Select"}
-          ariaLabel={field.label}
-          error={invalid ? fieldErrorText(field) : undefined}
-        />
-      </div>
-    );
-  }
-  if (field.kind === "multiselect") {
-    const chosen = value ? value.split("|").filter(Boolean) : [];
-    const max = field.maxSelect ?? 99;
-    const toggle = (v: string) => {
-      const next = chosen.includes(v) ? chosen.filter((x) => x !== v) : chosen.length < max ? [...chosen, v] : chosen;
-      onChange(next.join("|"));
-    };
-    return (
-      <div>
-        <div style={fieldLabel}>{field.label}{field.hint && <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}> · {field.hint}</span>}</div>
-        {/* Same pill as before, just laid out so the row wraps in order
-            instead of drifting — align-content keeps each wrapped line
-            flush left rather than letting the flex box stretch gaps between
-            rows to fill the container height. */}
-        <div style={{ display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: 8, padding: invalid ? 6 : 0, border: invalid ? `1px solid ${REUI_RED}` : "none", borderRadius: 12 }}>
-          {field.options?.map((o) => {
-            const on = chosen.includes(o.value);
-            const full = !on && chosen.length >= max;
-            return (
-              <button key={o.value} type="button" aria-pressed={on} disabled={full} onClick={() => toggle(o.value)}
-                style={{ height: 34, padding: "0 13px", borderRadius: 999, cursor: full ? "not-allowed" : "pointer", font: "600 12.5px/1 var(--font-sans)", border: on ? "1px solid var(--indigo-line)" : "1px solid var(--line)", background: on ? "var(--indigo-tint)" : "var(--card)", color: on ? "var(--indigo-text)" : "var(--ink)", opacity: full ? 0.45 : 1 }}>
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-        {invalid && <span className="af-onb-error">{fieldErrorText(field)}</span>}
-      </div>
-    );
-  }
-  const dis = field.disableOptionWhen && stepValues[field.disableOptionWhen.field] === field.disableOptionWhen.equals ? field.disableOptionWhen : null;
-  return (
-    <div>
-      <div style={fieldLabel}>{field.label}</div>
-      <div style={{ display: "inline-block", padding: invalid ? 6 : 0, border: invalid ? `1px solid ${REUI_RED}` : "none", borderRadius: 14 }}>
-        <Segmented value={value} onChange={onChange} options={(field.options ?? []).map((o) => ({ ...o, disabled: dis ? o.value === dis.option : false }))} />
-      </div>
-      {invalid && <span className="af-onb-error">{fieldErrorText(field)}</span>}
-      {dis?.note && <div style={{ font: "400 12px/17px var(--font-sans)", color: "var(--ink-faint)", marginTop: 6 }}>{dis.note}</div>}
-    </div>
-  );
-}
-
-// Phone-only top bar (desktop uses the hero's own logo/logout). |LOGO| ··· ☰
-function MobileBar() {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  async function logout() { await supabase.auth.signOut(); router.replace("/signup"); }
-  return (
-    <div className="af-onboard-mobilebar" style={{ justifyContent: "center", paddingTop: 16, position: "relative", zIndex: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 999, boxShadow: "var(--shadow-card)", padding: "10px 18px", height: 60, boxSizing: "border-box", width: "min(340px, calc(100vw - 32px))" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <LogoMark size={28} />
-          <span style={{ font: "700 19px/1 var(--font-sans)", color: "var(--ink)" }}>AfaqWay</span>
-        </div>
-        <div style={{ position: "relative" }}>
-          <button type="button" onClick={() => setOpen((v) => !v)} aria-label={open ? "Close menu" : "Open menu"} style={{ background: "none", border: "none", padding: 6, cursor: "pointer", color: "var(--ink-soft)", display: "flex" }}>
-            <svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{open ? <path d="M5 5l10 10M15 5L5 15" /> : <path d="M3 7h14M3 13h14" />}</svg>
-          </button>
-          {open && (
-            <>
-              <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 15 }} aria-hidden />
-              <div style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, minWidth: 180, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, boxShadow: "var(--shadow-card)", padding: 6, zIndex: 20 }}>
-                <button type="button" onClick={logout} style={{ width: "100%", height: 40, display: "flex", alignItems: "center", gap: 10, padding: "0 12px", borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", font: "500 14px/1 var(--font-sans)", color: "var(--red)", textAlign: "left" }}>
-                  <Icon name="logout" size={16} /> Log out
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Phone-only horizontal stepper (1—2—3—4—5) with the current step title + copy.
-// Indicator/separator structure ported from @reui/stepper — see Stepper.tsx.
-function MobileSteps({ items, view, reached, meta }: { items: string[]; view: number; reached: number; meta: { title: string; description: string } }) {
-  return (
-    <div className="af-onboard-mobilesteps" style={{ marginBottom: 20 }}>
-      <div style={{ marginBottom: 16 }}>
-        <Stepper value={view} reached={reached} indicators={{ completed: <Icon name="check" size={13} /> }}>
-          <StepperNav>
-            {items.map((_, i) => {
-              const step = i + 1;
-              const isLast = i === items.length - 1;
-              return (
-                <StepperItem key={step} step={step} isLast={isLast}>
-                  <StepperIndicator />
-                  <StepperSeparator isLast={isLast} />
-                </StepperItem>
-              );
-            })}
-          </StepperNav>
-        </Stepper>
-      </div>
-      <h1 style={{ font: "700 22px/28px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{meta.title}</h1>
-      <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0" }}>{meta.description}</p>
-    </div>
-  );
-}
-
-// Footer: Back sits in the far-left corner; save indicator + primary on the right.
-function StepFooter({ onBack, backLabel = "Back", saveState, right }: { onBack?: () => void; backLabel?: string; saveState?: "idle" | "saving" | "saved" | "error"; right: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-      {onBack ? <Button variant="ghost" size="lg" onClick={onBack}>{backLabel}</Button> : <span />}
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        {saveState && <SaveIndicator state={saveState} />}
-        {right}
-      </div>
-    </div>
-  );
-}
-
-// Small 2-step progress marker used inside the Program step.
-function SubStepper({ sub, labels, onJump }: { sub: number; labels: string[]; onJump: (i: number) => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center" }}>
-      {labels.map((l, i) => {
-        const active = i === sub, done = i < sub;
-        return (
-          <div key={i} style={{ display: "flex", alignItems: "center", flex: i < labels.length - 1 ? 1 : "none" }}>
-            <button type="button" onClick={() => done && onJump(i)} disabled={!done} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: done ? "pointer" : "default", padding: 0 }}>
-              <span style={{ width: 26, height: 26, borderRadius: 999, flex: "none", display: "flex", alignItems: "center", justifyContent: "center", background: active || done ? "var(--indigo-600)" : "var(--subtle)", color: active || done ? "#fff" : "var(--ink-faint)", font: "600 12px/1 var(--font-sans)" }}>{done ? <Icon name="check" size={13} /> : i + 1}</span>
-              <span style={{ font: "600 13px/1 var(--font-sans)", color: active ? "var(--indigo-700)" : "var(--ink-faint)" }}>{l}</span>
-            </button>
-            {i < labels.length - 1 && <span style={{ flex: 1, height: 2, background: sub > i ? "var(--indigo-600)" : "var(--line)", margin: "0 12px", borderRadius: 999 }} />}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function NoteBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", gap: 10, background: "var(--amber-tint)", border: "1px solid var(--amber-line)", borderRadius: 12, padding: "12px 14px", marginTop: 16 }}>
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="var(--amber)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ flex: "none", marginTop: 1 }}><path d="M10 3 2 17h16L10 3z" /><path d="M10 8v4M10 14.5v.5" /></svg>
-      <span style={{ font: "500 13px/19px var(--font-sans)", color: "var(--ink)" }}>{children}</span>
-    </div>
-  );
-}
-
-const degLabel = (s: string) => s === "high_school" ? "High school" : s === "bachelor" ? "Bachelor's" : s === "master" ? "Master's" : (s || "—");
-const cleanList = (s: string) => (s || "").replace(/[[\]"]/g, "").trim() || "—";
-
-function ageFromDob(dob: string): number | null {
-  if (!dob) return null;
-  const d = new Date(dob);
-  if (isNaN(d.getTime())) return null;
-  const t = new Date();
-  let a = t.getFullYear() - d.getFullYear();
-  const m = t.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
-  return a >= 0 && a < 130 ? a : null;
-}
-
-function LegalCheck({ checked, onToggle, onRead, label, invalid }: { checked: boolean; onToggle: () => void; onRead: () => void; label: string; invalid?: boolean }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 9, textAlign: "left" }}>
-      <Checkbox checked={checked} invalid={invalid} onChange={onToggle} ariaLabel={label} />
-      <span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>
-        {label}{" "}
-        <button type="button" onClick={onRead} style={{ background: "none", border: "none", cursor: "pointer", font: "600 12.5px/18px var(--font-sans)", color: "var(--indigo-600)", padding: 0, textDecoration: "underline" }}>Read</button>
-      </span>
-    </div>
-  );
-}
-
-/* ── Page ───────────────────────────────────────────────────────────── */
+const degreeLabel = (s: string) => (s === "high_school" ? "High school" : s === "bachelor" ? "Bachelor's degree" : s === "master" ? "Master's degree" : "—");
 
 export default function ProfileSetup() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState(1);
-  const [reached, setReached] = useState(1);
-  const [personal, setPersonal] = useState<Personal>(EMPTY_P);
+  const [personal, setPersonal] = useState<Personal>(EMPTY_PERSONAL);
   const [cfa, setCfa] = useState<Cfa>({});
   const [userNumber, setUserNumber] = useState<number | null>(null);
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+
+  const [screenId, setScreenId] = useState<string | null>(null);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const [showError, setShowError] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [confirmCode, setConfirmCode] = useState<string | null>(null);
-  const [progSub, setProgSub] = useState(0); // sub-step within the program step (0 = preferences, 1 = pick)
-  const [priceSub, setPriceSub] = useState(0); // sub-step within the pricing step (0 = plan, 1 = checkout)
-  const [showErrors, setShowErrors] = useState(false); // reveal red borders on required-but-empty after Continue
+  const [priceSub, setPriceSub] = useState(0);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreeRefund, setAgreeRefund] = useState(false);
   const [legalError, setLegalError] = useState(false);
   const [legalView, setLegalView] = useState<null | "terms" | "refund">(null);
+  const [switchTo, setSwitchTo] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState(false);
+
   const pRef = useRef(personal);
   const cRef = useRef(cfa);
   const uidRef = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navigating = useRef(false); // re-entrancy guard so a double-tap on Continue can't skip a step
+  const moving = useRef(false); // re-entrancy guard: a double tap must not skip a screen
 
   useSingleSession(sessionUserId);
 
   const flow = getCountryFlow(personal.destination_country);
-  const total = 1 + (flow?.steps.length ?? 0);
-  const stepperItems = ["Personal", ...(flow?.steps.map((s) => s.stepperLabel) ?? [])];
-  const heroSteps = stepperItems.map((label) => ({ label, caption: HERO_CAPTIONS[label] ?? "" }));
+  const labels = groupLabels(flow);
+  const screens = useMemo(() => buildScreens(personal, cfa, flow), [personal, cfa, flow]);
+  const selectedPrograms = (cfa.program_setup?.selected_programs ?? "").split("|").filter(Boolean).map(Number);
 
+  const idx = Math.max(0, screens.findIndex((s) => s.id === screenId));
+  const screen: Screen | undefined = screens[idx];
+
+  /* ── Load ───────────────────────────────────────────────────────────── */
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -468,26 +101,32 @@ export default function ProfileSetup() {
       if (cancelled) return;
       const row = (data ?? {}) as Record<string, unknown>;
       if (row.onboarding_completed_at) { router.replace("/dashboard"); return; }
+
       const p = personalFromRow(row);
       const c = cfaFromJson(row.country_flow_answers);
-      const phase = str(row.onboarding_phase) || "universal";
-      const stepInPhase = clamp(typeof row.onboarding_step === "number" ? row.onboarding_step : 1, 1, 20);
-      const abs = phase === "universal" ? 1 : 1 + stepInPhase;
       pRef.current = p; cRef.current = c;
       setUserNumber(typeof row.user_number === "number" ? row.user_number : null);
-      setPersonal(p); setCfa(c); setReached(abs); setView(abs); setLoading(false);
+      setPersonal(p); setCfa(c);
+
+      /* Re-entry lands on the first screen that is genuinely unanswered, rather
+         than on whatever position was last written: a step abandoned halfway
+         resumes halfway. A student who has answered nothing yet is not
+         resuming at all, so they get the opening screen. */
+      const list = buildScreens(p, c, getCountryFlow(p.destination_country));
+      const picked = (c.program_setup?.selected_programs ?? "").split("|").filter(Boolean).map(Number);
+      const started = list.some((s) => s.kind === "question" && screenAnswered(s, p, c, picked));
+      const first = started ? list.find((s) => !screenAnswered(s, p, c, picked)) : list[0];
+      setScreenId((first ?? list[list.length - 1]).id);
+      setPriceSub(str(c.pricing?.plan) ? 1 : 0);
+      setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [router]);
 
-  useEffect(() => { setProgSub(0); setPriceSub(cRef.current.pricing?.plan ? 1 : 0); setShowErrors(false); }, [view]); // restart sub-steps on main-step change (resume checkout if a plan was already chosen)
-  // Move the view to the top of the new step / sub-step (desktop frame scroll + mobile page scroll).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.scrollTo(0, 0);
-    document.querySelector(".af-frame-body")?.scrollTo({ top: 0 });
-  }, [view, progSub, priceSub]);
+  // Every screen change starts at the top.
+  useEffect(() => { window.scrollTo(0, 0); }, [screenId]);
 
+  /* ── Saving ─────────────────────────────────────────────────────────── */
   async function save(retry = true) {
     const id = uidRef.current;
     if (!id) return;
@@ -506,45 +145,81 @@ export default function ProfileSetup() {
   function scheduleSave() { if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => void save(), 600); }
   function flushSave() { if (timer.current) { clearTimeout(timer.current); timer.current = null; } void save(); }
 
-  function setP(key: keyof Personal, value: string) {
-    setPersonal((prev) => { const next = { ...prev, [key]: value }; pRef.current = next; return next; });
-    scheduleSave();
-  }
-  function setFieldValue(step: CountryFlowStep, key: string, value: string) {
-    setCfa((prev) => {
-      const stepVals = { ...(prev[step.id] ?? {}), [key]: value };
-      for (const sec of step.sections) for (const f of sec.fields) {
-        if (f.forceValueWhen && stepVals[f.forceValueWhen.field] === f.forceValueWhen.equals) stepVals[f.key] = f.forceValueWhen.value;
-      }
-      const next = { ...prev, [step.id]: stepVals };
+  /* ── Writing an answer ──────────────────────────────────────────────── */
+  /* Answers are mirrored into refs as they are written. The debounced save
+     fires after the component has moved on, so it needs the newest values, not
+     the ones captured in the render that scheduled it. */
+  function writeSlot(slot: Slot, value: string) {
+    if (slot.type === "personal") {
+      const next = { ...pRef.current, [slot.key]: value };
+      pRef.current = next;
+      setPersonal(next);
+    } else {
+      const step = flow?.steps.find((s) => s.id === slot.stepId);
+      const vals = { ...(cRef.current[slot.stepId] ?? {}), [slot.key]: value };
+      const next = { ...cRef.current, [slot.stepId]: step ? applyForceRules(step, vals) : vals };
       cRef.current = next;
-      return next;
-    });
+      setCfa(next);
+    }
     scheduleSave();
   }
 
-  const currentValid =
-    view === 1
-      ? validatePersonal(personal)
-      : (() => { const s = flow?.steps[view - 2]; return !s || s.sections.length === 0 || validateStep(s, cfa[s.id]); })();
+  /* Switching destination throws away the answers that belong to the country
+     being left, so it asks first — but only once there is something to lose. */
+  function setDestination(code: string) {
+    if (code === personal.destination_country) return;
+    if (hasCfaData(cfa)) { setSwitchTo(code); return; }
+    writeSlot({ type: "personal", key: "destination_country" }, code);
+  }
+  async function applySwitch(code: string) {
+    const next = { ...pRef.current, destination_country: code };
+    pRef.current = next; cRef.current = {};
+    setPersonal(next); setCfa({}); setSwitchTo(null); setPriceSub(0);
+    const id = uidRef.current;
+    if (id) await supabase.from("profiles").update({ destination_country: code, country_flow_answers: {}, onboarding_phase: "universal", onboarding_step: 1 }).eq("id", id);
+  }
 
-  async function persistPosition(abs: number) {
+  /* ── Navigation ─────────────────────────────────────────────────────── */
+  async function persistPosition(group: number) {
     const id = uidRef.current;
     if (!id) return;
-    await supabase.from("profiles").update({ onboarding_phase: abs === 1 ? "universal" : "country_flow", onboarding_step: abs === 1 ? 1 : abs - 1 }).eq("id", id);
+    await supabase.from("profiles").update({ onboarding_phase: group === 0 ? "universal" : "country_flow", onboarding_step: group === 0 ? 1 : group }).eq("id", id);
+  }
+
+  const canContinue = !screen ? false : screenAnswered(screen, personal, cfa, selectedPrograms);
+
+  /* `advance` moves; `goNext` is advance with the answer gate in front of it.
+     They are separate because the payment sub-flow advances on its own signal:
+     approval arrives from Supabase realtime and calls back synchronously, so
+     the gate would still be reading the pre-approval answers and refuse. */
+  function advance() {
+    if (moving.current || !screen) return;
+    const next = screens[idx + 1];
+    if (!next) return;
+    flushSave();
+    moving.current = true;
+    setShowError(false);
+    setDirection(1);
+    setScreenId(next.id);
+    if (next.group !== screen.group) void persistPosition(next.group);
+    setTimeout(() => { moving.current = false; }, 240);
   }
   function goNext() {
-    if (navigating.current) return;            // ignore rapid double-clicks
-    if (!currentValid) { setShowErrors(true); return; }
-    setShowErrors(false);
-    flushSave();                               // persist the latest field values before leaving the step
-    const next = view + 1;
-    setView(next);                             // advance immediately — no waiting on the network (fixes the lag/flash)
-    if (next > reached) { setReached(next); void persistPosition(next); } // remember position in the background
-    navigating.current = true;
-    setTimeout(() => { navigating.current = false; }, 250);
+    if (!canContinue) { setShowError(true); return; }
+    advance();
   }
+  function goBack() {
+    if (moving.current || idx === 0) return;
+    moving.current = true;
+    setShowError(false);
+    setDirection(-1);
+    setScreenId(screens[idx - 1].id);
+    setTimeout(() => { moving.current = false; }, 240);
+  }
+
   async function finish() {
+    if (!(agreeTerms && agreeRefund)) { setLegalError(true); return; }
+    setFinishing(true);
     const id = uidRef.current;
     if (id) {
       await supabase.from("profiles").update({ onboarding_completed_at: new Date().toISOString(), onboarding_phase: "country_flow", onboarding_step: flow?.steps.length ?? 1 }).eq("id", id);
@@ -554,32 +229,201 @@ export default function ProfileSetup() {
     router.replace("/dashboard");
   }
 
-  function pickCountry(code: string, available: boolean) {
-    if (!available || code === personal.destination_country) return;
-    if (reached > 1 || hasCfaData(cRef.current)) { setConfirmCode(code); return; }
-    setP("destination_country", code);
-  }
-  async function applySwitch(code: string) {
-    const next = { ...pRef.current, destination_country: code };
-    pRef.current = next; cRef.current = {};
-    setPersonal(next); setCfa({}); setReached(1); setView(1); setConfirmCode(null);
-    const id = uidRef.current;
-    if (id) await supabase.from("profiles").update({ destination_country: code, country_flow_answers: {}, onboarding_phase: "universal", onboarding_step: 1 }).eq("id", id);
+  if (loading || !screen) {
+    return <div className="onb-boot">Loading your profile…</div>;
   }
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--paper)", color: "var(--ink-faint)", font: "400 15px/24px var(--font-sans)" }}>Loading your profile…</div>
-    );
-  }
+  // One bar for the whole journey; the group name only labels it for a screen reader.
+  const overallPct = (idx / Math.max(1, screens.length - 1)) * 100;
 
-  const isLast = view === total;
-  const meta = view === 1 ? { title: "Tell us about you", description: "The basics we need before we can shortlist programs. This stays in your file, you can edit most of it later." } : flow!.steps[view - 2];
-  const bStep: CountryFlowStep | null = view === 1 ? null : flow!.steps[view - 2];
-  const isProgram = bStep?.custom === "program";
-  const isPricing = bStep?.custom === "pricing";
-  const isRoadmap = bStep?.placeholder === "roadmap";
-  const programProfile: StudentProfile = {
+  const isPricing = screen.kind === "pricing";
+  const isSummary = screen.kind === "summary";
+  const back = idx > 0 ? goBack : undefined;
+
+  return (
+    <div className="onb-root" data-wide={screen.kind === "program" || isPricing || undefined}>
+      <BrandMark />
+      <TopUtilities />
+
+      <main className="onb-card">
+        {/* The plan screen is the one decision with a price on it, so the card
+            gets a drafting-table field behind it. Nowhere else. */}
+        {isPricing && priceSub === 0 && <BlueprintGrid variant="dots" size={22} />}
+        {finishing && (
+          <div className="onb-done" role="status" aria-live="assertive">
+            <svg className="onb-done-mark" viewBox="0 0 52 52" aria-hidden>
+              <circle cx="26" cy="26" r="23" />
+              <path d="M15 26.5 L22.5 34 L37.5 18.5" />
+            </svg>
+            <p className="onb-done-title">You&apos;re all set</p>
+            <p className="onb-done-sub">Building your workspace…</p>
+          </div>
+        )}
+        <Progress pct={overallPct} label={labels[screen.group]} />
+
+        <Stage screenKey={screen.id} direction={direction}>
+          {screen.kind === "note" && (
+            <div className="onb-note">
+              {/* A breath, not a question: no info button, but Back still has to
+                  work — these sit mid-journey, not only at the start. */}
+              {back ? <BackButton onBack={back} className="onb-note-back" /> : <span className="onb-note-back" aria-hidden />}
+              <div className="onb-note-body">
+                <Emoji name={screen.emoji} size={84} className="onb-note-emoji" />
+                <h1 className="onb-q onb-q-big">{screen.title}</h1>
+                <p className="onb-sub">{screen.body}</p>
+              </div>
+            </div>
+          )}
+
+          {screen.kind === "question" && (() => {
+            const q = screen.question;
+            const value = readSlot(q.slot, personal, cfa);
+            const bad = showError && !(value !== "" && q.isValid(value));
+            const isDestination = q.slot.type === "personal" && q.slot.key === "destination_country";
+            return (
+              <>
+                <Head title={q.title} subtitle={q.subtitle} hint={q.hint} onBack={back} />
+                <div className="onb-answer">
+                  {q.control.kind === "phone" ? (
+                    <PhoneAnswer
+                      code={personal.whatsapp_country_code}
+                      number={personal.whatsapp_number}
+                      emoji={q.emoji}
+                      invalid={bad}
+                      onCode={(v) => writeSlot({ type: "personal", key: "whatsapp_country_code" }, v)}
+                      onNumber={(v) => writeSlot({ type: "personal", key: "whatsapp_number" }, v)}
+                      onCommit={flushSave}
+                      onEnter={goNext}
+                    />
+                  ) : (
+                    <Answer
+                      control={q.control}
+                      value={value}
+                      label={q.title}
+                      emoji={q.emoji}
+                      invalid={bad}
+                      onChange={(v) => (isDestination ? setDestination(v) : writeSlot(q.slot, v))}
+                      onCommit={flushSave}
+                      onEnter={goNext}
+                    />
+                  )}
+                  {q.note && <p className="onb-note-line">{q.note}</p>}
+                  {bad && <p className="onb-err" role="alert">{q.error}</p>}
+
+                  {/* Revealed by this screen's own answer, and part of it: the
+                      same Continue waits for these too. */}
+                  {(q.followUps ?? []).filter((f) => f.applies?.(cfa) ?? true).map((f) => {
+                    const fv = readSlot(f.slot, personal, cfa);
+                    const fbad = showError && !(fv !== "" && f.isValid(fv));
+                    return (
+                      <div className="onb-followup" key={f.slot.type === "flow" ? f.slot.key : f.title}>
+                        <h2 className="onb-followup-label">{f.title}</h2>
+                        {f.control.kind !== "phone" && (
+                          <Answer
+                            control={f.control}
+                            value={fv}
+                            label={f.title}
+                            emoji={f.emoji}
+                            invalid={fbad}
+                            onChange={(v) => writeSlot(f.slot, v)}
+                            onCommit={flushSave}
+                            onEnter={goNext}
+                          />
+                        )}
+                        {fbad && <p className="onb-err" role="alert">{f.error}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
+
+          {screen.kind === "program" && (
+            <>
+              <Head title={screen.title} subtitle={screen.subtitle} onBack={back} />
+              <div className="onb-answer">
+                <ProgramPicker
+                  profile={programProfile(cfa)}
+                  selected={selectedPrograms}
+                  onSelect={(ids) => { writeSlot({ type: "flow", stepId: screen.stepId, key: "selected_programs" }, ids.join("|")); flushSave(); }}
+                />
+              </div>
+            </>
+          )}
+
+          {isPricing && screen.kind === "pricing" && (
+            <>
+              <Head
+                title={priceSub === 0 ? "How much help do you want?" : "Complete your payment"}
+                subtitle={priceSub === 0 ? "Two ways to do this: drive it yourself, or hand the paperwork to an advisor. You can change plan later." : "Transfer the amount, then upload the receipt. We verify it by hand."}
+                onBack={back}
+              />
+              {priceSub === 0 ? (
+                <div className="onb-answer">
+                  <PlanStep
+                    current={cfa.pricing?.plan}
+                    ref_={cfa.pricing?.ref}
+                    setPricing={(key, value) => writeSlot({ type: "flow", stepId: screen.stepId, key }, value)}
+                    setPriceSub={setPriceSub}
+                  />
+                </div>
+              ) : (
+                <PaymentStep
+                  userId={sessionUserId ?? ""}
+                  pricing={cfa.pricing ?? {}}
+                  setPricing={(key, value) => writeSlot({ type: "flow", stepId: screen.stepId, key }, value)}
+                  onApproved={() => { setPriceSub(0); advance(); }}
+                  onBackToPlans={() => setPriceSub(0)}
+                />
+              )}
+            </>
+          )}
+
+          {isSummary && (
+            <Summary
+              personal={personal} cfa={cfa} userNumber={userNumber} onBack={back} saveState={saveState}
+              agreeTerms={agreeTerms} agreeRefund={agreeRefund} legalError={legalError}
+              onTerms={() => { setAgreeTerms((v) => !v); setLegalError(false); }}
+              onRefund={() => { setAgreeRefund((v) => !v); setLegalError(false); }}
+              onRead={setLegalView}
+            />
+          )}
+        </Stage>
+
+        {/* Pricing draws its own action row inside the frame, so the card hides its own. */}
+        {!isPricing && (
+          <Footer
+            onNext={isSummary ? finish : goNext}
+            nextLabel={screen.kind === "note" ? screen.cta : isSummary ? "Enter my dashboard" : "Continue"}
+            canNext={isSummary ? true : canContinue}
+            busy={finishing}
+            saveState={isSummary ? undefined : saveState}
+          />
+        )}
+      </main>
+
+      {switchTo && (
+        <div className="onb-modal" role="dialog" aria-modal>
+          <div className="onb-modal-card">
+            <h2>Switch destination?</h2>
+            <p>Switching to {countryByCode(switchTo)?.name} clears the {countryByCode(personal.destination_country)?.name} answers you have given so far.</p>
+            <div className="onb-modal-foot">
+              <Button variant="ghost" onPress={() => setSwitchTo(null)}>Cancel</Button>
+              <Button variant="danger" onPress={() => applySwitch(switchTo)}>Switch anyway</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {legalView && <LegalDocModal doc={legalView} onClose={() => setLegalView(null)} />}
+    </div>
+  );
+}
+
+/* ── Pieces ───────────────────────────────────────────────────────────── */
+
+function programProfile(cfa: Cfa): StudentProfile {
+  return {
     degree: cfa.timing_education?.target_degree === "master" ? "Master" : "Bachelor",
     fields: (cfa.program_setup?.field_of_interest ?? "").split("|").filter(Boolean),
     maxBudget: numOrNull(cfa.program_setup?.max_budget),
@@ -589,266 +433,80 @@ export default function ProfileSetup() {
     testType: cfa.program_setup?.english_test_type ?? null,
     testScore: numOrNull(cfa.program_setup?.english_test_score),
   };
-  const selectedPrograms = (cfa.program_setup?.selected_programs ?? "").split("|").filter(Boolean).map(Number);
+}
 
-  // One footer, always pinned to the bottom of the frame (pricing renders its own).
-  const prevStep = () => setView((v) => Math.max(1, v - 1));
-  const progNext = () => { if (!currentValid) { setShowErrors(true); return; } setShowErrors(false); setProgSub(1); };
-  const stepFooter =
-    view === 1 ? <StepFooter saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />
-    : isProgram ? (progSub === 0
-        ? <StepFooter onBack={prevStep} saveState={saveState} right={<Button variant="primary" size="lg" onClick={progNext}>Continue</Button>} />
-        // Back stays available so picking never traps the user, but Continue
-        // only activates once a program is actually chosen — nothing to
-        // advance with otherwise.
-        : <StepFooter onBack={() => setProgSub(0)} saveState={saveState} right={<Button variant="primary" size="lg" disabled={selectedPrograms.length === 0} onClick={goNext}>Continue</Button>} />)
-    : (bStep && bStep.sections.length > 0) ? <StepFooter onBack={prevStep} saveState={saveState} right={<Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />
-    : <StepFooter right={isLast ? <Button variant="primary" size="lg" onClick={() => { if (!(agreeTerms && agreeRefund)) { setLegalError(true); return; } finish(); }}>Done</Button> : <Button variant="primary" size="lg" onClick={goNext}>Continue</Button>} />;
+/* The last screen is the point of the whole thing: it hands back what the
+   student just built, in their own answers, rather than announcing that a form
+   was submitted. */
+function Summary({
+  personal, cfa, userNumber, onBack, saveState, agreeTerms, agreeRefund, legalError, onTerms, onRefund, onRead,
+}: {
+  personal: Personal; cfa: Cfa; userNumber: number | null; onBack?: () => void;
+  saveState?: "idle" | "saving" | "saved" | "error";
+  agreeTerms: boolean; agreeRefund: boolean; legalError: boolean;
+  onTerms: () => void; onRefund: () => void; onRead: (d: "terms" | "refund") => void;
+}) {
+  const country = countryByCode(personal.destination_country);
+  const plan = planById(cfa.pricing?.plan);
+  const programId = Number((cfa.program_setup?.selected_programs ?? "").split("|").filter(Boolean)[0]);
+  const program = PROGRAMS.find((p) => p.id === programId) ?? null;
+  const intake = intakeByValue(cfa.timing_education?.intake_term)?.label ?? "—";
+  const rows: { emoji: EmojiName; label: string; value: string }[] = [
+    { emoji: country?.code === "LT" ? "flag-lt" : "globe", label: "Destination", value: country?.name ?? "—" },
+    { emoji: "target", label: "Study goal", value: degreeLabel(cfa.timing_education?.target_degree ?? "") },
+    { emoji: "graduation", label: "Programme", value: program ? program.name : "To be chosen with your advisor" },
+    { emoji: "calendar", label: "Start", value: intake },
+    { emoji: "card", label: "Service", value: plan?.name ?? "—" },
+    { emoji: "handshake", label: "Advisor support", value: plan?.id === "full_service" ? "Included, end to end" : "On request, you drive it" },
+  ];
 
+  const who = personal.full_name ? `${personal.full_name.trim().split(/\s+/)[0]}, this` : "This";
   return (
-    <div className={`af-onboard-shell${isProgram ? " af-onboard-noscale" : ""}`}>
-      <MobileBar />
-      <div className="af-onboard-grid">
-        <aside className="af-onboard-left">
-          <OnboardingHeroPanel steps={heroSteps} view={view} reached={reached} onJump={(i) => { if (view !== total) setView(i); }} />
-        </aside>
-        <section className="af-onboard-right">
-          <div className="af-onboard-col">
-            <MobileSteps items={stepperItems} view={view} reached={reached} meta={meta} />
-            <div className="af-onboard-info" style={{ marginBottom: 14 }}>
-              <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{meta.title}</h1>
-              <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "6px 0 0", maxWidth: 620 }}>{meta.description}</p>
-            </div>
-            {isProgram && <div className="af-substep-card" style={{ marginBottom: 14 }}><SubStepper sub={progSub} labels={["Your preferences", "Pick your programs"]} onJump={setProgSub} /></div>}
-            {isPricing && <div className="af-substep-card" style={{ marginBottom: 14 }}><SubStepper sub={priceSub} labels={["Choose a plan", "Checkout"]} onJump={setPriceSub} /></div>}
-            <div className="af-onboard-scroll">
-              <div className={`af-frame ${isPricing && priceSub === 0 ? "af-frame-open" : "af-frame-card"}${isRoadmap ? " af-frame-video" : ""}`}>
-                {isRoadmap && (
-                  <>
-                    <video
-                      autoPlay muted loop playsInline preload="auto" aria-hidden className="af-roadmap-video"
-                      onLoadedMetadata={(e) => { e.currentTarget.playbackRate = ROADMAP_VIDEO_RATE; }}
-                      onTimeUpdate={onRoadmapVideoTime}
-                    >
-                      <source src="/onboarding/step-2.mp4" type="video/mp4" />
-                    </video>
-                    <div aria-hidden className="af-roadmap-veil" />
-                  </>
-                )}
-                {isPricing ? (
-                  <PricingCheckout
-                    userId={uidRef.current ?? ""}
-                    pricing={cfa.pricing ?? {}}
-                    setPricing={(key, value) => setFieldValue(bStep!, key, value)}
-                    priceSub={priceSub}
-                    setPriceSub={setPriceSub}
-                    onApproved={() => { setPriceSub(0); goNext(); }}
-                    onBackStep={() => setView((v) => Math.max(1, v - 1))}
-                  />
-                ) : (
-                  <>
-                    <div className="af-frame-body">
-          {view === 1 ? (
-            <>
-              {/* Personal details */}
-              <div style={eyebrow}>Personal details</div>
-              <div style={sectionTitle}>Who you are</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div className="af-row-name">
-                  <Field label="Full name" icon={fieldIcon("name")} hint="exactly as written in your passport" required value={personal.full_name} aria-invalid={(showErrors && !personal.full_name.trim()) || undefined} error={showErrors && !personal.full_name.trim() ? "Full name is required." : undefined} onChange={(e) => setP("full_name", titleCase(e.target.value))} onBlur={flushSave} placeholder="Your full name" />
-                  <Select
-                    label="Gender" icon={fieldIcon("gender")} value={personal.gender}
-                    onChange={(v) => { setP("gender", v); flushSave(); }}
-                    options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))}
-                    placeholder="Select"
-                    error={showErrors && !personal.gender ? "Please select your gender." : undefined}
-                  />
-                </div>
-                <div className="af-row-2">
-                  <Field label="Date of birth" icon={fieldIcon("dob")} type="date" required value={personal.date_of_birth} aria-invalid={(showErrors && !personal.date_of_birth) || undefined} error={showErrors && !personal.date_of_birth ? "Date of birth is required." : undefined} onChange={(e) => setP("date_of_birth", e.target.value)} onBlur={flushSave} />
-                  <Field label="City you live in" icon={fieldIcon("city")} required value={personal.city} aria-invalid={(showErrors && !personal.city.trim()) || undefined} error={showErrors && !personal.city.trim() ? "City is required." : undefined} onChange={(e) => setP("city", titleCase(e.target.value))} onBlur={flushSave} placeholder="e.g. Casablanca" />
-                </div>
-                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span style={{ font: "500 13px/20px var(--font-sans)", color: "var(--ink)" }}>WhatsApp number</span>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input className="af" value={personal.whatsapp_country_code} onChange={(e) => setP("whatsapp_country_code", e.target.value.replace(/[^\d+]/g, ""))} onBlur={flushSave} style={{ width: 76, textAlign: "center" }} aria-label="Country code" />
-                    <input className="af" value={personal.whatsapp_number} aria-invalid={(showErrors && !/^\d{6,15}$/.test(personal.whatsapp_number.replace(/\s/g, ""))) || undefined} onChange={(e) => setP("whatsapp_number", e.target.value.replace(/[^\d]/g, ""))} onBlur={flushSave} inputMode="numeric" placeholder="6XXXXXXXX" style={{ flex: 1 }} aria-label="WhatsApp number" />
-                  </div>
-                  {showErrors && !/^\d{6,15}$/.test(personal.whatsapp_number.replace(/\s/g, "")) && <span className="af-onb-error">Enter a valid WhatsApp number.</span>}
-                </label>
-              </div>
+    <div className="onb-summary">
+      {onBack ? <BackButton onBack={onBack} className="onb-note-back" /> : <span className="onb-note-back" aria-hidden />}
 
-              {divider}
+      <div className="onb-summary-body">
+        <Emoji name="party" size={72} className="onb-note-emoji" />
+        <h1 className="onb-q onb-q-big">Your AfaqWay plan is ready.</h1>
+        <p className="onb-sub">
+          {who} is what we build from here{userNumber != null ? `, under student number AWU-${String(userNumber).padStart(3, "0")}` : ""}.
+        </p>
 
-              {/* Destination */}
-              <div style={eyebrow}>Your future destination</div>
-              <div style={sectionTitle}>Where you want to study</div>
-              <div className="af-country-grid">
-                {COUNTRIES.map((c) => {
-                  const selected = personal.destination_country === c.code;
-                  return (
-                    <button key={c.code} type="button" disabled={!c.available} onClick={() => pickCountry(c.code, c.available)}
-                      style={{ textAlign: "left", display: "flex", alignItems: "center", gap: 12, padding: 16, borderRadius: 12, border: selected ? "1px solid var(--indigo-line)" : "1px solid var(--line)", background: selected ? "var(--indigo-tint)" : "var(--card)", cursor: c.available ? "pointer" : "not-allowed", opacity: c.available ? 1 : 0.4, transition: "border-color 120ms cubic-bezier(.4,0,.2,1), background 120ms cubic-bezier(.4,0,.2,1)" }}>
-                      <Flag stripes={c.stripes} size="lg" />
-                      <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ font: "600 14.5px/20px var(--font-sans)", color: selected ? "var(--indigo-text)" : "var(--ink)" }}>{c.name}</span>
-                        <Pill tone={c.available ? "green" : "amber"}>{c.available ? "Available now" : "Coming soon"}</Pill>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {showErrors && !countryByCode(personal.destination_country)?.available && <div style={{ font: "500 12.5px/18px var(--font-sans)", color: "var(--red)", marginTop: 8 }}>Please choose an available destination to continue.</div>}
-            </>
-          ) : isProgram ? (
-            <>
-              {progSub === 0 ? (
-                <>
-                  {bStep!.sections.map((sec, si) => (
-                    <div key={si}>
-                      {si > 0 && divider}
-                      <div style={eyebrow}>{sec.eyebrow}</div>
-                      <div style={sectionTitle}>{sec.sectionTitle}</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        {groupFields(sec.fields.filter((f) => fieldVisible(f, cfa[bStep!.id] ?? {}))).map((group, gi) => (
-                          <div key={gi} className={group.length > 1 ? `af-row-${group.length}` : undefined}>
-                            {group.map((f) => (
-                              <FlowField key={f.key} field={f} value={cfa[bStep!.id]?.[f.key] ?? ""} stepValues={cfa[bStep!.id] ?? {}} invalid={showErrors && fieldInvalid(f, cfa[bStep!.id]?.[f.key] ?? "", cfa[bStep!.id] ?? {})} onChange={(v) => setFieldValue(bStep!, f.key, v)} onFlush={flushSave} />
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {/* A note, not a banner: leading icon + left accent, same
-                      amber as before — just without the filled pill/frame
-                      behind the text. Sits at the very top of the frame. */}
-                  <div className="af-note">
-                    <span className="af-note-ico"><Info size={15} /></span>
-                    <span className="af-note-body">
-                      <span className="af-note-en">Take your time choosing your program.</span>
-                      <span className="af-note-sep" aria-hidden>·</span>
-                      <span className="af-note-ar" dir="rtl" lang="ar">خذ وقتك في اختيار برنامجك الدراسي.</span>
-                    </span>
-                  </div>
-                  <ProgramMatch profile={programProfile} selected={selectedPrograms} onSelect={(ids) => setFieldValue(bStep!, "selected_programs", ids.join("|"))} />
-                </>
-              )}
-            </>
-          ) : bStep && bStep.sections.length > 0 ? (
-            <>
-              {bStep.sections.map((sec, si) => (
-                <div key={si}>
-                  {si > 0 && divider}
-                  <div style={eyebrow}>{sec.eyebrow}</div>
-                  <div style={sectionTitle}>{sec.sectionTitle}</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    {groupFields(sec.fields.filter((f) => fieldVisible(f, cfa[bStep.id] ?? {}))).map((group, gi) => (
-                      <div key={gi} className={group.length > 1 ? `af-row-${group.length}` : undefined}>
-                        {group.map((f) => (
-                          <FlowField key={f.key} field={f} value={cfa[bStep.id]?.[f.key] ?? ""} stepValues={cfa[bStep.id] ?? {}} invalid={showErrors && fieldInvalid(f, cfa[bStep.id]?.[f.key] ?? "", cfa[bStep.id] ?? {})} onChange={(v) => setFieldValue(bStep, f.key, v)} onFlush={flushSave} />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </>
-          ) : (
-            // placeholder step (program / pricing / roadmap)
-            <>
-              {bStep?.placeholder === "program" && <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: 0 }}>Program-matching engine, coming next. You&apos;ll see programs that match your profile here.</p>}
-              {bStep?.placeholder === "pricing" && <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: 0 }}>Plans and checkout, coming next. Two paid tiers: <strong style={{ color: "var(--ink)" }}>Full service</strong> and <strong style={{ color: "var(--ink)" }}>Self service</strong>.</p>}
-              {bStep?.placeholder === "roadmap" && (
-                <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 400 }}>
-                  <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 4 }}>
-                    {/* Task 5: header — logo left, short trust line right */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <LogoMark size={22} />
-                        <span style={{ font: "700 15px/1 var(--font-sans)", color: "var(--ink)" }}>AfaqWay</span>
-                      </div>
-                      <span style={{ font: "600 12px/16px var(--font-sans)", color: "var(--indigo-600)", textAlign: "right" }}>Built on your trust.</span>
-                    </div>
-
-                    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 4, padding: "8px 0" }}>
-                      <span style={{ width: 54, height: 54, borderRadius: 999, flex: "none", background: "var(--green-tint)", border: "1px solid var(--green-line)", color: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", animation: "afNodePop .5s cubic-bezier(.4,0,.2,1) both" }}>
-                        <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>
-                      </span>
-                      {/* Celebration fires twice, behind the heading only. */}
-                      <span style={{ position: "relative", display: "block" }}>
-                        <Confetti bursts={2} />
-                        <h2 style={{ position: "relative", font: "700 21px/27px var(--font-sans)", color: "var(--ink)", margin: "10px 0 0" }}>Congratulations!</h2>
-                      </span>
-                      <p style={{ font: "600 13.5px/20px var(--font-sans)", color: "var(--indigo-600)", margin: "4px 0 0" }}>Good luck in your roadmap.</p>
-
-                      {/* Task 6: colorless, extra-blurred transparent glass card */}
-                      <div style={{ width: "100%", maxWidth: 400, marginTop: 14, textAlign: "left", background: "rgba(255,255,255,.18)", backdropFilter: "blur(30px) saturate(1.05)", WebkitBackdropFilter: "blur(30px) saturate(1.05)", border: "1px solid rgba(255,255,255,.45)", borderRadius: 18, boxShadow: "0 12px 32px rgba(23,35,58,.14)", padding: "14px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
-                          <span style={{ width: 38, height: 38, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center", font: "700 15px/1 var(--font-sans)" }}>{(personal.full_name || "U").trim().charAt(0).toUpperCase()}</span>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ font: "700 14px/18px var(--font-sans)", color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{personal.full_name || "Your name"}</div>
-                            <div style={{ font: "600 11px/15px var(--font-sans)", color: "var(--indigo-600)" }}>AWU-{String(userNumber ?? 0).padStart(3, "0")}</div>
-                          </div>
-                        </div>
-                        {[
-                          ["Age", ageFromDob(personal.date_of_birth) != null ? `${ageFromDob(personal.date_of_birth)} years` : "—"],
-                          ["Country", countryByCode(personal.destination_country)?.name ?? "—"],
-                          ["Program interest", cleanList(cfa.program_setup?.field_of_interest ?? "")],
-                          ["Last diploma", degLabel(cfa.timing_education?.last_degree ?? "")],
-                          ["Degree to study", degLabel(cfa.timing_education?.target_degree ?? "")],
-                          ["Plan", planById(cfa.pricing?.plan)?.name ?? "—"],
-                        ].map(([k, v]) => (
-                          <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderTop: "1px solid rgba(23,35,58,.08)" }}>
-                            <span style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>{k}</span>
-                            <span style={{ font: "600 12.5px/18px var(--font-sans)", color: "var(--ink)", textAlign: "right" }}>{v}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <p style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink-soft)", margin: "14px 0 0", maxWidth: 420 }}>
-                        You built your roadmap successfully with <strong style={{ color: "var(--indigo-600)" }}>{planById(cfa.pricing?.plan)?.name ?? "your plan"}</strong>.
-                      </p>
-                      <p style={{ font: "400 12px/18px var(--font-sans)", color: "var(--ink-faint)", margin: "5px 0 0", maxWidth: 420 }}>Your personalized roadmap is being prepared, we&apos;ll take it from here.</p>
-
-                      <div style={{ width: "100%", maxWidth: 420, marginTop: 14, display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
-                        <LegalCheck checked={agreeTerms} invalid={legalError && !agreeTerms} onToggle={() => { setAgreeTerms((v) => !v); setLegalError(false); }} onRead={() => setLegalView("terms")} label="I have read and agree to the Terms of Service (Agreement)." />
-                        <LegalCheck checked={agreeRefund} invalid={legalError && !agreeRefund} onToggle={() => { setAgreeRefund((v) => !v); setLegalError(false); }} onRead={() => setLegalView("refund")} label="I have read the Refund Policy." />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-                    </div>
-                    <div className="af-frame-footer">{stepFooter}</div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+        <ul className="onb-recap">
+          {rows.map((r) => (
+            <li key={r.label}>
+              <Emoji name={r.emoji} size={22} />
+              <span className="onb-recap-label">{r.label}</span>
+              <span className="onb-recap-value">{r.value}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {confirmCode && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(23,35,58,.35)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <Card style={{ width: "100%", maxWidth: 420, padding: 24 }}>
-            <h2 style={{ font: "600 18px/24px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Switch destination?</h2>
-            <p style={{ font: "400 14px/22px var(--font-sans)", color: "var(--ink-soft)", margin: "10px 0 20px" }}>
-              Switching destination will clear the {countryByCode(personal.destination_country)?.name} questions you&apos;ve answered so far. Continue?
-            </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-              <Button variant="ghost" onClick={() => setConfirmCode(null)}>Cancel</Button>
-              <Button variant="destructive" onClick={() => applySwitch(confirmCode)}>Continue</Button>
-            </div>
-          </Card>
-        </div>
-      )}
-      {legalView && <LegalDocModal doc={legalView} onClose={() => setLegalView(null)} />}
+      {/* The two agreements sit against the button they gate, not at the end of
+          a scroll: nobody should have to hunt for what is blocking Done. */}
+      <div className="onb-legal" data-bad={legalError || undefined}>
+        <SaveNote state={saveState} />
+        <LegalLine checked={agreeTerms} onToggle={onTerms} onRead={() => onRead("terms")} text="I have read and agree to the Terms of Service." />
+        <LegalLine checked={agreeRefund} onToggle={onRefund} onRead={() => onRead("refund")} text="I have read the Refund Policy." />
+        {legalError && <p className="onb-err" role="alert">Please accept both before we start your file.</p>}
+      </div>
+    </div>
+  );
+}
+
+function LegalLine({ checked, onToggle, onRead, text }: { checked: boolean; onToggle: () => void; onRead: () => void; text: string }) {
+  return (
+    <div className="onb-legal-line">
+      <Checkbox isSelected={checked} onChange={onToggle} aria-label={text}>
+        <Checkbox.Content>
+          <Checkbox.Control>
+            <Checkbox.Indicator />
+          </Checkbox.Control>
+          {text}
+        </Checkbox.Content>
+      </Checkbox>
+      <button type="button" className="onb-legal-read" onClick={onRead}>Read</button>
     </div>
   );
 }

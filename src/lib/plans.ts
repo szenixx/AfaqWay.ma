@@ -20,6 +20,9 @@ export interface Plan {
   featuresAr: string[]; // full Arabic list (meaning, not literal)
 }
 
+/** Payment reference shown to the student and matched by the admin review. */
+export const genRef = () => "AFQ-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
 export const PLANS: Plan[] = [
   {
     id: "self_service",
@@ -32,6 +35,7 @@ export const PLANS: Plan[] = [
       "Free program-matching before you pay",
       "Personalized 6-stage roadmap",
       "Human review on every document",
+      "Live document status on every upload",
       "Learning resources on every step",
       "24/7 support access",
     ],
@@ -42,6 +46,12 @@ export const PLANS: Plan[] = [
       "Learning resources on every step: links, PDFs, videos, and plain-language explanations",
       "Full visibility into document status: Under review, Needs changes, or Approved",
       "24/7 support access",
+      "Automatic reminders before every deadline and appointment",
+      "A calendar carrying every deadline, appointment and intake date",
+      "One inbox for every update on your file, so nothing arrives only by email",
+      "Your programme's fees, deadlines and English requirements kept current for you",
+      "The steps that are genuinely yours to call, you mark done yourself",
+      "A downloadable invoice for every payment you make",
     ],
     featuresAr: [
       "توجيه مجاني لاختيار البرنامج المناسب قبل أن تدفع أي شيء",
@@ -50,6 +60,12 @@ export const PLANS: Plan[] = [
       "موارد تعليمية في كل خطوة: روابط وملفات PDF وفيديوهات وشروحات مبسّطة",
       "رؤية كاملة لحالة كل وثيقة: قيد المراجعة، تحتاج تعديلات، أو مقبولة",
       "دعم متاح على مدار الساعة طوال أيام الأسبوع",
+      "تذكيرات تلقائية قبل كل موعد نهائي وكل موعد رسمي",
+      "تقويم يجمع كل المواعيد النهائية والمواعيد الرسمية وتواريخ الالتحاق",
+      "صندوق واحد يجمع كل التحديثات على ملفك، فلا يصلك شيء عبر البريد وحده",
+      "رسوم برنامجك ومواعيده وشروط اللغة الإنجليزية، محدّثة لك دائماً",
+      "الخطوات التي يعود قرارها إليك حقاً، تؤشّر إنجازها بنفسك",
+      "فاتورة قابلة للتحميل عن كل دفعة تقوم بها",
     ],
   },
   {
@@ -63,8 +79,11 @@ export const PLANS: Plan[] = [
       "Everything in Self Service, done for you",
       "A dedicated admin runs your whole file",
       "Live tracker of your application",
-      "Service and support after you arrive",
+      "Document requests and updates by chat",
       "Interview preparation coaching",
+      "Priority review, from start to settled",
+      "Service and support after you arrive",
+      "Post-arrival checklist once your permit lands",
     ],
     features: [
       "Free program-matching guidance before you pay for anything",
@@ -73,6 +92,12 @@ export const PLANS: Plan[] = [
       "Learning resources on every step: links, PDFs, videos, and plain-language explanations",
       "Full visibility into document status: Under review, Needs changes, or Approved",
       "24/7 support access",
+      "Automatic reminders before every deadline and appointment",
+      "A calendar carrying every deadline, appointment and intake date",
+      "One inbox for every update on your file, so nothing arrives only by email",
+      "Your programme's fees, deadlines and English requirements kept current for you",
+      "The steps that are genuinely yours to call, you mark done yourself",
+      "A downloadable invoice for every payment you make",
       "The platform drives every step for you, not just guides it",
       "A dedicated admin manages your entire application file",
       "Live tracker showing exactly where your application stands",
@@ -89,6 +114,12 @@ export const PLANS: Plan[] = [
       "موارد تعليمية في كل خطوة: روابط وملفات PDF وفيديوهات وشروحات مبسّطة",
       "رؤية كاملة لحالة كل وثيقة: قيد المراجعة، تحتاج تعديلات، أو مقبولة",
       "دعم متاح على مدار الساعة طوال أيام الأسبوع",
+      "تذكيرات تلقائية قبل كل موعد نهائي وكل موعد رسمي",
+      "تقويم يجمع كل المواعيد النهائية والمواعيد الرسمية وتواريخ الالتحاق",
+      "صندوق واحد يجمع كل التحديثات على ملفك، فلا يصلك شيء عبر البريد وحده",
+      "رسوم برنامجك ومواعيده وشروط اللغة الإنجليزية، محدّثة لك دائماً",
+      "الخطوات التي يعود قرارها إليك حقاً، تؤشّر إنجازها بنفسك",
+      "فاتورة قابلة للتحميل عن كل دفعة تقوم بها",
       "المنصّة تتولّى كل خطوة نيابةً عنك، لا تكتفي بالإرشاد فقط",
       "مستشار مخصّص يدير ملف طلبك بالكامل",
       "متابعة مباشرة تُظهر بالضبط أين وصل طلبك",

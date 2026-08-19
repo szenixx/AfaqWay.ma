@@ -138,7 +138,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
   }, [docs, docQuery, docFilter, docSort]);
 
   const openStored = async (path: string, name: string, download: boolean) => {
-    const url = await fileUrl(path, "documents", download ? name : undefined);
+    const url = await fileUrl(path, download ? name : undefined);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -417,7 +417,7 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
 function DocFrame({ doc }: { doc: DbDocument }) {
   const [url, setUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const load = useCallback(async () => { setUrl(await fileUrl(doc.file_path, "documents")); }, [doc.file_path]);
+  const load = useCallback(async () => { setUrl(await fileUrl(doc.file_path)); }, [doc.file_path]);
   // Fetching the signed URL is the "subscribe to an external system" case.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);

@@ -102,12 +102,12 @@ export default function StudentChat({ userId, full, onNav }: {
 
   async function viewFile(path: string | null) {
     if (!path) return;
-    const url = await fileUrl(path, "update_files");
+    const url = await fileUrl(path);
     if (url) window.open(url, "_blank", "noopener");
   }
   async function downloadFile(path: string | null, name: string | null) {
     if (!path) return;
-    const url = await fileUrl(path, "update_files", name ?? undefined);
+    const url = await fileUrl(path, name ?? undefined);
     if (url) { const a = document.createElement("a"); a.href = url; a.download = name ?? ""; document.body.appendChild(a); a.click(); a.remove(); }
   }
   async function deleteMsg(m: Msg) { setMenu(null); if (m.sender !== "user") return; await supabase.from("messages").delete().eq("id", m.id); void load(); }

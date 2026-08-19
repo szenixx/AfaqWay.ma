@@ -55,7 +55,7 @@ export function useActiveCommunity() {
       id: r.id,
       name: r.display_name,
       joined: r.created_at,
-      avatar: r.avatar_path ? await fileUrl(r.avatar_path, "avatars", undefined, 86400) : null,
+      avatar: r.avatar_path ? await fileUrl(r.avatar_path, undefined, 86400) : null,
     })));
     setMembers(resolved);
   }, []);

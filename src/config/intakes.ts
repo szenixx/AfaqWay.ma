@@ -13,15 +13,19 @@ export type Intake = {
   label: string;
   labelAr: string;
   year: number;
+  /* Onboarding row icon, a key of src/lib/onboarding/emojiMap.json. Coloured
+     dots rather than pictures: the rows differ only by year, so the icon is a
+     marker, not an illustration of anything. */
+  emoji?: string;
 };
 
 export const INTAKES: Intake[] = [
-  { value: "Autumn 2027 (September)", label: "Autumn 2027 (September)", labelAr: "خريف 2027 (سبتمبر)", year: 2027 },
-  { value: "Autumn 2028 (September)", label: "Autumn 2028 (September)", labelAr: "خريف 2028 (سبتمبر)", year: 2028 },
-  { value: "Autumn 2029 (September)", label: "Autumn 2029 (September)", labelAr: "خريف 2029 (سبتمبر)", year: 2029 },
+  { value: "Autumn 2027 (September)", label: "Autumn 2027 (September)", labelAr: "خريف 2027 (سبتمبر)", year: 2027, emoji: "circle-green" },
+  { value: "Autumn 2028 (September)", label: "Autumn 2028 (September)", labelAr: "خريف 2028 (سبتمبر)", year: 2028, emoji: "circle-purple" },
+  { value: "Autumn 2029 (September)", label: "Autumn 2029 (September)", labelAr: "خريف 2029 (سبتمبر)", year: 2029, emoji: "circle-yellow" },
 ];
 
 /** Options for a Select control, in chronological order. */
-export const INTAKE_OPTIONS = INTAKES.map((i) => ({ value: i.value, label: i.label }));
+export const INTAKE_OPTIONS = INTAKES.map((i) => ({ value: i.value, label: i.label, emoji: i.emoji }));
 
 export const intakeByValue = (v: string | null | undefined) => INTAKES.find((i) => i.value === v) ?? null;

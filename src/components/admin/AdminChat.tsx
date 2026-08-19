@@ -73,7 +73,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
     const fields = await loadAvatarFields(ids);
     setUsers(list.map((u) => ({ ...u, ...(fields.get(u.id) ?? {}) })));
     const withAvatar = list.filter((u) => u.avatar_path);
-    const entries = await Promise.all(withAvatar.map(async (u) => [u.id, await fileUrl(u.avatar_path as string, "avatars", undefined, 86400)] as const));
+    const entries = await Promise.all(withAvatar.map(async (u) => [u.id, await fileUrl(u.avatar_path as string, undefined, 86400)] as const));
     setAvatars(Object.fromEntries(entries.filter(([, url]) => url)) as Record<string, string>);
   }, []);
   useEffect(() => { void loadUsers(); }, [loadUsers]);
@@ -122,8 +122,8 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
      row — the same place every consumer chat puts a single read receipt. */
   const lastMineId = [...msgs].reverse().find((m) => m.sender === "admin")?.id ?? null;
 
-  async function viewFile(path: string | null) { if (!path) return; const url = await fileUrl(path, "update_files"); if (url) window.open(url, "_blank", "noopener"); }
-  async function downloadFile(path: string | null, name: string | null) { if (!path) return; const url = await fileUrl(path, "update_files", name ?? undefined); if (url) { const a = document.createElement("a"); a.href = url; a.download = name ?? ""; document.body.appendChild(a); a.click(); a.remove(); } }
+  async function viewFile(path: string | null) { if (!path) return; const url = await fileUrl(path); if (url) window.open(url, "_blank", "noopener"); }
+  async function downloadFile(path: string | null, name: string | null) { if (!path) return; const url = await fileUrl(path, name ?? undefined); if (url) { const a = document.createElement("a"); a.href = url; a.download = name ?? ""; document.body.appendChild(a); a.click(); a.remove(); } }
   async function togglePin(m: Msg) { await supabase.from("messages").update({ pinned: !m.pinned }).eq("id", m.id); if (sel) void loadMsgs(sel); }
   async function deleteMsg(m: Msg) { await supabase.from("messages").delete().eq("id", m.id); if (sel) void loadMsgs(sel); setMenu(null); }
   async function renameFile(m: Msg) {
@@ -164,7 +164,7 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
         // Filed under the recipient student so they can read it back from R2.
         const up = await uploadUserFile(file, { folder: "chat", ownerId: sel });
         file_path = up.path; file_name = file.name;
-        if (emailOn) attachUrl = await fileUrl(up.path, "update_files", undefined, 60 * 60 * 24 * 7);
+        if (emailOn) attachUrl = await fileUrl(up.path, undefined, 60 * 60 * 24 * 7);
       }
       const { data: { user } } = await supabase.auth.getUser();
       const ins = await supabase.from("messages").insert({ user_id: sel, sender: "admin", body: finalBody, file_path, file_name, pinned: pinOn, emailed: emailOn, created_by: user?.id, reply_to: replyTo?.id ?? null });

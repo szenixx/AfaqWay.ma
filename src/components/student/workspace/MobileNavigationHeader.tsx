@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type PropsWithChildren, type ReactNode } from "react";
 import { X as CloseIcon, Menu as Menu02 } from "lucide-react";
-import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { LogoMark } from "@/components/ds/LogoMark";
 
 /* Mobile navigation header — literally the marketing SiteHeader's mobile bar
    (same compact pill that hugs its own content, same logo/text size, same

@@ -2,7 +2,7 @@ import Link from "next/link";
 import SiteHeader from "@/components/home/SiteHeader";
 import Footer from "@/components/home/Footer";
 import { Container, IconArrow } from "@/components/home/ui";
-import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { LogoMark } from "@/components/ds/LogoMark";
 import { STATS } from "@/components/home/Statistics";
 
 export const metadata = {

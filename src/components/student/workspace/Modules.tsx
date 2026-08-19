@@ -26,7 +26,7 @@ import {
   Calendar, CreditCard, UserRound, Send, LifeBuoy, Compass,
   X, Sparkles, GraduationCap, Lock, Wallet, Ticket, BadgeCheck,
 } from "lucide-react";
-import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { LogoMark } from "@/components/ds/LogoMark";
 import { PAY_METHODS } from "@/lib/plans";
 import { planById } from "@/lib/plans";
 import type { StudyApp, AcademicInfo } from "@/lib/studyApplication";
@@ -582,7 +582,7 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
       const { path } = await uploadUserFile(prepared, { folder: "avatars" });
       setProgress(80);
       await setUploadedPhoto(profile.userId, path);
-      setAvatarUrl(await fileUrl(path, "avatars", undefined, 86400));
+      setAvatarUrl(await fileUrl(path, undefined, 86400));
       await onReload();
       setProgress(100);
     } catch (err) {

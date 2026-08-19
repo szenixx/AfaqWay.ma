@@ -107,7 +107,7 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
 
   async function viewReceipt(path: string | null) {
     if (!path) return;
-    const url = await fileUrl(path, "receipts");
+    const url = await fileUrl(path);
     // Each receipt opens at fit size, never at the previous one's zoom.
     if (url) { setViewZoom(1); setViewRot(0); setViewer({ url, pdf: /\.pdf$/i.test(path) }); }
   }
@@ -117,10 +117,9 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
     const patch: Record<string, unknown> = { status, reviewed_at: new Date().toISOString(), reviewed_by: user?.id };
     if (status === "rejected") {
       patch.rejection_comment = comment.trim() || "Your receipt could not be verified.";
-      // Rejecting drops the receipt file itself (R2 for current rows, Supabase for legacy ones).
+      // Rejecting drops the receipt file itself.
       if (r.receipt_path) {
-        if (r.receipt_path.startsWith("r2:")) await deleteUserFile(r.receipt_path).catch(() => {});
-        else await supabase.storage.from("receipts").remove([r.receipt_path]);
+        await deleteUserFile(r.receipt_path).catch(() => {});
         patch.receipt_path = null;
       }
     }

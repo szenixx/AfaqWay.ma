@@ -1,7 +1,7 @@
 "use client";
 
 import { Section } from "@/components/legal/Legal";
-import { LogoMark } from "@/components/hero/OnboardingHeroPanel";
+import { LogoMark } from "@/components/ds/LogoMark";
 
 /* Single source of truth for the Terms + Refund text. Used by the /terms and
    /refund pages AND the in-app agreement viewer (onboarding roadmap step). */

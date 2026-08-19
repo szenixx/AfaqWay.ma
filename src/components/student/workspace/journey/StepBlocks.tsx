@@ -42,7 +42,7 @@ function Attachment({ path, fileName, description, title }: { path: string; file
   const [busy, setBusy] = useState(false);
   const go = async (download: boolean) => {
     setBusy(true);
-    const url = await fileUrl(path, "documents", download ? fileName : undefined);
+    const url = await fileUrl(path, download ? fileName : undefined);
     setBusy(false);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };

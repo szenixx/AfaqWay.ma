@@ -185,7 +185,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
   };
 
   const open = async (path: string, name: string, download: boolean) => {
-    const url = await fileUrl(path, "documents", download ? name : undefined);
+    const url = await fileUrl(path, download ? name : undefined);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
 

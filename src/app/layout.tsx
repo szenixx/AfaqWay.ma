@@ -14,6 +14,9 @@ import "./dashboard.css";
 /* The admin Overview's HeroUI theme + layout, scoped to `.afq-hui`. */
 import "./admin-overview.css";
 import "./admin-wallet.css";
+/* The onboarding journey's own sheet, scoped to `.onb-root`. Separate from
+   globals.css on purpose: /profile-setup is not built from the platform shell. */
+import "./onboarding.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 

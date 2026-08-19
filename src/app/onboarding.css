@@ -1,0 +1,920 @@
+/* ══ AfaqWay onboarding — the guided journey at /profile-setup ═════════════
+
+   A deliberately separate surface. Everything else on the platform is built
+   from the design system's cards, panels and workspace shell; this one is not,
+   by design: a student answering their first question should see one question,
+   not an application. It keeps three things from the platform — the type
+   (var(--font-sans)), the functional icon set, and the brand mark — and
+   composes everything else itself.
+
+   TWO LAYERS, AND THEY NEVER MIX
+
+     the FRAME   a flat brand-blue field, the white mark top-left, the two
+                 utilities top-right. Anchored to the viewport.
+     the CARD    600 x 705, white, centred. Progress at the very top, one
+                 question in the middle, one action at the bottom.
+
+   The vertical space between the last option and Continue is INTENTIONAL. The
+   card does not shrink to its content: a fixed frame is what stops the button
+   moving under the reader's thumb from one question to the next.
+
+   The old wizard is untouched at /profile-setup/classic and still uses the
+   .af-onboard-* rules in globals.css. Nothing here reaches into those.
+
+   Scoped under .onb-root. HeroUI v3 supplies the controls (Button, RadioGroup,
+   CheckboxGroup, Select, TextField, ProgressBar); its semantic tokens are
+   mapped onto AfaqWay's below, the same way .afq-hui does for the admin
+   dashboard, so the library never inherits the app's globals.               */
+
+.onb-root {
+  /* ── Measured off the reference at 1850 x 941 ──────────────────────────
+     Card 700 x 827 at y=56, horizontally centred and NOT vertically centred.
+     Content column 650 (700 - 2 x 24 padding), which every row inside the card
+     spans: progress, options and Continue all start at the same x. */
+  --onb-blue: #2E3BC7;          /* the field */
+  --onb-brand: #2E3BC7;         /* progress fill, Continue, selected border */
+  --onb-track: #ABB1E9;         /* progress, unfilled */
+  --onb-edge: #DFDFDF;          /* option border */
+  --onb-ink: #282828;           /* question, option name */
+  --onb-ink-2: #282828;         /* trailing option label */
+  --onb-ink-3: #868686;         /* subtitle */
+  --onb-card-w: 764px;
+  --onb-card-h: 862px;
+  --onb-card-top: 42px;
+  --onb-card-pad: 24px;         /* horizontal, and the card's bottom inset */
+
+  --onb-ease: cubic-bezier(.32, .72, 0, 1);
+  --onb-fast: 180ms;
+  --onb-slow: 260ms;
+
+  /* ── HeroUI semantic tokens, wearing AfaqWay ───────────────────────── */
+  --accent: #2E3BC7;            --accent-foreground: #FFFFFF;
+  --focus: #2E3BC7;
+  --success: #3F8C63;           --success-foreground: #FFFFFF;
+  --warning: #B0790B;           --warning-foreground: #FFFFFF;
+  --danger: #B23B27;            --danger-foreground: #FFFFFF;
+  --background: #FFFFFF;        --foreground: #282828;
+  --surface: #FFFFFF;           --surface-foreground: #282828;
+  --surface-secondary: #FFFFFF; --surface-tertiary: #FAFBFD;
+  --overlay: #FFFFFF;           --overlay-foreground: #282828;
+  --muted: #868686;
+  --default: #F2F4F8;           --default-foreground: #282828;
+  --border: #DFDFDF;
+  --separator: #EFF0F5;
+  --field-background: #FFFFFF;  --field-foreground: #282828;
+  --field-placeholder: #9AA0AE;
+  --radius: 0.875rem;
+  --surface-shadow: none;
+  --overlay-shadow: 0 18px 44px rgba(23, 35, 58, .22);
+
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  /* Near the top of the viewport, not vertically centred: the card is tall
+     enough that centring it would leave uneven bands above and below. */
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--onb-card-top);
+  background: var(--onb-blue);
+  color: var(--onb-ink);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+/* The programme list and the payment sub-flow carry more than one question's
+   worth of content, so the card widens for them instead of scrolling a 600px
+   column. Nothing else about the frame changes. */
+.onb-root[data-wide] { --onb-card-w: 960px; }
+
+.onb-boot {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: #2E3BC7; color: rgba(255, 255, 255, .78); font: 400 15px/24px var(--font-sans);
+}
+
+.onb-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── Frame: brand mark and the two utilities ───────────────────────────
+   Anchored to the viewport, not to the card, so the card stays centred while
+   these stay in their corners. */
+/* The mark's own glyph fills ~53% of its square viewBox horizontally and ~58%
+   vertically, so the box is inset by that transparent margin to land the
+   VISIBLE chevrons at 24 x 22 at a visible width of ~30px. Sizing the box to 30
+   would draw a 16px mark. */
+.onb-logo {
+  position: absolute; top: 10px; left: 12px; z-index: 5;
+  display: inline-flex; line-height: 0;
+}
+/* The language pill keeps the reference's exact corner; the account control —
+   the one utility a student without a profile still needs — sits inboard of it. */
+.onb-topright {
+  position: absolute; top: 28px; right: 25px; z-index: 5;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.onb-pop-anchor { position: relative; }
+.onb-pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 90px; height: 32px; padding: 0; border: none; border-radius: 999px;
+  background: #FFFFFF; color: var(--onb-brand); cursor: pointer;
+  font: 500 14px/1 var(--font-sans);
+  transition: background var(--onb-fast) var(--onb-ease), transform var(--onb-fast) var(--onb-ease);
+}
+.onb-pill:hover { background: #F2F3FF; }
+.onb-pill:active { transform: scale(.97); }
+.onb-pill:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 3px; }
+.onb-pill-round { width: 32px; }
+/* Signing out is the one destructive thing in here, so it wears the platform's
+   destructive colour rather than hiding behind a neutral profile glyph. */
+.onb-pill-danger { color: var(--red); }
+.onb-pill-danger:hover { background: var(--red-tint); }
+
+.onb-pop {
+  position: absolute; top: calc(100% + 8px); right: 0; min-width: 190px; z-index: 40;
+  background: #FFFFFF; border-radius: 14px; box-shadow: var(--overlay-shadow); padding: 6px;
+  animation: onbPop 160ms var(--onb-ease);
+}
+.onb-pop-item {
+  width: 100%; min-height: 36px; display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border: none; border-radius: 10px; background: transparent; cursor: pointer;
+  font: 500 13.5px/18px var(--font-sans); color: var(--onb-ink); text-align: left;
+}
+.onb-pop-item:hover:not(:disabled) { background: #F2F3FF; }
+.onb-pop-item:disabled { cursor: not-allowed; color: var(--onb-ink-3); }
+.onb-pop-tag { margin-left: auto; font: 500 10.5px/14px var(--font-sans); color: var(--onb-brand); }
+.onb-pop-soon { color: var(--onb-ink-3); }
+/* Anchored to the info button's right edge and running leftward, so it stays
+   inside the card instead of hanging off it. */
+.onb-pop-help {
+  width: min(268px, calc(100vw - 72px));
+  padding: 12px 14px; font: 400 12.5px/18px var(--font-sans); color: #4A5568;
+}
+@keyframes onbPop { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+.onb-pop-help { animation: none; }
+
+/* ── The card ────────────────────────────────────────────────────────── */
+.onb-card {
+  position: relative; z-index: 2;
+  width: min(var(--onb-card-w), calc(100vw - 32px));
+  /* Asymmetric on purpose: the card sits near the top, so the room it needs
+     below is a margin, not a mirror of the offset above it. */
+  height: min(var(--onb-card-h), calc(100vh - var(--onb-card-top) - 32px));
+  padding: 22px var(--onb-card-pad) 0;
+  background: #FFFFFF;
+  border-radius: 18px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: width var(--onb-slow) var(--onb-ease);
+}
+/* Everything in the card sits above the optional BlueprintGrid behind it. */
+.onb-card > *:not(.blueprint) { position: relative; z-index: 1; }
+
+/* ── Progress ──────────────────────────────────────────────────────────
+   One quiet bar across the very top of the card. */
+.onb-root .onb-progress { flex: none; display: block; }
+.onb-progress-track {
+  height: 8px; border-radius: 999px; background: var(--onb-track); overflow: hidden;
+}
+.onb-progress-fill {
+  display: block; height: 100%; width: 100%; border-radius: 999px;
+  background: var(--onb-brand); transform-origin: left center;
+  transition: transform var(--onb-slow) var(--onb-ease);
+}
+
+/* ── The stage: the only part that changes between screens ───────────── */
+.onb-stage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.onb-screen { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ── Question header ─────────────────────────────────────────────────── */
+/* Progress ends at y=86; the question sits at y=112. The row is inset 18px so
+   the arrow lines up with the option icons and the question with their labels. */
+.onb-head { flex: none; padding: 26px 15px 0 18px; }
+.onb-headrow { display: flex; align-items: center; gap: 10px; }
+.onb-iconbtn {
+  flex: none; width: 19px; height: 19px; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 4px; background: transparent; color: #111111; cursor: pointer;
+  transition: color var(--onb-fast) var(--onb-ease);
+}
+.onb-iconbtn:hover { color: var(--onb-brand); }
+.onb-iconbtn:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: 3px; }
+.onb-iconbtn-ghost { pointer-events: none; }
+
+.onb-q {
+  flex: 1; min-width: 0; margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -.01em;
+  color: var(--onb-ink);
+  text-wrap: balance;
+}
+/* Aligned under the question text (arrow 18 + gap 11), not under the arrow. */
+.onb-sub {
+  margin: 12px 0 0 29px; /* 19px arrow + 10px gap */
+  font: 400 14px/20px var(--font-sans);
+  color: var(--onb-ink-3);
+}
+
+/* ── Answer area ───────────────────────────────────────────────────────
+   Takes the remaining height and scrolls inside itself, so a fifteen-option
+   question never pushes Continue off the card. */
+.onb-answer {
+  flex: 1; min-height: 0; margin-top: 20px; padding-bottom: 8px;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: #D8DBE6 transparent;
+}
+.onb-answer::-webkit-scrollbar { width: 6px; }
+.onb-answer::-webkit-scrollbar-thumb { background: #D8DBE6; border-radius: 999px; }
+/* Programme picker */
+
+/* The two modes are a setting, not an answer, so they sit on a grey wash
+   instead of the white an option row uses. */
+.onb-root .onb-modes { margin-bottom: 4px; }
+.onb-root .onb-modes .onb-opt-in { background: rgba(23, 35, 58, .04); border-color: transparent; }
+.onb-root .onb-modes .onb-opt-in:hover { background: rgba(23, 35, 58, .07); border-color: transparent; }
+.onb-root .onb-modes .onb-opt-in[data-on] { background: #F1F2FE; border-color: var(--onb-brand); }
+
+/* Slimmer than an answer field: this one filters a list, it is not the answer. */
+.onb-searchbox { height: 38px; margin: 16px 0 0; padding: 0 12px; gap: 8px; border-radius: 11px; }
+.onb-root .onb-searchbox .onb-input { height: 36px; font: 400 14px/1 var(--font-sans); }
+.onb-searchbox .onb-input-emoji { width: 17px; height: 17px; }
+.onb-listnote { margin: 16px 2px 12px; font: 400 13px/19px var(--font-sans); color: var(--onb-ink-3); }
+.onb-empty { margin: 20px 2px; font: 400 14px/21px var(--font-sans); color: var(--onb-ink-3); }
+.onb-sep { height: 1px; border: none; background: var(--onb-edge); margin: 22px 0 0; }
+
+/* The match, as a dial and a word. `currentColor` carries the band through the
+   ring, so one attribute recolours the whole badge. */
+.onb-score {
+  flex: none; display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 11px 5px 7px; border-radius: 999px; white-space: nowrap;
+  font: 600 12.5px/16px var(--font-sans);
+  background: #F1F2FB; color: var(--onb-brand);
+}
+.onb-score-ring {
+  flex: none; width: 17px; height: 17px; border-radius: 999px;
+  background: conic-gradient(currentColor var(--pct, 0%), rgba(23, 35, 58, .13) 0);
+  -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%);
+  mask: radial-gradient(circle, transparent 52%, #000 54%);
+}
+.onb-score[data-band="plain"] { background: var(--grey-tint); color: var(--ink-soft); }
+.onb-score[data-band="perfect"] { background: rgba(63, 140, 99, .13); color: var(--green); }
+
+/* Programme row: the choice fills it, the info button rides on top at the right
+   edge, and the row's own content keeps clear of it. */
+.onb-root .onb-prorow { position: relative; }
+.onb-root .onb-prochoice { display: block; }
+.onb-root .onb-prorow .onb-opt-in { position: relative; overflow: hidden; padding-right: 52px; }
+
+/* The university's own mark, sunk into the corner of its row. */
+.onb-prowatermark {
+  position: absolute; top: -10px; left: -12px; z-index: 0;
+  width: 78px; height: 78px; object-fit: contain;
+  opacity: .11; filter: grayscale(1); pointer-events: none; user-select: none;
+  transition: opacity var(--onb-fast) var(--onb-ease), filter var(--onb-fast) var(--onb-ease);
+}
+.onb-root .onb-prorow .onb-opt-in > *:not(.onb-prowatermark) { position: relative; z-index: 1; }
+.onb-root .onb-prorow .onb-opt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onb-root .onb-prorow .onb-opt-in:hover .onb-prowatermark { opacity: .15; }
+.onb-root .onb-prorow .onb-opt-in[data-on] .onb-prowatermark { opacity: .18; filter: none; }
+.onb-proinfo {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 999px; background: transparent; color: var(--onb-ink-3); cursor: pointer;
+  transition: background var(--onb-fast) var(--onb-ease), color var(--onb-fast) var(--onb-ease);
+}
+.onb-proinfo:hover { background: #EEF0FB; color: var(--onb-brand); }
+.onb-proinfo:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: 2px; }
+
+/* Programme detail — a fixed panel, sized to fit its own content. The facts sit
+   in a two-column grid so nothing has to scroll to be read. */
+.onb-prosheet {
+  position: relative; width: 100%; max-width: 560px;
+  background: #fff; border-radius: 22px; padding: 26px 28px 24px;
+  box-shadow: 0 30px 70px rgba(10, 14, 60, .36); animation: onbPop 200ms var(--onb-ease);
+}
+.onb-prosheet-x {
+  position: absolute; top: 18px; right: 18px; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 999px; background: #F2F3FB; color: var(--onb-ink-3); cursor: pointer;
+  transition: background var(--onb-fast) var(--onb-ease), color var(--onb-fast) var(--onb-ease);
+}
+.onb-prosheet-x:hover { background: #E7E9F7; color: var(--onb-ink); }
+.onb-prosheet-x:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: 2px; }
+
+.onb-prosheet-head { padding-right: 44px; }
+.onb-prosheet-tag {
+  display: inline-block; margin-bottom: 10px; padding: 4px 10px; border-radius: 999px;
+  background: #F1F2FE; color: var(--onb-brand);
+  font: 600 11px/15px var(--font-sans); letter-spacing: .04em; text-transform: uppercase;
+}
+.onb-prosheet-head h2 { margin: 0; font: 600 22px/29px var(--font-sans); color: var(--onb-ink); letter-spacing: -.015em; }
+.onb-prosheet-head p { margin: 5px 0 0; font: 500 14px/20px var(--font-sans); color: var(--onb-ink-3); }
+
+.onb-prosheet-facts {
+  margin: 22px 0 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 28px;
+  border-top: 1px solid #EFEFF3;
+}
+.onb-prosheet-facts > div { padding: 12px 0 11px; border-bottom: 1px solid #EFEFF3; }
+.onb-prosheet-facts dt { font: 400 12px/17px var(--font-sans); color: var(--onb-ink-3); }
+.onb-prosheet-facts dd { margin: 2px 0 0; font: 500 14px/20px var(--font-sans); color: var(--onb-ink); }
+/* An odd number of facts leaves a gap; the last one takes the full row. */
+.onb-prosheet-facts > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.onb-prosheet-gaps { display: flex; gap: 11px; margin-top: 18px; color: var(--amber); }
+.onb-prosheet-gaps > svg { flex: none; margin-top: 1px; }
+.onb-prosheet-gaps h3 { margin: 0 0 5px; font: 600 13.5px/19px var(--font-sans); color: inherit; }
+.onb-prosheet-gaps ul { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 4px; }
+.onb-prosheet-gaps li { font: 400 13px/19px var(--font-sans); color: inherit; }
+
+.onb-root .onb-prosheet-done { margin-top: 24px; height: 52px; }
+
+/* Only where the panel genuinely cannot fit does it get a scroll pane, which
+   still beats clipping half the record. */
+@media (max-height: 760px) {
+  .onb-prosheet { max-height: calc(100dvh - 40px); overflow-y: auto; }
+}
+
+/* ── Plans ─────────────────────────────────────────────────────────────
+   Two cards side by side, stretched to the frame. Everything is the flat
+   white-and-hairline of the rest of the journey — no glass. */
+.onb-readfirst { flex: none; margin: 0 2px 16px; text-align: center; font: 400 13.5px/21px var(--font-sans); color: var(--onb-ink-3); }
+.onb-readfirst strong { font-weight: 400; color: var(--onb-ink-3); }
+.onb-readfirst button, .onb-readfirst a {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: 500 13.5px/21px var(--font-sans); color: var(--onb-brand); text-decoration: underline;
+}
+
+/* The pair fills the frame rather than sitting as two short cards with a void
+   underneath: the answer area becomes a column and the grid takes what is left. */
+.onb-answer:has(.onb-plans) { display: flex; flex-direction: column; }
+/* The pair never touches the bottom of the card: the gap is what keeps them
+   reading as cards inside a frame rather than as the frame itself. */
+.onb-plans { flex: 1; min-height: 380px; margin-bottom: 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+/* SpotlightCard wraps the children in .af-spotlight-content, so the box lives
+   on the card and the column layout lives on that inner element. */
+.onb-plan {
+  position: relative; overflow: hidden;
+  padding: 22px 20px 20px; border: 1px solid var(--onb-edge); border-radius: 18px; background: #fff;
+  transition: border-color var(--onb-fast) var(--onb-ease);
+}
+.onb-plan > .af-spotlight-content { display: flex; flex-direction: column; height: 100%; }
+.onb-plan:hover { border-color: #C4C8EE; }
+.onb-plan[data-on] { border-color: var(--onb-brand); background: #FAFAFF; }
+.onb-plan-head { display: flex; align-items: center; gap: 10px; }
+.onb-plan-tab {
+  margin-left: auto; flex: none;
+  padding: 4px 10px; border-radius: 999px; background: #EDEEFC; color: var(--onb-brand);
+  font: 600 10px/14px var(--font-sans); letter-spacing: .05em; text-transform: uppercase;
+}
+.onb-plan h3 { margin: 0; font: 600 17px/24px var(--font-sans); color: var(--onb-ink); }
+.onb-plan-tagline { margin: 8px 0 0; font: 400 13px/19px var(--font-sans); color: var(--onb-ink-3); }
+.onb-plan-price { display: flex; align-items: baseline; gap: 6px; margin: 16px 0 0; padding-bottom: 18px; border-bottom: 1px solid #F0F0F3; }
+.onb-plan-price strong { font: 700 34px/38px var(--font-sans); color: var(--onb-ink); letter-spacing: -.02em; }
+.onb-plan-price span { font: 600 15px/20px var(--font-sans); color: var(--onb-ink-3); }
+.onb-plan-list { flex: 1; list-style: none; margin: 18px 0 20px; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.onb-plan-list li { display: flex; gap: 9px; font: 400 13px/19px var(--font-sans); color: var(--onb-ink); }
+.onb-feat-tick {
+  flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 999px;
+  background: #EDEEFC; color: var(--onb-brand); display: flex; align-items: center; justify-content: center;
+}
+/* The godui MagicButton, wearing the onboarding's colours: its default face is
+   white on a translucent shell, which is invisible on a white card. Scoped, so
+   the dashboard's own MagicButton is untouched. */
+.onb-root .onb-plan-cta {
+  width: 100%; height: 50px; padding: 2px; border-radius: 13px;
+  justify-self: stretch; margin: 0;
+  background: var(--onb-brand);
+  box-shadow: 0 10px 22px -14px rgba(46, 59, 199, .8);
+}
+.onb-root .onb-plan-cta .magic-btn__face {
+  border-radius: 11px; background: var(--onb-brand); color: #fff;
+  font: 600 14px/1 var(--font-sans);
+}
+.onb-root .onb-plan-cta:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -14px rgba(46, 59, 199, .9); }
+.onb-root .onb-plan-cta:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--onb-brand); }
+
+/* ── All features ──────────────────────────────────────────────────────
+   Everything behind it goes soft, so the comparison is the only thing to read. */
+/* Everything behind goes right out of focus: the comparison is 20 lines of
+   detail and it is the only thing that should be readable while it is open. */
+.onb-modal-focus {
+  background: rgba(18, 22, 84, .52);
+  backdrop-filter: blur(26px) saturate(.75) brightness(.92);
+  -webkit-backdrop-filter: blur(26px) saturate(.75) brightness(.92);
+  padding: 16px;
+}
+/* Wide enough that all fourteen Full Service lines fit without a scroll pane. */
+.onb-feat {
+  position: relative; width: 100%; max-width: 1080px;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; border-radius: 22px; box-shadow: 0 30px 70px rgba(10, 14, 60, .45);
+  animation: onbPop 200ms var(--onb-ease);
+}
+.onb-feat-head {
+  flex: none; display: flex; align-items: flex-start; gap: 14px;
+  padding: 20px 28px 15px; border-bottom: 1px solid #EFEFF3;
+}
+.onb-feat-head > div:first-child { flex: 1; min-width: 0; padding-right: 8px; }
+.onb-feat-head h2 { margin: 0; font: 600 19px/26px var(--font-sans); color: var(--onb-ink); letter-spacing: -.01em; }
+.onb-feat-head p { margin: 4px 0 0; font: 400 13px/19px var(--font-sans); color: var(--onb-ink-3); }
+.onb-feat-lang { flex: none; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: #F2F3FB; margin-right: 40px; }
+.onb-feat-lang button {
+  min-width: 34px; height: 26px; padding: 0 10px; border: none; border-radius: 999px;
+  background: transparent; color: var(--onb-ink-3); cursor: pointer; font: 600 12px/1 var(--font-sans);
+}
+.onb-feat-lang button[data-on] { background: #fff; color: var(--onb-brand); box-shadow: 0 1px 2px rgba(23, 35, 58, .1); }
+.onb-feat .onb-prosheet-x { top: 22px; right: 22px; }
+.onb-feat-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 36px; padding: 20px 28px 24px; }
+.onb-feat-cols > section + section { border-left: 1px solid #F0F0F3; padding-left: 36px; margin-left: -18px; }
+.onb-feat-cols[dir="rtl"] > section + section { border-left: none; border-right: 1px solid #F0F0F3; padding: 0 36px 0 0; margin: 0 -18px 0 0; }
+.onb-feat-cols h3 { margin: 0; font: 600 15px/21px var(--font-sans); color: var(--onb-ink); }
+.onb-feat-tag { margin: 3px 0 13px; font: 400 12px/17px var(--font-sans); color: var(--onb-ink-3); }
+.onb-feat-cols ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.onb-feat-cols li { display: flex; gap: 9px; font: 400 12.5px/17px var(--font-sans); color: var(--onb-ink); }
+.onb-feat-cols[dir="rtl"] li { flex-direction: row-reverse; text-align: right; }
+
+/* Only where it genuinely cannot fit does it get a scroll pane. */
+@media (max-height: 860px) {
+  .onb-feat { max-height: calc(100dvh - 32px); }
+  .onb-feat-cols { flex: 1; min-height: 0; overflow-y: auto; }
+}
+
+/* A follow-up belongs to the answer above it, but it is still a question being
+   asked — so it is typeset like one, at the same size as the question in the
+   header, rather than shrunk into a field label. */
+.onb-followup { margin-top: 30px; animation: onbReveal 260ms var(--onb-ease) both; }
+.onb-followup-label {
+  display: block; margin: 0 2px 16px;
+  font: 600 22px/28px var(--font-sans); color: var(--onb-ink); letter-spacing: -.01em;
+}
+@keyframes onbReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+.onb-note-line { margin: 10px 2px 0; font: 400 12.5px/18px var(--font-sans); color: var(--onb-ink-3); }
+.onb-err { margin: 10px 2px 0; font: 500 13px/19px var(--font-sans); color: var(--red); animation: onbShake 220ms var(--onb-ease); }
+@keyframes onbShake { 0%, 100% { transform: none; } 30% { transform: translateX(-3px); } 65% { transform: translateX(3px); } }
+
+/* ── Options ───────────────────────────────────────────────────────────
+   [emoji] name … trailing label. Selection is a brand border and a pale wash,
+   never a filled row: at 52px a filled row shouts. */
+/* minmax(0, 1fr), never a bare 1fr: `1fr` means `minmax(auto, 1fr)`, whose auto
+   floor is the item's min-content width, so a row with a long programme name
+   refuses to shrink and pushes straight out of the card. A 0 floor lets the row
+   shrink and lets the ellipsis inside it do its job. */
+.onb-root .onb-opts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.onb-root .onb-opts[data-cols="2"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.onb-root .onb-opt { min-width: 0; }
+.onb-root .onb-opt { display: block; }
+/* 64px tall, the icon 16px in and the label 52px in — the same left rhythm the
+   header row uses, so the column reads as one grid. */
+.onb-root .onb-opt-in {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; min-height: 68px; padding: 8px 16px;
+  border: 1px solid var(--onb-edge); border-radius: 17px; background: #FFFFFF;
+  cursor: pointer; text-align: left;
+  transition:
+    border-color var(--onb-fast) var(--onb-ease),
+    background var(--onb-fast) var(--onb-ease),
+    box-shadow var(--onb-fast) var(--onb-ease),
+    transform var(--onb-fast) var(--onb-ease);
+}
+.onb-root .onb-opt-in:hover { border-color: #C4C8EE; background: #FAFAFF; }
+.onb-root .onb-opt-in:active { transform: scale(.99); }
+/* Chosen is a single blue stroke and a pale wash. No second ring, no thickened
+   border: at 68px tall the row is already unmistakable, and stacking a focus
+   outline on top of a selected border reads as a rendering fault. */
+.onb-root .onb-opt-in[data-on],
+.onb-root .onb-opt-in[data-selected="true"] {
+  border-color: var(--onb-brand);
+  background: #F4F5FE;
+}
+/* Keyboard focus still has to be visible — React Aria only flags it when focus
+   actually came from the keyboard, so a mouse click never draws the ring. */
+.onb-opt[data-focus-visible] .onb-opt-in,
+.onb-opt:has(:focus-visible) .onb-opt-in { outline: 2px solid var(--onb-brand); outline-offset: 2px; }
+.onb-opt[data-disabled] .onb-opt-in,
+.onb-opt.radio--disabled .onb-opt-in,
+.onb-opt.checkbox--disabled .onb-opt-in { opacity: .45; cursor: not-allowed; }
+.onb-opt[data-disabled] .onb-opt-in:hover { border-color: var(--onb-edge); background: #FFFFFF; }
+
+.onb-opt-emoji { flex: none; }
+.onb-opt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.onb-root .onb-opt-label { font: 500 15.5px/21px var(--font-sans); color: var(--onb-ink); }
+.onb-root .onb-opt-sub {
+  font: 400 12.5px/17px var(--font-sans); color: var(--onb-ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Level meter: bars of rising height, lit up to the chosen rank. */
+.onb-meter { flex: none; display: flex; align-items: flex-end; gap: 2px; width: 22px; height: 20px; }
+.onb-meter i {
+  flex: 1; border-radius: 1.5px; background: #D6D9EC;
+  transition: background var(--onb-fast) var(--onb-ease);
+}
+/* Green, not brand blue: these bars report a level reached, the same signal a
+   status colour carries. --green-soft is the design system's graphics green. */
+.onb-meter i[data-on] { background: var(--green-soft); }
+.onb-root .onb-opt-side { flex: none; font: 500 14px/20px var(--font-sans); color: var(--onb-ink-3); }
+.onb-root .onb-opt-tick { display: flex; color: var(--onb-brand); }
+.onb-opt-tick svg { width: 16px; height: 16px; }
+
+/* HeroUI ships its own radio/checkbox chrome; the row IS the control here, so
+   its dot is stood down inside .onb-opts only. */
+.onb-root .onb-opts .radio__control, .onb-root .onb-opts .checkbox__control { display: none; }
+.onb-root .onb-opts .radio, .onb-root .onb-opts .checkbox { margin: 0; }
+
+/* ── Fields ────────────────────────────────────────────────────────────
+   A typed answer gets the same emoji, the same height and the same radius as a
+   chosen one: one screen with a single input should not feel emptier than one
+   with four options, so the field carries the same visual weight. */
+/* The BOX carries the border, the height and the focus ring; the emoji and the
+   input sit inside it, so a typed answer is one object on the screen — the same
+   shape as an option row, with the same emoji in the same place. */
+.onb-inputbox {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; height: 68px; padding: 0 16px;
+  border: 1px solid var(--onb-edge); border-radius: 17px; background: #FFFFFF;
+  transition: border-color var(--onb-fast) var(--onb-ease), box-shadow var(--onb-fast) var(--onb-ease);
+}
+.onb-inputbox:hover { border-color: #C4C8EE; }
+.onb-inputbox:focus-within { border-color: var(--onb-brand); box-shadow: inset 0 0 0 1px var(--onb-brand); }
+.onb-inputbox[data-invalid] { border-color: var(--red); }
+.onb-inputbox[data-invalid]:focus-within { box-shadow: inset 0 0 0 1px var(--red); border-color: var(--red); }
+.onb-input-emoji { flex: none; }
+.onb-root .onb-field { display: flex; flex-direction: column; flex: 1; min-width: 0; width: auto; }
+.onb-root .onb-input {
+  width: 100%; height: 66px; padding: 0; border: none; border-radius: 0; background: transparent;
+  font: 500 16.5px/1 var(--font-sans); color: var(--onb-ink); box-shadow: none;
+}
+.onb-root .onb-input::placeholder { color: var(--field-placeholder); font-weight: 400; }
+.onb-root .onb-input:focus { outline: none; box-shadow: none; }
+
+/* The dialling code and the number are one answer, so they share one shell with
+   a hairline between them. Two separately-bordered boxes read as two questions,
+   which this is not. */
+.onb-phone { gap: 0; }
+.onb-root .onb-phone-code { flex: none; width: 66px; }
+.onb-root .onb-phone-number { flex: 1; min-width: 0; }
+.onb-root .onb-phone-input {
+  width: 100%; height: 66px; padding: 0; border: none; background: transparent;
+  font: 500 16.5px/1 var(--font-sans); color: var(--onb-ink); box-shadow: none; border-radius: 0;
+}
+.onb-root .onb-phone-code .onb-phone-input { letter-spacing: .01em; }
+.onb-root .onb-phone-number .onb-phone-input { padding-left: 14px; }
+.onb-root .onb-phone-input:focus { outline: none; box-shadow: none; }
+.onb-root .onb-phone-input::placeholder { color: var(--field-placeholder); font-weight: 400; }
+.onb-phone .onb-input-emoji { margin-right: 14px; }
+.onb-phone-split { flex: none; width: 1px; height: 28px; background: var(--onb-edge); margin-left: 14px; }
+
+.onb-root .onb-select-trigger {
+  width: 100%; height: 68px; padding: 0 16px;
+  border: 1px solid var(--onb-edge); border-radius: 17px; background: #FFFFFF;
+  font: 500 16.5px/1 var(--font-sans); color: var(--onb-ink);
+  display: flex; align-items: center; gap: 14px;
+  transition: border-color var(--onb-fast) var(--onb-ease), box-shadow var(--onb-fast) var(--onb-ease);
+}
+.onb-root .onb-select-trigger:hover { border-color: #C4C8EE; }
+.onb-root .onb-select-trigger:focus-within,
+.onb-root .onb-select-trigger[data-focus-visible],
+.onb-root .onb-select-trigger[data-pressed] { border-color: var(--onb-brand); box-shadow: inset 0 0 0 1px var(--onb-brand); }
+/* The chevron goes to the right edge whatever HeroUI names its parts. */
+.onb-root .onb-select-trigger > :last-child { margin-left: auto; }
+.onb-select-popover { border-radius: 16px; }
+
+/* ── Visual / motivational screens ─────────────────────────────────────
+   No back arrow, no info: these are a breath, not a question. */
+/* A breath between phases, so it is composed like one: emoji, then title, then
+   the line of copy, centred on both axes with nothing else on screen. */
+.onb-note { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 4px 20px; overflow-y: auto; }
+.onb-note-body {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+}
+.onb-note-back { flex: none; align-self: flex-start; margin: 15px 0 0 -2px; }
+.onb-note-emoji { margin-bottom: 26px; animation: onbRise 460ms var(--onb-ease) both; }
+.onb-q-big { flex: none; max-width: 520px; font-size: 34px; line-height: 43px; font-weight: 700; letter-spacing: -.02em; }
+.onb-note .onb-sub { max-width: 470px; margin: 14px 0 0; font-size: 16px; line-height: 24px; }
+@keyframes onbRise { from { opacity: 0; transform: translateY(10px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* ── Footer ────────────────────────────────────────────────────────────
+   One action, full width, in the same place on every screen. Back lives in the
+   header, so nothing sits beside it competing for the tap. */
+/* The save note is absolutely placed so it can appear and vanish without ever
+   moving Continue, which has to stay at the same y on every screen. */
+.onb-foot { position: relative; flex: none; padding-bottom: var(--onb-card-pad); }
+.onb-save { position: absolute; left: 2px; top: -21px; font: 400 12px/18px var(--font-sans); color: var(--onb-ink-3); }
+.onb-save-err { color: var(--red); }
+.onb-root .onb-next {
+  width: 100%; height: 60px; border-radius: 15px;
+  background: var(--onb-brand); color: #FFFFFF;
+  font: 600 14px/1 var(--font-sans); border: none;
+  transition: background var(--onb-fast) var(--onb-ease), transform var(--onb-fast) var(--onb-ease), opacity var(--onb-fast) var(--onb-ease);
+}
+.onb-root .onb-next:hover:not([data-disabled]) { background: #262FB4; }
+.onb-root .onb-next:active:not([data-disabled]) { transform: scale(.995); }
+.onb-root .onb-next[data-disabled] { background: var(--onb-brand); opacity: .38; }
+
+/* ── The personalized result ───────────────────────────────────────── */
+/* ── The personalized result ───────────────────────────────────────────
+   Composed on the centre line, like the breath screens: this is the moment the
+   journey pays off, not another form. The recap stays a bounded block so the
+   label/value pairs still line up. */
+.onb-summary { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.onb-summary-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 0 4px 8px;
+}
+.onb-summary-body .onb-q-big { max-width: 520px; }
+.onb-summary-body .onb-sub { max-width: 460px; margin: 12px 0 0; }
+
+.onb-recap { width: min(100%, 440px); list-style: none; margin: 26px 0 0; padding: 0; display: flex; flex-direction: column; text-align: left; }
+.onb-recap li {
+  display: flex; align-items: center; gap: 11px; padding: 12px 2px;
+  border-bottom: 1px solid #F0F0F3;
+  animation: onbRow 380ms var(--onb-ease) both;
+}
+.onb-recap li:nth-child(1) { animation-delay: 40ms; }
+.onb-recap li:nth-child(2) { animation-delay: 80ms; }
+.onb-recap li:nth-child(3) { animation-delay: 120ms; }
+.onb-recap li:nth-child(4) { animation-delay: 160ms; }
+.onb-recap li:nth-child(5) { animation-delay: 200ms; }
+.onb-recap li:nth-child(6) { animation-delay: 240ms; }
+@keyframes onbRow { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.onb-recap-label { flex: 1; font: 400 14px/20px var(--font-sans); color: var(--onb-ink-3); }
+.onb-recap-value { font: 500 14px/20px var(--font-sans); color: var(--onb-ink); text-align: right; }
+
+/* Pinned above the footer: flex: none keeps it out of the scroll above it. The
+   block lines up with the recap so the page still reads as one centred column,
+   while the agreements themselves stay left-aligned and stacked. */
+.onb-legal {
+  flex: none; width: min(100%, 440px); margin: 18px auto 0;
+  padding: 16px 0 20px; border-top: 1px solid #F0F0F3;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+}
+.onb-legal-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 400 13px/19px var(--font-sans); color: #4A5568; text-align: left; }
+/* Above both agreements, not tucked under them beside the button. */
+.onb-legal .onb-save { position: static; margin: 0 0 2px; }
+.onb-legal-read { background: none; border: none; padding: 0; cursor: pointer; font: 500 13px/19px var(--font-sans); color: var(--onb-brand); text-decoration: underline; }
+.onb-legal[data-bad] .checkbox__control { border-color: var(--red); }
+
+/* ── Payment ───────────────────────────────────────────────────────────
+   Same rows, same fields, same footer geometry as every other step. The logic
+   is shared with the classic wizard through usePaymentFlow; only this dressing
+   is the journey's own. */
+.onb-payref { margin: 0 2px 14px; font: 400 12.5px/18px var(--font-sans); color: var(--onb-ink-3); }
+.onb-payref strong { font-weight: 600; color: var(--onb-ink); letter-spacing: .02em; }
+
+.onb-paylogo { flex: none; display: flex; align-items: center; justify-content: center; }
+.onb-paylogo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.onb-root .onb-paymethod { border: 1px solid var(--onb-edge); }
+.onb-root .onb-paymethod:disabled { opacity: .45; cursor: not-allowed; }
+.onb-root .onb-paymethod:disabled:hover { border-color: var(--onb-edge); background: #fff; }
+.onb-paytag {
+  margin-left: 8px; padding: 3px 8px; border-radius: 999px; vertical-align: 1px;
+  background: #EDEEFC; color: var(--onb-brand);
+  font: 600 9.5px/13px var(--font-sans); letter-spacing: .05em; text-transform: uppercase;
+}
+.onb-paytag-soon { background: #F1F2F5; color: var(--onb-ink-3); }
+
+/* Footer: same place and same pair as the journey's own, since these screens
+   carry their own actions rather than the card's Continue. */
+.onb-payfoot { flex: none; display: flex; align-items: center; gap: 16px; padding-bottom: var(--onb-card-pad); }
+.onb-payback {
+  background: none; border: none; padding: 8px 2px; cursor: pointer;
+  font: 500 14px/1 var(--font-sans); color: var(--onb-brand);
+}
+.onb-payback:hover { text-decoration: underline; }
+.onb-root .onb-paynext { width: auto; min-width: 190px; height: 52px; margin-left: auto; }
+
+/* The chosen method, restated above the transfer details. */
+.onb-paysum {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; margin-bottom: 22px;
+  border: 1px solid var(--onb-edge); border-radius: 17px; background: #FAFAFF;
+}
+.onb-paysum-amount { flex: none; font: 700 18px/24px var(--font-sans); color: var(--onb-brand); }
+
+.onb-payhead { margin: 22px 2px 10px; font: 600 15px/21px var(--font-sans); color: var(--onb-ink); }
+.onb-payhead:first-child { margin-top: 0; }
+.onb-payrows { border-top: 1px solid #F0F0F3; }
+.onb-payrow {
+  display: flex; align-items: center; gap: 14px;
+  padding: 11px 2px; border-bottom: 1px solid #F0F0F3;
+}
+.onb-payrow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.onb-payrow-label { font: 400 12px/17px var(--font-sans); color: var(--onb-ink-3); }
+.onb-payrow-value { font: 500 14px/20px var(--font-sans); color: var(--onb-ink); word-break: break-all; }
+.onb-payrow-copy {
+  flex: none; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--onb-edge); border-radius: 11px; background: #fff;
+  color: var(--onb-ink-3); cursor: pointer;
+  transition: color var(--onb-fast) var(--onb-ease), border-color var(--onb-fast) var(--onb-ease);
+}
+.onb-payrow-copy:hover { color: var(--onb-brand); border-color: #C4C8EE; }
+.onb-payrow-copy[data-done] { color: var(--green); border-color: var(--green-line); }
+
+.onb-paynote { margin: 0 2px; font: 400 13.5px/21px var(--font-sans); color: var(--onb-ink); }
+.onb-payrules { margin: 12px 2px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.onb-payrules li { font: 400 12px/17px var(--font-sans); color: var(--onb-ink-3); }
+.onb-payempty {
+  margin: 0; padding: 20px; border: 1px dashed var(--onb-edge); border-radius: 16px;
+  font: 400 14px/21px var(--font-sans); color: var(--onb-ink-3);
+}
+.onb-payreject {
+  display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px;
+  padding: 14px 16px; border-radius: 15px; background: var(--red-tint);
+  font: 400 12.5px/18px var(--font-sans); color: var(--onb-ink);
+}
+.onb-payreject strong { font: 600 13.5px/19px var(--font-sans); color: var(--red); }
+
+/* Waiting on the review.
+
+   The overlay sits on .onb-screen, so the frame the student was just in — the
+   back arrow, the step's title and the method rows — stays on screen and goes
+   soft behind it. Only the wait is in focus. */
+.onb-payoverlay {
+  position: absolute; inset: -8px -4px 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 24px 8px;
+  animation: onbFade 200ms var(--onb-ease);
+}
+/* The box itself is blurred, not the overlay's backdrop: `filter` on the frame
+   behind renders far heavier and far more predictably than `backdrop-filter`,
+   which several browsers quietly clamp. `:has()` reaches the step's header too,
+   so the back arrow and the title go soft with the method rows. */
+.onb-screen:has(.onb-payoverlay) > *:not(.onb-payoverlay) {
+  filter: blur(13px);
+  pointer-events: none;
+  user-select: none;
+}
+.onb-payoverlay { background: rgba(255, 255, 255, .45); }
+.onb-payoverlay h2 { margin: 20px 0 0; font: 600 22px/29px var(--font-sans); color: var(--onb-ink); letter-spacing: -.01em; }
+.onb-payoverlay p { max-width: 390px; margin: 10px 0 0; font: 400 14px/21px var(--font-sans); color: var(--onb-ink-3); }
+.onb-paywa {
+  display: inline-flex; align-items: center; gap: 9px; margin-top: 24px; height: 48px; padding: 0 22px;
+  border-radius: 13px; background: #25D366; color: #fff; text-decoration: none;
+  font: 600 14px/1 var(--font-sans); box-shadow: 0 10px 22px -12px rgba(37, 211, 102, .9);
+  transition: background var(--onb-fast) var(--onb-ease), transform var(--onb-fast) var(--onb-ease);
+}
+.onb-paywa:hover { background: #1FBB59; transform: translateY(-1px); }
+/* Cancelling stays a plain line of text: it is the one thing here nobody
+   should reach for by accident. */
+.onb-paycancel {
+  margin-top: 16px; background: none; border: none; padding: 6px; cursor: pointer;
+  font: 500 13px/18px var(--font-sans); color: var(--red); text-decoration: underline;
+}
+.onb-payconfirm { display: flex; gap: 12px; margin-top: 22px; }
+
+/* ── Done ──────────────────────────────────────────────────────────────
+   The check draws itself while the profile is actually being finalised, so the
+   animation is the wait rather than decoration on top of it. */
+.onb-done {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; background: #fff; animation: onbFade 220ms var(--onb-ease);
+}
+.onb-done-mark { width: 92px; height: 92px; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.onb-done-mark circle {
+  stroke: var(--onb-brand); stroke-width: 2.2;
+  stroke-dasharray: 145; stroke-dashoffset: 145;
+  animation: onbDraw 620ms var(--onb-ease) forwards;
+}
+.onb-done-mark path {
+  stroke: var(--onb-brand); stroke-width: 3.4;
+  stroke-dasharray: 44; stroke-dashoffset: 44;
+  animation: onbDraw 420ms var(--onb-ease) 380ms forwards;
+}
+@keyframes onbDraw { to { stroke-dashoffset: 0; } }
+.onb-done-title {
+  margin: 18px 0 0; font: 600 22px/29px var(--font-sans); color: var(--onb-ink); letter-spacing: -.01em;
+  animation: onbRise 420ms var(--onb-ease) 620ms both;
+}
+.onb-done-sub {
+  margin: 6px 0 0; font: 400 14px/21px var(--font-sans); color: var(--onb-ink-3);
+  animation: onbRise 420ms var(--onb-ease) 720ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onb-done-mark circle, .onb-done-mark path { animation: none; stroke-dashoffset: 0; }
+  .onb-done-title, .onb-done-sub { animation: none; }
+}
+
+/* ── Destination-switch confirmation ───────────────────────────────── */
+.onb-modal {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(18, 22, 84, .5); animation: onbFade 160ms var(--onb-ease);
+}
+@keyframes onbFade { from { opacity: 0; } to { opacity: 1; } }
+.onb-modal-card {
+  width: 100%; max-width: 420px; background: #fff; border-radius: 18px; padding: 24px;
+  box-shadow: 0 30px 60px rgba(10, 14, 60, .34); animation: onbPop 200ms var(--onb-ease);
+}
+.onb-modal-emoji { display: block; margin: 0 auto 16px; animation: onbRise 400ms var(--onb-ease) both; }
+.onb-modal-card h2 { margin: 0; font: 600 19px/26px var(--font-sans); color: var(--onb-ink); }
+.onb-modal-card[data-center] { text-align: center; }
+.onb-modal-card[data-center] .onb-modal-foot { justify-content: center; }
+.onb-modal-card p { margin: 10px 0 20px; font: 400 14px/22px var(--font-sans); color: #4A5568; }
+.onb-modal-foot { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ══ Narrow desktop / tablet ═══════════════════════════════════════════════
+   The card stays the card; only the frame's corner gutters come in, so the
+   utilities never sit over it. */
+@media (max-height: 900px) {
+  .onb-root { --onb-card-top: 30px; }
+}
+@media (max-height: 800px) {
+  .onb-root { --onb-card-top: 22px; }
+}
+
+/* ══ Mobile — recomposed, not shrunk ══════════════════════════════════════
+   The card becomes the screen: full bleed under the corner utilities, with
+   the same order and the same 52px targets. */
+@media (max-width: 767px) {
+  .onb-root {
+    --onb-card-pad: 16px; --onb-card-top: 64px;
+    height: 100dvh; min-height: 100dvh; padding-top: 0;
+    align-items: flex-end;
+  }
+  .onb-root[data-wide] { --onb-card-w: 764px; }
+
+  .onb-logo { top: 2px; left: 4px; }
+  .onb-topright { top: 18px; right: 14px; }
+
+  .onb-card {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 76px);
+    margin-bottom: 12px;
+    border-radius: 20px;
+    padding-top: 18px;
+  }
+
+  .onb-head { padding: 22px 4px 0 4px; }
+  .onb-sub { margin-left: 29px; }
+  .onb-q { font-size: 20px; line-height: 27px; }
+  .onb-sub { font-size: 13.5px; line-height: 19px; padding-left: 0; }
+  .onb-answer { margin-top: 18px; }
+
+  .onb-root .onb-opts[data-cols="2"] { grid-template-columns: minmax(0, 1fr); }
+  /* Two short answers keep their row on a phone: Yes and No read fine at half
+     width, and stacking them wastes a third of the screen. */
+  .onb-root .onb-opts[data-compact] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .onb-root .onb-opts[data-compact] .onb-opt-in { justify-content: center; gap: 10px; }
+
+  /* Programme rows stay one line on a phone; the badge and the gutters shrink
+     so the name keeps the room instead of pushing the row past the card. */
+  .onb-root .onb-prorow .onb-opt-in { padding: 8px 42px 8px 12px; gap: 10px; }
+  .onb-root .onb-prorow .onb-score { gap: 5px; padding: 4px 8px 4px 5px; font-size: 11.5px; }
+  .onb-root .onb-prorow .onb-score-ring { width: 14px; height: 14px; }
+  .onb-proinfo { right: 8px; width: 28px; height: 28px; }
+  .onb-prowatermark { width: 66px; height: 66px; top: -8px; left: -10px; }
+
+  .onb-plans { grid-template-columns: minmax(0, 1fr); }
+  .onb-payfoot { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
+  .onb-root .onb-paynext { width: 100%; margin-left: 0; }
+  .onb-payback { text-align: center; }
+  .onb-root .onb-plan-cta { height: 48px; }
+  .onb-feat-cols { grid-template-columns: minmax(0, 1fr); gap: 26px; padding: 18px; }
+  .onb-feat-cols > section + section { border-left: none; padding-left: 0; margin-left: 0; border-top: 1px solid #F0F0F3; padding-top: 22px; }
+  .onb-feat-cols[dir="rtl"] > section + section { border-right: none; padding: 22px 0 0; margin: 0; border-top: 1px solid #F0F0F3; }
+  .onb-feat-head { padding: 20px 18px 16px; }
+  .onb-feat-lang { margin-right: 38px; }
+  .onb-prosheet { padding: 22px 18px 18px; }
+  .onb-prosheet-facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .onb-prosheet-head h2 { font-size: 19px; line-height: 26px; }
+  .onb-root .onb-opt-in { min-height: 62px; border-radius: 15px; padding: 8px 14px; gap: 12px; }
+  .onb-followup { margin-top: 18px; }
+  .onb-root .onb-opt-label { font-size: 14.5px; }
+  .onb-inputbox, .onb-root .onb-select-trigger { height: 60px; padding: 0 14px; gap: 11px; border-radius: 15px; }
+  .onb-root .onb-input, .onb-root .onb-phone-input { height: 58px; font-size: 16px; }
+  .onb-root .onb-phone-code { width: 60px; }
+  .onb-root .onb-phone-number .onb-phone-input { padding-left: 11px; }
+  .onb-phone .onb-input-emoji { margin-right: 11px; }
+  .onb-phone-split { margin-left: 11px; }
+
+  .onb-note-emoji { width: 76px; height: 76px; margin-bottom: 18px; }
+  .onb-q-big { font-size: 27px; line-height: 34px; }
+  .onb-note .onb-sub { font-size: 14.5px; line-height: 21px; margin-top: 12px; }
+  .onb-pop-help { width: min(260px, calc(100vw - 48px)); }
+  .onb-recap li { padding: 11px 0; }
+  .onb-recap-value { font-size: 13.5px; }
+}
+
+/* Very short phones: the card gives up its breathing space before its rhythm. */
+@media (max-width: 767px) and (max-height: 680px) {
+  .onb-topright { top: 12px; }
+  .onb-card { height: calc(100dvh - 62px); }
+  .onb-head { padding-top: 18px; }
+  .onb-answer { margin-top: 14px; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .onb-note-emoji, .onb-recap li, .onb-err, .onb-pop, .onb-modal, .onb-modal-card { animation: none; }
+  .onb-progress-fill, .onb-opt-in, .onb-card { transition-duration: 1ms; }
+}

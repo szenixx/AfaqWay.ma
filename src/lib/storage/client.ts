@@ -2,10 +2,13 @@ import { supabase } from "@/lib/supabase/client";
 import type { StorageFolder } from "@/types/storage";
 
 /* Browser-side entry point to platform storage.
-   The browser never sees R2 credentials: it posts the file to our own API
-   routes, which upload to Cloudflare R2 server-side. Stored paths are written
-   as "r2:<key>"; legacy rows may still hold a bare Supabase storage path, which
-   `fileUrl` keeps resolving so old files stay readable. */
+
+   Every file on the platform lives in Cloudflare R2 and nowhere else. The
+   browser never sees R2 credentials: it posts the file to our own API routes,
+   which upload server-side. Stored paths are always written as "r2:<key>".
+
+   Supabase is the database and the auth provider here, never a file store: it
+   is used below only to read the caller's access token. */
 
 export type StoredFile = { path: string; key: string; fileName: string; mimeType: string; size: number };
 
@@ -38,17 +41,12 @@ export async function uploadUserFile(
 }
 
 /** Resolve a stored path to a short-lived viewable/downloadable URL. */
-export async function fileUrl(path: string, supabaseBucket: string, download?: string, ttl?: number): Promise<string | null> {
-  if (!path.startsWith("r2:")) {
-    // Legacy Supabase-stored file (pre-R2 rows).
-    const { data } = await supabase.storage.from(supabaseBucket).createSignedUrl(path, 300, download ? { download } : undefined);
-    return data?.signedUrl ?? null;
-  }
+export async function fileUrl(path: string, download?: string, ttl?: number): Promise<string | null> {
   try {
     const res = await fetch("/api/file-url", {
       method: "POST",
       headers: { ...(await authHeader()), "Content-Type": "application/json" },
-      body: JSON.stringify({ key: path.slice(3), download, ttl }),
+      body: JSON.stringify({ key: path.startsWith("r2:") ? path.slice(3) : path, download, ttl }),
     });
     if (!res.ok) return null;
     return ((await res.json()) as { url?: string }).url ?? null;

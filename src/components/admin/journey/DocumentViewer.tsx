@@ -37,7 +37,7 @@ export function DocumentViewer({ doc, onClose, onDecide, busy }: {
   const isPdf = PDF.test(name) || doc.mime_type === "application/pdf";
 
   const load = useCallback(async () => {
-    setUrl(await fileUrl(doc.file_path, "documents"));
+    setUrl(await fileUrl(doc.file_path));
     setLoading(false);
   }, [doc.file_path]);
   // Fetching the signed URL is the "subscribe to an external system" case; the
@@ -53,7 +53,7 @@ export function DocumentViewer({ doc, onClose, onDecide, busy }: {
   }, [full, onClose]);
 
   const download = async () => {
-    const signed = await fileUrl(doc.file_path, "documents", name);
+    const signed = await fileUrl(doc.file_path, name);
     if (signed) window.open(signed, "_blank", "noopener,noreferrer");
   };
 

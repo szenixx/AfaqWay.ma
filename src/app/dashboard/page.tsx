@@ -45,7 +45,7 @@ export default function Dashboard() {
     // the avatar migration is applied.
     const av = await loadAvatarFieldsFor(uid);
     const avatarPath = (row.avatar_path as string) || "";
-    const avatarUrl = avatarPath ? await fileUrl(avatarPath, "avatars", undefined, 86400) : null;
+    const avatarUrl = avatarPath ? await fileUrl(avatarPath, undefined, 86400) : null;
     // One profile picture per user: publish it so every avatar on the platform
     // renders the same image (and updates the moment a new one is uploaded).
     setAvatarUrl(avatarUrl);

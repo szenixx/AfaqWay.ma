@@ -793,6 +793,40 @@
 .magic-btn--still .magic-btn__sheen { animation: none; background: rgba(255, 255, 255, .55); }
 .magic-btn--outline .magic-btn__face { background: transparent; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
 
+/* ── BlueprintGrid ─────────────────────────────────────────────────────────
+   A technical-drawing field, drawn in gradients. Inert and absolutely placed,
+   so it needs a positioned, clipping parent and never affects layout. */
+.blueprint {
+  --bp-ink: rgba(46, 59, 199, .16);
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-size: var(--bp-size) var(--bp-size);
+}
+.blueprint--grid {
+  background-image:
+    linear-gradient(to right, var(--bp-ink) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bp-ink) 1px, transparent 1px);
+}
+.blueprint--dots {
+  background-image: radial-gradient(circle, var(--bp-ink) 1.2px, transparent 1.2px);
+  background-position: center;
+}
+.blueprint--crosses {
+  background-image:
+    linear-gradient(to right, var(--bp-ink) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bp-ink) 1px, transparent 1px);
+  -webkit-mask: repeating-conic-gradient(#000 0 25%, transparent 0 50%) 0 0 / var(--bp-size) var(--bp-size);
+  mask: repeating-conic-gradient(#000 0 25%, transparent 0 50%) 0 0 / var(--bp-size) var(--bp-size);
+}
+/* The field thins out toward the edges instead of stopping at them. */
+.blueprint--fade {
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 30%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(120% 90% at 50% 30%, #000 30%, transparent 78%);
+}
+.blueprint--crosses.blueprint--fade {
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
 /* ── BorderBeam ────────────────────────────────────────────────────────────
    A short bead of light running the card's border. `offset-path` traces the
    card's own rounded rect, so only offset-distance animates — one compositor

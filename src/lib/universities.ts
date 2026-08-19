@@ -119,7 +119,11 @@ export const UNIVERSITIES: University[] = [
   },
 ];
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+/* Diacritics are folded before the character filter, otherwise a Lithuanian
+   name never matches the plain-ASCII spelling the catalogue stores: "Klaipėda"
+   would normalise to "klaip da" and miss "Klaipeda" entirely. */
+const norm = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 /** Finds a university from any stored name (profile, programme catalogue…). */
 export function findUniversity(name: string | null | undefined): University | null {
