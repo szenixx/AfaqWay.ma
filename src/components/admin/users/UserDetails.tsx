@@ -5,6 +5,7 @@ import {
   CalendarDays, CircleCheck, Clock3, Download, ExternalLink, Eye, FileText, GraduationCap,
   History, Mail, MapPin, Phone, Route, TriangleAlert, X,
 } from "lucide-react";
+import { DialogFoot, DialogHead } from "@/components/ds";
 import { AnimatedModal, Input, Loader, Select, UserAvatar, ImageZoom, Status } from "@/components/ds";
 import { fileUrl } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
@@ -13,7 +14,7 @@ import { TrpStatusCard } from "@/components/admin/journey/TrpStatusCard";
 import { OutboxCard, outboxPhone } from "@/components/admin/journey/OutboxCard";
 import {
   fetchApprovals, fetchDocuments, fetchEvents, fetchProgress, fetchStages, fetchSteps,
-  stepRequirements, subscribeJourney,
+  reviewDocument, stepRequirements, subscribeJourney,
   type DbDocument, type DbEvent, type DbStep, type DocStatus, type Plan,
 } from "@/lib/journeyDb";
 import { JrButton } from "@/components/student/workspace/journey/parts";
@@ -75,6 +76,12 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
   const [docFilter, setDocFilter] = useState<"all" | DocStatus>("all");
   const [docSort, setDocSort] = useState<"recent" | "name" | "status">("recent");
   const [preview, setPreview] = useState<DbDocument | null>(null);
+  /* Which document is being sent back, and why. A rejection without a reason
+     tells the student nothing, so the comment is asked for rather than
+     optional. */
+  const [rejecting, setRejecting] = useState<DbDocument | null>(null);
+  const [rejectWhy, setRejectWhy] = useState("");
+  const [busyDoc, setBusyDoc] = useState<string | null>(null);
   const online = useIsOnline(user.id);
 
   const load = useCallback(async () => {
@@ -134,6 +141,21 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
     const url = await fileUrl(path, "documents", download ? name : undefined);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
+
+  /* The one place a document is decided. reviewDocument writes the verdict AND
+     notifies the student — it existed but had no caller, which is why an
+     upload never came back to anybody. */
+  const decide = useCallback(async (doc: DbDocument, status: DocStatus, comment = "") => {
+    setBusyDoc(doc.id);
+    try {
+      await reviewDocument(doc.id, status, comment);
+      await load();
+    } finally {
+      setBusyDoc(null);
+      setRejecting(null);
+      setRejectWhy("");
+    }
+  }, [load]);
 
   const phone = `${user.whatsapp_country_code ?? ""}${user.whatsapp_number ?? ""}`.trim();
 
@@ -310,11 +332,58 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
                           <JrButton icon={<Download size={14} />} onClick={() => openStored(d.upload!.file_path, d.upload!.file_name, true)}>Download</JrButton>
                         </>
                       )}
+                      {/* An uploaded document can be decided here. Approved
+                          documents keep a way back, because a mistaken
+                          approval otherwise has no undo. */}
+                      {d.upload?.file_path && d.status !== "approved" && (
+                        <JrButton
+                          disabled={busyDoc === d.upload.id} icon={<CircleCheck size={14} />}
+                          tone="success" onClick={() => void decide(d.upload!, "approved")}
+                        >
+                          Approve
+                        </JrButton>
+                      )}
+                      {d.upload?.file_path && d.status !== "needs_changes" && (
+                        <JrButton
+                          disabled={busyDoc === d.upload.id} icon={<TriangleAlert size={14} />}
+                          tone={d.status === "approved" ? "quiet" : "danger"}
+                          onClick={() => { setRejecting(d.upload); setRejectWhy(""); }}
+                        >
+                          {d.status === "approved" ? "Undo" : "Request changes"}
+                        </JrButton>
+                      )}
                       {!d.upload?.file_path && <span className="stp-doc-sub">Not uploaded</span>}
                     </span>
                   </li>
                 ))}
               </ul>
+            )}
+
+            {rejecting && (
+              <AnimatedModal
+                ariaLabel="Request changes" className="dlg" open
+                onClose={() => setRejecting(null)}
+              >
+                <DialogHead title="Send this document back?">
+                  The student is notified straight away and can re-upload. Tell them what needs
+                  fixing — a rejection with no reason just sends them round again.
+                </DialogHead>
+                <Input
+                  value={rejectWhy} onChange={(e) => setRejectWhy(e.target.value)}
+                  placeholder="e.g. The scan is cut off at the bottom — please re-upload the full page."
+                  aria-label="Reason"
+                />
+                <DialogFoot>
+                  <JrButton size="md" tone="quiet" onClick={() => setRejecting(null)}>Cancel</JrButton>
+                  <JrButton
+                    disabled={!rejectWhy.trim() || busyDoc === rejecting.id}
+                    size="md" tone="danger"
+                    onClick={() => void decide(rejecting, "needs_changes", rejectWhy.trim())}
+                  >
+                    Request changes
+                  </JrButton>
+                </DialogFoot>
+              </AnimatedModal>
             )}
 
             {preview && (

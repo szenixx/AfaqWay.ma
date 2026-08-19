@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { createElement } from "react";
 import {
   IdCard, FileSignature, FileUser, MailCheck, HandCoins, MapPinned, Stamp, BadgeCheck,
   FileCheck2, Banknote, CreditCard, Send, MessagesSquare, Hourglass, HeartPulse, Landmark,
@@ -122,4 +123,20 @@ export function iconForStep(title: string): StepIcon {
   if (exact) return exact;
   for (const [pattern, icon] of KEYWORDS) if (pattern.test(title)) return icon;
   return FileText;
+}
+
+/** The same lookup, as a component.
+ *
+ *  Resolving `iconForStep` to a component variable inside a render and then
+ *  rendering it reads to the compiler as creating a component per render. This
+ *  wrapper is declared once at module scope, so a caller renders `<StepIcon />`
+ *  and nothing is constructed on the way. */
+export function StepIcon({ title, size = 16, className }: {
+  title: string; size?: number; className?: string;
+}) {
+  /* createElement rather than binding the lookup to a capitalised local and
+     rendering <Icon />: the icon is picked from a fixed table, so this creates
+     an element, never a component. Writing it as JSX reads to the compiler as
+     the latter. */
+  return createElement(iconForStep(title), { size, className });
 }

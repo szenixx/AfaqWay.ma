@@ -20,11 +20,32 @@ const TOPIC = "afaqway-presence";
 
 type Roster = Set<string>;
 
+/** One person on the channel. The payload each tab tracks already carries the
+ *  name and role, so a reader does not have to go back to the database for
+ *  them. */
+export type PresencePerson = { userId: string; name: string | null; role: string };
+let people: PresencePerson[] = [];
+const peopleListeners = new Set<(p: PresencePerson[]) => void>();
+
 let channel: RealtimeChannel | null = null;
 let roster: Roster = new Set();
 const listeners = new Set<(r: Roster) => void>();
 /** What this tab is announcing, re-sent whenever the socket reconnects. */
 let selfPayload: { userId: string; name: string | null; role: string } | null = null;
+
+/** The tracked payloads, deduplicated by user — one person with two tabs open
+ *  is one person here. */
+function readPeople(ch: RealtimeChannel): PresencePerson[] {
+  const state = ch.presenceState() as Record<string, { userId?: string; name?: string | null; role?: string }[]>;
+  const byUser = new Map<string, PresencePerson>();
+  for (const entries of Object.values(state)) {
+    for (const e of entries) {
+      if (!e?.userId || byUser.has(e.userId)) continue;
+      byUser.set(e.userId, { userId: e.userId, name: e.name ?? null, role: e.role ?? "student" });
+    }
+  }
+  return [...byUser.values()];
+}
 
 function readRoster(ch: RealtimeChannel): Roster {
   const state = ch.presenceState() as Record<string, { userId?: string }[]>;
@@ -47,6 +68,8 @@ function ensureChannel(): RealtimeChannel {
   const sync = () => {
     roster = readRoster(ch);
     for (const notify of listeners) notify(roster);
+    people = readPeople(ch);
+    for (const notify of peopleListeners) notify(people);
   };
 
   ch.on("presence", { event: "sync" }, sync)
@@ -104,4 +127,21 @@ export function useOnlineUsers(): Set<string> {
 export function useIsOnline(userId: string | null | undefined): boolean {
   const online = useOnlineUsers();
   return Boolean(userId && online.has(userId));
+}
+
+/** Everyone currently on the platform, with the name and role they announced.
+ *  Same single channel as useOnlineUsers — this is another reader, not another
+ *  presence system. */
+export function useOnlinePeople(): PresencePerson[] {
+  const [list, setList] = useState<PresencePerson[]>(() => people);
+
+  useEffect(() => {
+    ensureChannel();
+    const notify = (p: PresencePerson[]) => setList(p);
+    peopleListeners.add(notify);
+    notify(people);
+    return () => { peopleListeners.delete(notify); };
+  }, []);
+
+  return list;
 }

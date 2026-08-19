@@ -1,0 +1,350 @@
+/* ══ Admin Overview — HeroUI, wearing AfaqWay ══════════════════════════════
+
+   Two jobs, kept apart:
+
+   1. THEME. HeroUI reads semantic custom properties (--accent, --surface,
+      --success …). The app already defines several of those names at :root for
+      other purposes, and the app's stylesheets load AFTER HeroUI's — so left
+      alone, HeroUI would silently inherit the app's values. Everything is
+      therefore declared on `.afq-hui` instead. Custom properties inherit, so
+      the whole subtree gets the right values and nothing outside it changes.
+
+   2. LAYOUT. The grid, the density and the few places AfaqWay's proportions
+      differ from the library's defaults.
+
+   Spacing contract: outer 22px · section 18px · card gap 14px · card pad 16px.
+   Colour has roles: accent = brand/primary, success = complete, warning =
+   needs attention, purple = secondary analytics, neutral = inactive.          */
+
+.afq-hui {
+  /* ── Brand ──────────────────────────────────────────────────────────────
+     HeroUI's "accent" is its primary. AfaqWay's is #3B41C9. */
+  --accent: #3B41C9;
+  --accent-foreground: #FFFFFF;
+  --focus: #3B41C9;
+
+  /* ── Status, mapped to the platform's own semantics ──────────────────── */
+  --success: #3F8C63;   --success-foreground: #FFFFFF;
+  --warning: #B0790B;   --warning-foreground: #FFFFFF;
+  --danger:  #B23B27;   --danger-foreground: #FFFFFF;
+
+  /* ── Surfaces — white leads; the field behind it is a light neutral ──── */
+  --background: #F6F7FB;
+  --foreground: #17233A;
+  --surface: #FFFFFF;            --surface-foreground: #17233A;
+  --surface-secondary: #FFFFFF;  --surface-tertiary: #FAFBFD;
+  --overlay: #FFFFFF;            --overlay-foreground: #17233A;
+  --muted: #5A6B85;
+  --default: #F2F4F8;            --default-foreground: #17233A;
+  --border: #E9EAF1;
+  --separator: #EFF0F5;
+  --field-background: #FAFBFD;
+  --field-foreground: #17233A;
+  --field-placeholder: #8695AB;
+
+  /* ── Shape & depth — flatter and tighter than the library default ────── */
+  --radius: 0.5rem;
+  --surface-shadow: 0 1px 2px rgba(23, 35, 58, .03), 0 8px 22px -18px rgba(23, 35, 58, .20);
+  --overlay-shadow: 0 18px 44px rgba(23, 35, 58, .16);
+
+  /* The platform's own accents, for the pieces HeroUI has no token for. */
+  --ao-purple: #6B4BA8;
+  --ao-teal: #0F8A7E;
+  --ao-gold: #B0790B;
+}
+
+/* HeroUI's Card resolves its radius from `--radius-3xl`, which this app also
+   defines (28px) — far rounder than this page's 14–16px contract. Pinned here
+   rather than globally, so the app's own 28px cards are unaffected. */
+.afq-hui .card { border-radius: 14px; padding: 16px; gap: 10px; }
+.afq-hui .card__title { font: 600 14px/19px var(--font-sans); color: #17233A; }
+.afq-hui .card__description { font: 400 11.5px/16px var(--font-sans); color: #5A6B85; }
+
+/* ══ Shell ═════════════════════════════════════════════════════════════════ */
+/* One screen, fixed. The frame is rounded like every other admin surface, it
+   fills the height the shell gives it, and nothing scrolls except the students
+   table inside its own card. */
+.ao-root {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 16px;
+  /* Matches the admin sidebar's own height: the shell's 22px padding either
+     side, plus the 4px .adm-main leaves. The bottom padding .adm-main normally
+     adds is removed just for this page (below) so the frame lands flush. */
+  height: calc(var(--adm-vh, 100vh) - 52px);
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 26px;
+  box-shadow: 0 20px 54px rgba(23, 35, 58, .12);
+  font-family: var(--font-sans);
+}
+/* .adm-main pads 32px at the foot for scrolling pages; this one does not
+   scroll, so that padding would push the frame off-screen. */
+.adm-main:has(.ao-root) { padding: 4px; }
+.ao-head, .ao-kpis { min-height: 0; }
+.ao-analytics, .ao-manage { min-height: 0; }
+/* The one thing allowed to scroll, and only inside its own card. */
+.afq-hui .ao-table-wrap { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.afq-hui .ao-students, .afq-hui .ao-pending, .afq-hui .ao-support { min-height: 0; overflow: hidden; }
+.afq-hui .ao-queue, .afq-hui .ao-stack { min-height: 0; overflow: hidden; }
+/* Sign out is the one destructive control here, so it reads as one. */
+.afq-hui .ao-signout:hover { color: #B23B27; }
+
+/* ══ Header ════════════════════════════════════════════════════════════════ */
+.ao-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ao-head-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ao-head-meta { min-width: 0; }
+.ao-head-line { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.ao-head-name { margin: 0; font: 700 20px/26px var(--font-sans); color: #17233A; letter-spacing: -.02em; }
+.ao-head-sub { font: 400 11.5px/16px var(--font-sans); color: #5A6B85; }
+.ao-head-acts { display: flex; align-items: center; gap: 8px; flex: none; }
+.ao-dot {
+  position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 999px;
+  background: #B23B27; box-shadow: 0 0 0 2px #fff;
+}
+
+/* ══ KPI row ═══════════════════════════════════════════════════════════════ */
+.ao-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+.afq-hui .ao-kpi {
+  min-height: 96px; padding: 16px 18px; gap: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.afq-hui .ao-kpi:hover {
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--border));
+  box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 12px 26px -18px rgba(23,35,58,.28);
+  transform: translateY(-1px);
+}
+.ao-kpi-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ao-kpi-label {
+  font: 600 11px/15px var(--font-sans); letter-spacing: .04em;
+  text-transform: uppercase; color: #5A6B85;
+}
+/* Compact tile, never a giant icon. */
+.ao-kpi-ico {
+  flex: none; width: 26px; height: 26px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ao-kpi-bottom { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
+.ao-kpi-value {
+  font: 700 26px/30px var(--font-sans); color: #17233A;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.afq-hui .ao-kpi-chip { font-size: 10px; }
+
+/* Semantic accents — icon tile only, so the surfaces stay neutral. */
+.ao-t-accent  { background: rgba(59,65,201,.10);  color: #3B41C9; }
+.ao-t-success { background: rgba(63,140,99,.12);  color: #256B49; }
+.ao-t-warning { background: rgba(176,121,11,.12); color: #B0790B; }
+.ao-t-purple  { background: rgba(107,75,168,.12); color: #6B4BA8; }
+.ao-t-danger  { background: rgba(178,59,39,.10);  color: #B23B27; }
+.ao-t-teal    { background: rgba(15,138,126,.12); color: #0F8A7E; }
+.ao-t-warning-text { color: #B0790B; }
+
+/* ══ Analytics row — 51 / 26 / 23 ══════════════════════════════════════════ */
+.ao-analytics { display: grid; grid-template-columns: 51fr 26fr 23fr; gap: 14px; align-items: stretch; }
+.afq-hui .ao-card { display: flex; flex-direction: column; }
+.afq-hui .ao-card-head {
+  flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 10px;
+}
+
+/* ── Chart ──
+   recharts fills the card; the tooltip is styled here so it matches the rest
+   of the page rather than arriving with the library's default look. */
+.afq-hui .ao-activity { display: flex; flex-direction: column; }
+.afq-hui .ao-chart { flex: 1; min-height: 0; padding: 4px 0 0; }
+.afq-hui .ao-chart-foot {
+  flex-direction: row; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #F3F4F8;
+}
+.ao-trend {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 600 11.5px/16px var(--font-sans); color: #17233A;
+}
+.ao-chart-range { font: 400 10.5px/14px var(--font-sans); color: #5A6B85; }
+
+.ao-rtip {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 11px; border-radius: 10px;
+  background: #17233A; color: #fff;
+  box-shadow: 0 10px 26px -12px rgba(23, 35, 58, .65);
+  font: 500 11px/15px var(--font-sans);
+}
+.ao-rtip-head { font-weight: 700; font-size: 11.5px; margin-bottom: 2px; }
+.ao-rtip-row { display: flex; align-items: center; gap: 7px; color: rgba(255,255,255,.82); }
+.ao-rtip-row i { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+.ao-rtip-row b { margin-left: auto; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.ao-rtip-total {
+  display: flex; justify-content: space-between; gap: 12px; margin-top: 3px;
+  padding-top: 5px; border-top: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.82);
+}
+.ao-rtip-total b { color: #fff; font-variant-numeric: tabular-nums; }
+/* recharts draws a focus outline on the SVG surface; the card already reads
+   as the boundary. */
+.afq-hui .ao-chart .recharts-surface:focus { outline: none; }
+
+/* ── Funnel ── */
+/* Six rings on a 3x2 grid — each one a share of everyone who registered. */
+.afq-hui .ao-funnel {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: center; gap: 12px 6px;
+}
+.ao-dialcell { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.ao-dialcell-ring { position: relative; display: grid; place-items: center; }
+.afq-hui .ao-mini-ring { width: 48px; height: 48px; }
+/* The ring shows the share; the badge inside it shows the number. */
+.ao-dialcell-num {
+  position: absolute; display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 999px;
+  background: #fff; box-shadow: inset 0 0 0 1px #EFF0F5;
+  font: 700 12px/1 var(--font-sans); color: #17233A; font-variant-numeric: tabular-nums;
+}
+.ao-dialcell-label {
+  font: 500 10px/13px var(--font-sans); color: #5A6B85; text-align: center;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Destinations ── */
+.afq-hui .ao-dest-body { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ao-dial { position: relative; display: grid; place-items: center; }
+.ao-donut { width: 132px; height: 132px; display: block; }
+.ao-donut circle { transition: stroke-dasharray 700ms cubic-bezier(.4,0,.2,1); }
+.ao-dial-mid { position: absolute; display: flex; flex-direction: column; align-items: center; }
+.ao-dial-num { font: 700 30px/34px var(--font-sans); color: #17233A; font-variant-numeric: tabular-nums; }
+.ao-dial-cap { font: 500 11px/15px var(--font-sans); color: #5A6B85; }
+.afq-hui .ao-dest-sep { width: 100%; }
+.ao-dest-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 7px; }
+.ao-dest-list li { display: flex; align-items: center; gap: 8px; }
+.ao-swatch { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+/* The country's real flag, from its own stripe colours — never recoloured. */
+.ao-flag {
+  flex: none; width: 16px; height: 12px; border-radius: 2px; overflow: hidden;
+  display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(23,35,58,.10);
+}
+.ao-flag i { flex: 1; display: block; }
+.ao-dest-name { flex: 1; min-width: 0; font: 500 11.5px/16px var(--font-sans); color: #17233A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ao-dest-val { font: 700 11.5px/16px var(--font-sans); color: #5A6B85; font-variant-numeric: tabular-nums; }
+
+/* ══ Management row — 62 / 38 ══════════════════════════════════════════════ */
+.ao-manage { display: grid; grid-template-columns: 62fr 38fr; gap: 14px; align-items: start; }
+.ao-manage-side { display: flex; flex-direction: column; gap: 14px; }
+
+.afq-hui .ao-table-wrap { padding: 0; }
+.ao-rows-skel { display: flex; flex-direction: column; gap: 7px; }
+.afq-hui .ao-table { width: 100%; }
+.afq-hui .ao-trow { cursor: pointer; }
+.afq-hui .ao-trow:hover { background: rgba(59,65,201,.045); }
+.ao-person { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.ao-person-id { display: flex; flex-direction: column; min-width: 0; }
+.ao-person-name { font: 600 12.5px/17px var(--font-sans); color: #17233A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ao-person-mail { font: 400 10.5px/14px var(--font-sans); color: #5A6B85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ao-nums { font-variant-numeric: tabular-nums; }
+
+/* ── Queues ── */
+.afq-hui .ao-queue, .afq-hui .ao-stack, .afq-hui .ao-feed-list { display: flex; flex-direction: column; gap: 6px; }
+.ao-queue-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 6px; margin: 0 -6px; border: none; background: none; text-align: left;
+  border-radius: 9px; cursor: pointer; transition: background 160ms ease;
+}
+.ao-queue-row:hover { background: rgba(59,65,201,.05); }
+.ao-queue-ico { flex: none; width: 28px; height: 28px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+.ao-queue-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ao-queue-label {
+  display: flex; align-items: center; gap: 7px; min-width: 0;
+  font: 600 12.5px/17px var(--font-sans); color: #17233A;
+}
+.ao-queue-label > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ao-new {
+  flex: none; padding: 1px 5px; border-radius: 4px; font: 700 8.5px/12px var(--font-sans);
+  letter-spacing: .06em; font-style: normal; background: #B0790B; color: #fff;
+}
+.ao-queue-count { font: 400 10.5px/14px var(--font-sans); color: #5A6B85; }
+
+.ao-stack-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.ao-stack-label { font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+.ao-stack-val { font: 700 15px/20px var(--font-sans); color: #17233A; font-variant-numeric: tabular-nums; }
+.afq-hui .ao-stack-sep, .afq-hui .ao-feed-sep { margin: 0; }
+
+/* ── Awaiting reply — one number, made unmissable ── */
+.afq-hui .ao-await-body { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.ao-await-num {
+  padding: 0; border: none; background: none; cursor: pointer;
+  font: 700 40px/44px var(--font-sans); color: #8695AB;
+  letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+  transition: color 160ms ease, transform 160ms ease;
+}
+.ao-await-num.on { color: #B0790B; }
+.ao-await-num.on:hover { transform: translateY(-1px); }
+.ao-await-num:disabled { cursor: default; }
+.ao-await-cap { font: 400 11.5px/16px var(--font-sans); color: #5A6B85; }
+.ao-await-list { list-style: none; margin: 10px 0 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 2px; }
+.ao-await-list button {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 5px 6px; margin: 0 -6px; border: none; background: none; text-align: left;
+  border-radius: 8px; cursor: pointer; color: #5A6B85; transition: background 160ms ease;
+}
+.ao-await-list button:hover { background: rgba(59,65,201,.05); color: #3B41C9; }
+.ao-await-name { flex: 1; min-width: 0; font: 500 12px/16px var(--font-sans); color: #17233A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ao-await-more { font: 400 10.5px/14px var(--font-sans); color: #8695AB; padding: 3px 0 0; }
+
+/* ── Feed ── */
+.ao-feed-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 6px; margin: 0 -6px; border: none; background: none; text-align: left;
+  border-radius: 8px; cursor: pointer; transition: background 160ms ease;
+}
+.ao-feed-row:hover { background: rgba(59,65,201,.045); }
+.ao-feed-dot { flex: none; width: 7px; height: 7px; border-radius: 999px; background: #3B41C9; }
+.ao-feed-text { flex: 1; min-width: 0; font: 400 12px/17px var(--font-sans); color: #5A6B85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ao-feed-text b { font-weight: 600; color: #17233A; }
+.ao-feed-time { flex: none; font: 400 10.5px/14px var(--font-sans); color: #8695AB; }
+
+.ao-empty { margin: 0; padding: 14px 2px; font: 400 12px/18px var(--font-sans); color: #5A6B85; }
+
+/* ══ Responsive ════════════════════════════════════════════════════════════ */
+@media (max-width: 1279px) {
+  .ao-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ao-analytics { grid-template-columns: 1fr 1fr; }
+  .afq-hui .ao-dest { grid-column: 1 / -1; }
+  .afq-hui .ao-dest-body { flex-direction: row; align-items: center; gap: 20px; }
+  .afq-hui .ao-dest-sep { width: 1px; align-self: stretch; }
+}
+@media (max-width: 767px) {
+  .ao-manage { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  /* Too little height to hold everything at once — the page scrolls again
+     rather than clipping content. */
+  .ao-root { height: auto; overflow: visible; display: flex; flex-direction: column; }
+  .afq-hui .ao-table-wrap { overflow: visible; }
+}
+@media (max-width: 767px) {
+  .ao-root { padding: 14px; gap: 14px; border-radius: 18px; }
+  .afq-hui .ao-funnel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ao-head { flex-wrap: wrap; }
+  /* Two columns, per the brief. */
+  .ao-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .afq-hui .ao-kpi { min-height: 86px; padding: 13px 14px; }
+  .ao-kpi-value { font-size: 22px; line-height: 26px; }
+  .ao-analytics { grid-template-columns: 1fr; }
+  .afq-hui .ao-dest-body { flex-direction: column; }
+  .afq-hui .ao-dest-sep { width: 100%; height: 1px; align-self: auto; }
+  /* The table cannot stay readable at this width; it scrolls in its own box
+     rather than forcing the page sideways. */
+  .afq-hui .ao-table { min-width: 560px; }
+  .ao-head-acts { margin-left: auto; }
+}
+
+/* ══ Reduced motion ════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .afq-hui *, .afq-hui *::before, .afq-hui *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .afq-hui .ao-kpi:hover { transform: none; }
+}

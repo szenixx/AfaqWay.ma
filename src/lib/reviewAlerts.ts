@@ -10,23 +10,39 @@ import type { Plan } from "@/lib/journeyDb";
    plays when a new request lands. Both read the same subscription, so the
    number and the sound can never disagree. */
 
-/** Steps a student has submitted and nobody has decided on yet. */
+/** Everything a student has handed over that nobody has decided on yet —
+ *  submitted steps AND uploaded documents.
+ *
+ *  Counted by the STUDENT'S current plan, not by which plan's steps the row
+ *  happens to hang off. Two things go wrong the other way, and both were
+ *  showing up as inflated badges:
+ *
+ *    · a student who changed plan leaves rows attached to their old plan's
+ *      steps, so one person was counted under both plans at once;
+ *    · a deleted account leaves its rows behind, and nothing filtered them
+ *      out — they can never be actioned because the student is gone.
+ *
+ *  Going through `profiles` fixes both: every row counted belongs to a student
+ *  who exists and is on this plan today. */
 async function countPending(plan: Plan): Promise<number> {
-  const { data: stages } = await supabase
-    .from("journey_stages").select("id").eq("plan", plan).eq("country", "LT");
-  const stageIds = ((stages ?? []) as { id: string }[]).map((s) => s.id);
-  if (!stageIds.length) return 0;
+  const { data: people } = await supabase
+    .from("profiles").select("id").eq("plan", plan);
+  const ids = ((people ?? []) as { id: string }[]).map((p) => p.id);
+  if (!ids.length) return 0;
 
-  const { data: steps } = await supabase.from("journey_steps").select("id").in("stage_id", stageIds);
-  const stepIds = ((steps ?? []) as { id: string }[]).map((s) => s.id);
-  if (!stepIds.length) return 0;
-
-  const { count } = await supabase
-    .from("journey_progress")
-    .select("id", { count: "exact", head: true })
-    .eq("state", "in_progress")
-    .in("step_id", stepIds);
-  return count ?? 0;
+  const [steps, docs] = await Promise.all([
+    supabase.from("journey_progress")
+      .select("id", { count: "exact", head: true })
+      .eq("state", "in_progress")
+      .in("user_id", ids),
+    /* A document is waiting on us from the moment it is uploaded until it is
+       approved or sent back. */
+    supabase.from("journey_documents")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["uploaded", "under_review"])
+      .in("user_id", ids),
+  ]);
+  return (steps.count ?? 0) + (docs.count ?? 0);
 }
 
 /**
@@ -98,7 +114,9 @@ export function useReviewAlerts(enabled: boolean) {
     if (!enabled) return;
     const channel = supabase
       .channel("admin-review-alerts")
-      .on("postgres_changes", { event: "*", schema: "public", table: "journey_progress" }, () => { void load(); });
+      .on("postgres_changes", { event: "*", schema: "public", table: "journey_progress" }, () => { void load(); })
+      /* An upload has to ring the same bell a submitted step does. */
+      .on("postgres_changes", { event: "*", schema: "public", table: "journey_documents" }, () => { void load(); });
     channel.subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [enabled, load]);

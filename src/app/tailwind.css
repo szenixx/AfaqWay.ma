@@ -1,4 +1,10 @@
 @import "tailwindcss";
+/* HeroUI v3 — must follow tailwindcss, per its quick-start. Ships global BEM
+   blocks (.card, .button, .chip …); the app's own `.card` was renamed to
+   `.ds-card` so the two namespaces cannot overwrite each other. HeroUI's
+   semantic tokens are NOT set globally — they are scoped to `.afq-hui` (see
+   admin-overview.css) so the rest of the platform is untouched. */
+@import "@heroui/styles";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

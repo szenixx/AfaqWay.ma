@@ -368,9 +368,9 @@
 
 
 /* ── tokens/base.css ───────────────────────────────────────────────── */
-.card{background:var(--card);border:var(--card-border);border-radius:var(--radius-card);box-shadow:var(--elev-2);padding:24px;
+.ds-card{background:var(--card);border:var(--card-border);border-radius:var(--radius-card);box-shadow:var(--elev-2);padding:24px;
   transition:box-shadow 250ms var(--ease),transform 250ms var(--ease);}
-.card:hover{box-shadow:var(--elev-hover);transform:translateY(-3px);}
+.ds-card:hover{box-shadow:var(--elev-hover);transform:translateY(-3px);}
 .pill{font:600 10.5px/1 var(--font-sans);letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid;display:inline-flex;align-items:center;gap:6px;}
 .pill-grey{color:var(--grey);background:var(--grey-tint);border-color:var(--grey-line);}
 .pill-indigo{color:var(--indigo-text);background:var(--indigo-tint);border-color:var(--indigo-line);}
@@ -945,7 +945,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
    not fading) instead of animating; the JS reroll keeps moving them to new
    positions every 3.2s regardless, so the pattern still isn't frozen — just
    not continuously re-animating. Desktop keeps the original infinite fade. */
-@media (max-width:1023px){
+@media (max-width:767px){
   .af-grid-cell{animation:none;}
 }
 
@@ -998,7 +998,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 /* Mobile: the chat column is narrower, so the bubble goes slimmer still —
    tighter padding, smaller type, no forced minimum width (a short title
    like "Step Approved" can stay as narrow as the bubble naturally wants). */
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .chat-bubble.decision{padding:8px 11px;}
   .chat-decision-head{min-width:0;gap:4px;}
   .chat-decision-title{font-size:12.5px;line-height:16px;}
@@ -1196,7 +1196,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
    its own green, not a platform token) replaces the Status pill there — the
    pill stays exactly as it was on desktop. */
 .chat-ig-dot{display:none;}
-@media (max-width:1023px){
+@media (max-width:767px){
   .chat-header>.ds-status{display:none;}
   .chat-ig-dot{display:block;position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;
     border-radius:999px;background:#44d62c;border:2.5px solid var(--card);}

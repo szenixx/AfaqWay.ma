@@ -5,8 +5,10 @@ import {
   ChevronDown, CircleCheck, Clock3, Eye, FileText, FlaskConical, GraduationCap, Landmark, Lock,
   Plane, Play, Route, SkipForward,
 } from "lucide-react";
-import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep, type StepState } from "@/lib/journey";
+import { assembleRoadmap, roadmapProgress, stepDocuments, STATE_BADGE, STATE_STATUS, type JourneyStage, type JourneyStep } from "@/lib/journey";
 import { iconForStep } from "@/lib/journeyStepIcons";
+/* Shared with the dashboard's Next Steps snapshot so the two cannot drift. */
+import { STEP_ICON_TONE } from "./StepPreview";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
   mergeStepMeta, requestStageApproval, setStepState, subscribeJourney,
@@ -34,20 +36,6 @@ import { InfoCard, JrButton } from "./parts";
    administrator's edit appears without a refresh. */
 
 const STAGE_ICONS = [Landmark, GraduationCap, Route, FileText, Plane, Clock3];
-
-/* Each step's icon badge tints by the same four states everywhere else in
- * the journey uses: grey while it's still on the student (pending, or
- * locked behind an earlier one), amber once it's with an advisor, red if
- * it came back needing changes, green once it's settled — completed or
- * skipped, both nothing more to do. */
-const STEP_ICON_TONE: Record<StepState, "grey" | "amber" | "red" | "green"> = {
-  pending: "grey",
-  locked: "grey",
-  submitted: "amber",
-  rejected: "red",
-  completed: "green",
-  skipped: "green",
-};
 
 export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile; onNav: (id: string) => void; isAdmin?: boolean }) {
   const [stages, setStages] = useState<JourneyStage[]>([]);

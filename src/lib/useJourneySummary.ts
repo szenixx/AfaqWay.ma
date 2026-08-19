@@ -5,7 +5,7 @@ import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps,
   stepRequirements, subscribeJourney, type Plan,
 } from "@/lib/journeyDb";
-import { assembleRoadmap, roadmapProgress, type StageState } from "@/lib/journey";
+import { assembleRoadmap, roadmapProgress, type StageState, type StepState } from "@/lib/journey";
 import type { DocStatus } from "@/lib/journeyDb";
 
 /* Live journey and document counters.
@@ -27,15 +27,52 @@ export type JourneySummary = {
   docsPending: number;
   /** Every stage with its state, for the roadmap strip on the Overview. */
   stages: { id: string; title: string; state: StageState }[];
+  /** A four-step window onto the roadmap, for the dashboard's Next Steps
+      snapshot. Same steps the Journey page renders, just sliced. */
+  nextSteps: PreviewStep[];
   /** The most recently touched uploads, newest first. */
   recentDocs: { id: string; name: string; status: DocStatus; updatedAt: string }[];
+};
+
+/** One row of the Next Steps snapshot — the same shape the Journey page's own
+    rows are built from, reduced to what a preview needs. */
+export type PreviewStep = {
+  id: string;
+  title: string;
+  stageTitle: string;
+  state: StepState;
+  /** Held shut by the stage's own order: an earlier step is not approved yet. */
+  blocked: boolean;
 };
 
 const EMPTY: JourneySummary = {
   loading: true, pct: 0, stepsDone: 0, stepsTotal: 0,
   stageIndex: 0, stageCount: 0, stageTitle: "", docsApproved: 0, docsTotal: 0, docsPending: 0,
-  stages: [], recentDocs: [],
+  stages: [], nextSteps: [], recentDocs: [],
 };
+
+/* ── The four-step window ──────────────────────────────────────────────────
+   Anchored on the step the student should act on next, falling back through
+   progressively weaker signals so the card is never empty:
+
+     1. the first step they can actually start,
+     2. otherwise the step that is with an advisor, or the first unfinished
+        one — including a locked one, since "what is coming" is still useful,
+     3. otherwise the tail of the roadmap, for a student who has finished.
+
+   The window is then clamped so it always yields four rows where four exist. */
+function pickWindow(all: PreviewStep[], size = 4): PreviewStep[] {
+  if (all.length === 0) return [];
+
+  const settled = (s: PreviewStep) => s.state === "completed" || s.state === "skipped";
+  let anchor = all.findIndex((s) => !settled(s) && !s.blocked && s.state !== "submitted");
+  if (anchor === -1) anchor = all.findIndex((s) => s.state === "submitted");
+  if (anchor === -1) anchor = all.findIndex((s) => !settled(s));
+  if (anchor === -1) anchor = Math.max(0, all.length - size);   // everything done
+
+  // Never run past the end: shift the window back rather than return fewer.
+  return all.slice(Math.min(anchor, Math.max(0, all.length - size)), undefined).slice(0, size);
+}
 
 export function useJourneySummary(
   userId: string, plan: string | null, degree?: string | null, tester = false,
@@ -90,6 +127,20 @@ export function useJourneySummary(
       stageIndex: current ? current.index : 0, stageCount: road.length, stageTitle: current?.title ?? "",
       docsApproved, docsTotal: required.length, docsPending,
       stages: road.map((s) => ({ id: s.id, title: s.title, state: s.state })),
+      nextSteps: pickWindow(
+        /* Flattened in roadmap order, so the window reads as the journey does.
+           Plan-excluded stages are left out — a Self Service student should
+           not be told their next step is one they cannot reach. */
+        road.filter((s) => !s.planLocked).flatMap((stage) =>
+          stage.steps.map((st) => ({
+            id: st.id,
+            title: st.title,
+            stageTitle: stage.title,
+            state: st.state,
+            blocked: st.blockedBy.length > 0,
+          })),
+        ),
+      ),
       recentDocs,
     });
   }, [userId, plan, degree, tester]);
