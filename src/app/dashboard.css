@@ -44,7 +44,7 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(300px, 23vw, 372px);
+  grid-template-columns: minmax(0, 1fr) 332px;
   gap: 18px;
   overflow: hidden;
 }
@@ -68,9 +68,13 @@
    ~65% left, CTA ~35% right, both vertically centred. */
 .dx-welcome {
   position: relative; overflow: hidden;
-  display: grid; grid-template-columns: minmax(0, 65%) minmax(0, 35%);
+  /* Three lanes: greeting, student, CTA. The student stands between the words
+     and the action, facing back toward both. */
+  display: grid; grid-template-columns: minmax(0, 43%) minmax(0, 34%) minmax(0, 1fr);
   align-items: center; gap: 20px;
-  min-height: clamp(150px, 20vh, 200px); padding: 24px 30px; margin-bottom: 18px;
+  /* The card keeps the height it had before the illustration arrived: the
+     artwork is fitted to the card, never the other way round. */
+  min-height: 190px; padding: 24px 30px; margin-bottom: 18px;
   border-radius: 18px;
   /* #3B41C9 holds the identity; the tertiary only deepens the far corner. */
   background: linear-gradient(104deg, var(--dx-primary) 0%, var(--dx-primary) 52%, var(--dx-tertiary) 100%);
@@ -82,16 +86,40 @@
     radial-gradient(520px 240px at 84% -40%, rgba(255,255,255,.22), transparent 70%),
     radial-gradient(380px 240px at 6% 140%, rgba(255,255,255,.12), transparent 70%);
 }
-/* Sits behind the copy and the CTA, bleeding off the right edge so it reads
-   as a watermark rather than a pasted logo. */
-.dx-welcome-mark {
-  position: absolute; top: 50%; right: -12%; transform: translateY(-50%);
-  height: 240%; width: auto; opacity: .11; pointer-events: none;
+/* The journey line art, washed across the whole card. Bottom of the stack, so
+   the glow, the beams, the student and every word sit over it. Low enough in
+   opacity to be texture: it must never compete with the greeting, and it
+   carries the brand mark, which is why no separate chevron watermark remains. */
+.dx-welcome-bg {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  opacity: .08; pointer-events: none; user-select: none;
+}
+/* The student's lane. The frame stretches to the row and carries no layout
+   weight of its own; the artwork inside is absolute, so it sizes off the frame
+   and never feeds back into the card's height. The negative margins run the
+   frame through the card's own padding, top and bottom, so the artwork gets
+   the card's full height to fit into rather than just the padding box. The
+   card's own size is untouched. */
+.dx-welcome-figure {
+  grid-column: 2; position: relative; align-self: stretch; z-index: 1;
+  min-width: 0; margin: -16px 0 -24px; pointer-events: none;
+}
+/* Fitted inside the frame rather than bleeding out of it, so the whole upper
+   body reads: nothing is cropped at any card size. He rests on the card's
+   bottom edge, and the horizontal position sits him left of the lane so he
+   reads between the greeting and the button rather than against the CTA. */
+.dx-welcome-figure img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain; object-position: 26% bottom;
+  filter: drop-shadow(0 12px 22px rgba(10, 18, 70, .3));
 }
 .dx-welcome-copy { position: relative; z-index: 1; min-width: 0; }
 .dx-welcome-title {
   margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  font: 600 clamp(28px, 2.5vw, 34px)/1.18 var(--font-sans);
+  font: 600 32px/1.18 var(--font-sans);
   color: #fff; letter-spacing: -.03em;
 }
 /* The colour-emoji font, not the page font — otherwise the glyph renders
@@ -115,34 +143,17 @@
 }
 
 /* ── The journey CTA ──────────────────────────────────────────────────────
-   White on brand, so it is unmissable against the one saturated surface. The
-   motion is deliberately restrained: a slow glow that settles, and an arrow
-   that only travels on hover. Nothing loops forever. */
-.dx-cta {
-  position: relative; z-index: 1; justify-self: end;
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  width: clamp(180px, 100%, 220px); height: 52px; padding: 0 24px;
-  border: none; border-radius: 999px; cursor: pointer;
-  background: #fff; color: var(--dx-primary);
-  font: 700 14px/1 var(--font-sans); white-space: nowrap;
-  box-shadow: 0 10px 24px -12px rgba(10, 12, 67, .55);
-  animation: dxCtaSettle 2.6s var(--ease) .6s 3;
-  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), background 200ms var(--ease);
-}
-.dx-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -14px rgba(10, 12, 67, .65); background: #fff; }
-.dx-cta:active { transform: translateY(0) scale(.985); }
+   Now a MagicButton (src/components/godui/magic-button.tsx); its own styles
+   live with the ported components at the foot of this file. Only the arrow
+   belongs to the card. */
 .dx-cta-arrow { display: inline-block; transition: transform 220ms var(--ease); }
-.dx-cta:hover .dx-cta-arrow { transform: translateX(4px); }
-/* Three soft pulses, then it stops — enough to say "start here", not enough
-   to nag. */
-@keyframes dxCtaSettle {
-  0%, 100% { box-shadow: 0 10px 24px -12px rgba(10, 12, 67, .55), 0 0 0 0 rgba(255,255,255,.42); }
-  50%      { box-shadow: 0 10px 24px -12px rgba(10, 12, 67, .55), 0 0 0 9px rgba(255,255,255,0); }
-}
+.magic-btn:hover .dx-cta-arrow { transform: translateX(4px); }
 
 /* ══ FRAMES 5–7 · Metrics row ══════════════════════════════════════════════
    Deliberately unequal: performance ~56%, courses ~42%, 12px between. */
-.dx-metrics { display: grid; grid-template-columns: 56fr 42fr; gap: 14px; margin-bottom: 18px; }
+/* Progress · Support · University. Support takes the most width because its
+   lower half is a full-width call to action; the dials need the least. */
+.dx-metrics { display: grid; grid-template-columns: 32fr 33fr 35fr; gap: 14px; margin-bottom: 18px; }
 
 .dx-card {
   background: #fff; border: var(--dx-border); border-radius: var(--dx-radius);
@@ -156,119 +167,206 @@
 }
 .dx-link:hover { color: var(--indigo-500); }
 
-/* FRAME 6 — two rings side by side, 78px each. */
+/* Two dials side by side, sized to fill the card — they are the content here,
+   not a decoration beside it. */
 .dx-perf { display: flex; flex-direction: column; }
 .dx-perf-cols { flex: 1; display: grid; grid-template-columns: 1fr 1px 1fr; align-items: center; }
-.dx-perf-col { display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center; padding: 2px 8px; }
+.dx-perf-col { display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; padding: 0 6px; }
 .dx-perf-col .dx-card-title { font-size: 13px; }
 .dx-perf-rule { align-self: stretch; background: #F1F2F7; margin: 6px 0; }
 .dx-perf-sub { font: 400 12px/16px var(--font-sans); color: var(--ink-soft); }
+/* The dial scales with the card instead of sitting at a fixed size, so the
+   card is filled on a large screen and still fits on a small one. */
+.dx-perf-col .dx-ring { width: 100%; height: auto; max-width: 124px; }
 
 /* Belt and braces: this is a chart, never a filled surface. */
 .dx-ring { background: none; }
 .dx-ring-track { stroke: #EEEFF5; }
 .dx-ring-fill { stroke: var(--dx-primary); transition: stroke-dashoffset 700ms var(--ease); }
-/* Green means verified here because green means verified platform-wide. */
+/* Purple for progress, green for verified — the same two meanings the rest of
+   the platform uses, so the pair reads without a key. */
+.dx-ring.dxt-purple .dx-ring-fill { stroke: var(--purple); }
 .dx-ring.dxt-green .dx-ring-fill { stroke: var(--dx-green-soft); }
+/* The percentage is the headline of this card, so it is sized like one. */
 .dx-ring-num {
-  font: 700 17px/1 var(--font-sans); fill: var(--ink);
-  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+  font: 800 26px/1 var(--font-sans); fill: var(--ink);
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
 }
 
 .dx-legend { display: flex; gap: 14px; margin-top: 10px; padding-top: 9px; border-top: 1px solid #F3F4F8; }
 .dx-legend span { display: inline-flex; align-items: center; gap: 6px; font: 400 10.5px/14px var(--font-sans); color: var(--ink-soft); }
 .dx-legend .dot { width: 7px; height: 7px; border-radius: 999px; }
-.dx-legend .dot.primary { background: var(--dx-primary); }
-.dx-legend .dot.green { background: var(--dx-green-soft); }
+.dx-legend .dot.purple { background: var(--purple); }
 .dx-legend .dot.track { background: #DFE1EA; }
 
-/* FRAME 7 — compact list, thin bars. */
-.dx-courses { display: flex; flex-direction: column; }
-.dx-courselist { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
-.dx-course-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
-.dx-course-name { font: 500 13px/18px var(--font-sans); color: var(--ink); }
-.dx-course-pct { font: 600 12px/18px var(--font-sans); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.dx-thin { display: block; height: 6px; border-radius: 999px; background: #EEEFF5; overflow: hidden; }
-.dx-thin > span { display: block; height: 100%; border-radius: 999px; background: var(--dx-primary); transition: width 700ms var(--ease); }
-/* Four roles, four colours, and the same four everywhere on the page:
-   green done · primary in progress · gold needs you · neutral upcoming. */
-.dx-courselist li.dxt-green  .dx-thin > span { background: var(--dx-green-soft); }
-.dx-courselist li.dxt-gold   .dx-thin > span { background: var(--dx-gold); }
-.dx-courselist li.dxt-neutral .dx-thin > span { background: #CFD3DE; }
-.dx-courselist li.dxt-green  .dx-course-pct { color: var(--dx-green); }
-.dx-courselist li.dxt-gold   .dx-course-pct { color: var(--dx-gold); }
-.dx-courselist li.dxt-primary .dx-course-pct { color: var(--dx-primary); }
-
-/* ══ FRAME 8 · Media list ══════════════════════════════════════════════════
-   Compact rows inside one section — never a card per item. */
-.dx-media { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.dx-media-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.dx-medialist {
-  list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0;
-  display: flex; flex-direction: column; gap: 7px; overflow: hidden;
+/* ── AfaqWay Support ──────────────────────────────────────────────────────
+   The action card of the row. Everything above the button is kept short so
+   the call to action owns the lower half. */
+.dx-support { position: relative; overflow: hidden; display: flex; flex-direction: column; }
+/* The support tools, sized as a share of the card so the composition holds as
+   the column grows or narrows, and bled past the lower-right corner so the
+   card clips it rather than framing it. Layer 2 of the card: above the white,
+   below every piece of content. */
+.dx-support-art {
+  position: absolute; z-index: 0; right: -9%; top: 50%; transform: translateY(-52%);
+  width: 56%; max-width: 230px; height: auto;
+  opacity: .55; pointer-events: none; user-select: none;
 }
-.dx-mediarow {
-  display: flex; align-items: center; gap: 11px;
-  /* Elastic between a readable floor and the reference's 44px, so the rows
-     share the remaining height rather than pushing past the fold. */
-  flex: 1 1 0; min-height: 44px; max-height: 62px;
-  padding: 0 14px; border-radius: var(--dx-radius-sm);
-  background: #FAFBFD;
-  transition: background 160ms var(--ease);
+.dx-support-head { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; }
+/* The one live signal on the card. Green is already the platform's "verified
+   and complete" colour, so it carries the same meaning here: this is real. */
+.dx-support-live {
+  position: relative; z-index: 1; margin: 9px 0 0;
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 600 11px/15px var(--font-sans); color: var(--green-soft);
 }
-.dx-mediarow:hover { background: #F4F6FB; }
-.dx-thumb {
-  flex: none; width: 36px; height: 36px; border-radius: 11px;
+.dx-support-dot {
+  width: 7px; height: 7px; flex: none; border-radius: 999px;
+  background: var(--green-soft);
+  animation: lcaPulse 2.4s var(--ease) infinite;
+}
+.dx-support-ico {
+  flex: none; width: 28px; height: 28px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   background: var(--indigo-tint); color: var(--dx-primary);
 }
-.dx-mediarow.dxt-green .dx-thumb { background: var(--dx-green-tint); color: var(--dx-green); }
-.dx-mediarow.dxt-gold .dx-thumb { background: var(--dx-gold-tint); color: var(--dx-gold); }
-.dx-mediarow.dxt-neutral .dx-thumb { background: var(--grey-tint); color: var(--grey); }
-
-/* The state in words beside the colour, so the colour is never the only
-   carrier of meaning. */
-.dx-chip {
-  flex: none; padding: 4px 9px; border-radius: 999px; white-space: nowrap;
-  font: 600 10.5px/14px var(--font-sans);
-  background: var(--indigo-tint); color: var(--indigo-text);
+/* Held to the left of the artwork: the copy never runs across the headset, so
+   the tools stay readable and so does the sentence. */
+.dx-support-text {
+  position: relative; z-index: 1; flex: 1; max-width: 62%;
+  margin: 8px 0 0; font: 400 12px/18px var(--font-sans); color: var(--ink-soft);
 }
-.dx-mediarow.dxt-green .dx-chip { background: var(--dx-green-tint); color: var(--dx-green); }
-.dx-mediarow.dxt-gold .dx-chip { background: var(--dx-gold-tint); color: var(--dx-gold); }
-.dx-mediarow.dxt-neutral .dx-chip { background: var(--grey-tint); color: var(--grey); }
-.dx-media-title {
-  flex: 1; min-width: 0; font: 500 13.5px/19px var(--font-sans); color: var(--ink);
+/* Spans the card, not a token button in the corner. */
+.dx-support-cta {
+  position: relative; z-index: 1; width: 100%; margin-top: 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 46px; border: none; border-radius: 12px; cursor: pointer;
+  background: var(--dx-primary); color: #fff;
+  font: 700 13px/1 var(--font-sans); white-space: nowrap;
+  box-shadow: 0 10px 22px -14px rgba(59, 65, 201, .9);
+  transition: background 160ms var(--ease), transform 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+.dx-support-cta:hover {
+  background: var(--indigo-500); transform: translateY(-1px);
+  box-shadow: 0 14px 28px -14px rgba(59, 65, 201, 1);
+}
+.dx-support-cta:active { transform: translateY(0) scale(.99); }
+
+/* ── University information ───────────────────────────────────────────────
+   An academic profile card: the institution and the programme carry the
+   hierarchy, the facts sit quietly underneath. */
+.dx-uni { position: relative; overflow: hidden; display: flex; flex-direction: column; }
+/* Every field sits above the building, never behind it. */
+.dx-uni > * { position: relative; z-index: 1; }
+/* Sized as a share of the card, so it holds its corner as the column grows or
+   narrows. The artwork's ground is white and the card is white, so multiply
+   drops the ground out instead of leaving a pale plate. */
+.dx-uni-art {
+  position: absolute; z-index: 0; right: -5%; bottom: -3%;
+  width: 56%; max-width: 220px; height: auto;
+  opacity: .58; mix-blend-mode: multiply;
+  pointer-events: none; user-select: none;
+}
+.dx-uni-head { display: flex; align-items: center; gap: 12px; }
+.dx-uni-id { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dx-uni-name {
+  margin: 0; font: 700 15.5px/21px var(--font-sans); color: var(--ink); letter-spacing: -.015em;
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.dx-uni-place {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 500 11.5px/16px var(--font-sans); color: var(--ink-soft);
+}
+.dx-uni-place svg { color: var(--dx-primary); flex: none; }
+
+/* The programme is set apart from the institution above it. */
+.dx-uni-prog {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid #F1F2F7;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.dx-uni-progname {
+  font: 600 13.5px/19px var(--font-sans); color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.dx-uni-label {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 600 9.5px/13px var(--font-sans); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--dx-primary);
+}
+/* Stacked, tuition above duration, and held to the left half of the card so
+   the right side stays clear for the building. */
+.dx-uni-facts {
+  margin-top: auto; padding-top: 12px;
+  display: grid; grid-template-columns: minmax(0, 58%); gap: 6px;
+}
+/* Label over value inside each frame, tight enough that two stacked frames
+   cost no more height than the one row they replace. */
+.dx-uni-facts > div {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  min-width: 0; padding: 5px 10px; border-radius: 10px;
+  background: rgba(23, 35, 58, .035);
+}
+.dx-uni-value {
+  font: 600 13px/18px var(--font-sans); color: var(--ink);
+  font-variant-numeric: tabular-nums;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.dx-media-meta { flex: none; font: 400 12px/16px var(--font-sans); color: var(--ink-soft); white-space: nowrap; }
-.dx-dots {
-  flex: none; width: 26px; height: 26px; border-radius: 8px; border: none; background: none;
-  color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: background 160ms var(--ease), color 160ms var(--ease);
+
+/* ══ Next Steps ═══════════════════════════════════════════════════════════
+   A snapshot of the roadmap, so the rows are the Journey module's own: the
+   icon badge, its tone classes and the status pill all come from there. Only
+   the density is different — four rows in a dashboard card rather than a full
+   step with its actions. */
+.dx-next { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dx-media-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.dx-nextlist { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+
+.jr-preview {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  flex: 1 1 0; min-height: 46px; max-height: 62px;
+  padding: 0 12px; border: 1px solid transparent; border-radius: var(--dx-radius-sm);
+  background: #FAFBFD; text-align: left; cursor: pointer;
+  transition: background 160ms var(--ease), border-color 160ms var(--ease);
 }
-.dx-dots:hover { background: #EAEDF4; color: var(--ink); }
+.jr-preview:hover { background: #F4F6FB; }
+/* The step in play is the one thing here that should be findable at a glance. */
+.jr-preview.pending:not(.shut) { background: var(--indigo-50); border-color: var(--indigo-line); }
+.jr-preview.rejected { background: var(--red-tint); border-color: var(--red-line); }
+/* Locked stays visible — knowing what is coming is the point — but plainly
+   unavailable, so it is never mistaken for something to act on. */
+.jr-preview.shut { opacity: .62; cursor: default; }
+.jr-preview.shut:hover { background: #FAFBFD; }
+
+.jr-preview-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.jr-preview-title {
+  font: 600 12.5px/17px var(--font-sans); color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.jr-preview-stage {
+  font: 400 10.5px/14px var(--font-sans); color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The Journey module's icon badge, one size down. */
+.dx-next .jr-step-ico { width: 28px; height: 28px; border-radius: 9px; flex: none; }
 
 /* ══ FRAME 10 · Right utility panel ════════════════════════════════════════
    One continuous column, full workspace height, 20px internal padding. */
 .dx-panel {
   min-width: 0; min-height: 0; height: 100%;
-  display: flex; flex-direction: column;
-  padding: 4px 22px 22px;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 18px 22px 22px;
   background: #fff; border: var(--dx-border); border-radius: 20px;
   box-shadow: var(--dx-shadow); overflow: hidden;
 }
 
-/* FRAME 11 — toolbar, 54px, small icons then the profile. */
-.dx-tools { display: flex; align-items: center; gap: 2px; height: 58px; flex: none; }
-.dx-me { display: flex; align-items: center; gap: 9px; min-width: 0; margin-left: auto; padding: 0; border: none; background: none; cursor: pointer; text-align: left; }
-.dx-me-id { display: flex; flex-direction: column; min-width: 0; }
-.dx-me-name { font: 600 13px/17px var(--font-sans); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dx-me-mail { font: 400 10.5px/14px var(--font-sans); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
 /* FRAME 12 — calendar, the dominant element of the panel. */
 /* The calendar absorbs the panel's slack: its grid stretches, the cells with
    it, so the month always fits without the panel scrolling. */
-.dx-cal { flex: 1; min-height: 0; margin-top: 6px; display: flex; flex-direction: column; }
+/* Sized by its own cells, not by the panel: square cells keep the selected
+   day a circle instead of stretching it into an oval. */
+.dx-cal { flex: none; display: flex; flex-direction: column; }
 .dx-cal-head, .dx-cal-week { flex: none; }
 .dx-cal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .dx-cal-title { margin: 0; font: 700 18px/24px var(--font-sans); color: var(--ink); letter-spacing: -.015em; }
@@ -281,11 +379,11 @@
 }
 .dx-cal-nav button:hover { background: var(--indigo-50); color: var(--dx-primary); }
 .dx-cal-week, .dx-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.dx-cal-grid { flex: 1; min-height: 0; grid-template-rows: repeat(6, minmax(0, 1fr)); }
+.dx-cal-grid { flex: none; }
 .dx-cal-week { margin-bottom: 4px; }
 .dx-cal-week span { text-align: center; font: 600 10px/16px var(--font-sans); letter-spacing: .05em; color: var(--ink-soft); }
 .dx-cal-cell {
-  min-height: 0; border: none; background: none; border-radius: 999px;
+  aspect-ratio: 1; min-height: 0; border: none; background: none; border-radius: 999px;
   font: 500 13px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--ink); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background 160ms var(--ease), color 160ms var(--ease);
@@ -293,35 +391,6 @@
 .dx-cal-cell:hover { background: var(--indigo-50); }
 .dx-cal-cell.out { color: #C6CAD6; }
 .dx-cal-cell.sel { background: var(--dx-primary); color: #fff; font-weight: 700; }
-
-/* FRAMES 13–14 — event and actions, a continuation of the panel. */
-.dx-event { flex: none; padding-top: 16px; display: flex; flex-direction: column; }
-.dx-event-kicker { font: 600 10.5px/14px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
-.dx-event-title { margin: 5px 0 0; font: 700 16px/22px var(--font-sans); color: var(--ink); }
-.dx-event-detail { margin: 4px 0 0; font: 400 13px/19px var(--font-sans); color: var(--ink-soft); }
-.dx-event-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-.dx-event-meta > span { display: inline-flex; align-items: center; gap: 5px; font: 500 11.5px/16px var(--font-sans); color: var(--ink-soft); }
-.dx-people { margin-left: auto; display: flex; }
-.dx-people i {
-  width: 22px; height: 22px; border-radius: 999px; margin-left: -7px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--indigo-tint); color: var(--indigo-text); border: 2px solid #fff;
-  font: 600 9.5px/1 var(--font-sans); font-style: normal;
-}
-.dx-people i:first-child { margin-left: 0; }
-
-.dx-event-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
-.dx-btn {
-  height: 46px; border-radius: var(--dx-radius-sm); cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  font: 600 13px/1 var(--font-sans); border: 1px solid transparent;
-  transition: background 160ms var(--ease), border-color 160ms var(--ease), color 160ms var(--ease), transform 160ms var(--ease);
-}
-.dx-btn:active { transform: scale(.98); }
-.dx-btn.primary { background: var(--dx-primary); color: #fff; }
-.dx-btn.primary:hover { background: var(--indigo-500); }
-.dx-btn.outline { background: #fff; border-color: #E1E4EE; color: var(--ink-soft); }
-.dx-btn.outline:hover { border-color: var(--indigo-line); color: var(--dx-primary); }
 
 /* ══ Focus ═════════════════════════════════════════════════════════════════
    One ring for everything this sheet makes interactive. */
@@ -336,64 +405,341 @@
   /* Too short to hold everything at full size. The page still does not scroll
      — each column scrolls inside itself, which is the stated fallback. */
   .dx-center, .dx-panel { overflow-y: auto; overscroll-behavior: contain; }
-  .dx-mediarow { flex: none; height: 48px; max-height: none; }
-  .dx-medialist { overflow: visible; }
-  .dx-cal-grid { min-height: 210px; }
+  .jr-preview { flex: none; min-height: 52px; max-height: none; }
+  .dx-nextlist { overflow: visible; }
 }
 
 /* ══ FRAME 20 · Tablet ═════════════════════════════════════════════════════
    The panel narrows before it moves. */
 @media (max-width: 1199px) {
-  .dx-app { grid-template-columns: minmax(0, 1fr) clamp(268px, 27vw, 320px); gap: 14px; }
-  .dx-welcome { grid-template-columns: minmax(0, 58%) minmax(0, 42%); padding: 20px 22px; }
+  .dx-app { grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
+  /* The illustration gives ground first: the copy and the button are what have
+     to stay usable as the card narrows. */
+  .dx-welcome {
+    grid-template-columns: minmax(0, 41%) minmax(0, 30%) minmax(0, 1fr);
+    padding: 20px 22px; gap: 14px;
+  }
+  .dx-welcome-figure { margin: -12px 0 -20px; }
+  .dx-uni-art { width: 68%; opacity: .4; }
 }
 
-/* Below 1024 the two zones cannot sit side by side; the panel becomes content
+/* ══ Narrow desktop · 768-1023 ═════════════════════════════════════════════
+   Tablets live here, and they are desktop: the sidebar, the desktop header
+   and the right utility panel all stay exactly where they are. What changes
+   is inside the centre column, which is only ~340px wide once the rail and
+   the panel have taken their share — three metric cards side by side in that
+   space would be three slivers, so the row becomes a stack.
+
+   This is a component adjustment inside desktop mode, not a mode switch. See
+   the responsive contract at the top of globals.css. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* The panel gives a little back: at 300px it was nearly as wide as the
+     content it is meant to support. */
+  .dx-app { grid-template-columns: minmax(0, 1fr) 260px; }
+  /* The shell holds a fixed viewport height here, so the taller stacked
+     column scrolls inside itself rather than being clipped by it. */
+  .dx-center { overflow-y: auto; overscroll-behavior: contain; }
+
+  /* One card per row, full width of the column. */
+  .dx-metrics { grid-template-columns: minmax(0, 1fr); }
+  .dx-lastrow { grid-template-columns: minmax(0, 1fr); }
+  .dx-deck { min-height: 190px; }
+
+  /* The three-lane welcome card cannot hold a 180px button, a student and a
+     greeting in this width, so it takes the same shape it takes on a phone:
+     copy and CTA stacked, student washed across the right as background. */
+  .dx-welcome {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start; gap: 0; min-height: 0; padding: 20px 22px;
+  }
+  .dx-welcome-title { font-size: 26px; }
+  .dx-welcome-text { max-width: none; }
+  .dx-welcome-figure {
+    position: absolute; z-index: 0;
+    top: 0; right: 0; bottom: 0; left: auto;
+    width: 46%; height: 100%; margin: 0; opacity: .22;
+  }
+  .dx-welcome-figure img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; object-position: right bottom; filter: none;
+  }
+  .magic-btn { grid-column: 1; justify-self: start; width: clamp(180px, 62%, 240px); margin-top: 14px; }
+
+  .dx-perf-col .dx-ring { max-width: 104px; }
+  .dx-uni-art { width: 44%; opacity: .38; }
+  .dx-support-art { width: 34%; }
+  .dx-support-text { max-width: 66%; }
+  /* Three social cards in a ~340px column would be three slivers, so they
+     stack here too — desktop architecture, component adjustment. */
+  .dxs-row { grid-template-columns: minmax(0, 1fr); }
+  .dxs-body { max-width: 68%; }
+}
+
+/* Below 768 the two zones cannot sit side by side; the panel becomes content
    underneath, and the divider turns horizontal. */
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   /* One column cannot hold both zones on one screen, so the page becomes an
      ordinary scrolling document again. */
   /* One column cannot hold both zones on one screen, so the page becomes an
      ordinary scrolling document again. */
   .dx-app { height: auto; overflow: visible; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .sw-content:has(.dx-app) { overflow-y: auto; padding: 0 0 20px; }
+
+  /* The device advice is an absolute notification everywhere else (globals.css)
+     — it scrolls away with the page. The dashboard is the one screen where it
+     stays pinned under the bar, directly above the welcome card, because this
+     is the screen a student lands on and the recommendation is about the whole
+     workspace rather than anything on this page. */
+  .sw-root:has(.dx-app) .dvc-advice { position: fixed; }
   .dx-center, .dx-panel { overflow: visible; height: auto; }
-  .dx-mediarow { flex: none; height: 48px; max-height: none; }
-  .dx-medialist { overflow: visible; }
-  .dx-cal-grid { min-height: 230px; }
-  .dx-event { margin-top: 18px; }
+  .jr-preview { flex: none; min-height: 52px; max-height: none; }
+  .dx-nextlist { overflow: visible; }
 }
 
+/* ══ Social modules ════════════════════════════════════════════════════════
+   Three AfaqWay services that live on social platforms. One card system, one
+   set of dimensions, three accents: the platform brings its colour and its
+   mark, AfaqWay brings the type, the spacing and the frame. Nothing here is a
+   picture of a card — every title, line and button is real markup, and the
+   generated artwork is a single decorative layer underneath it. */
+.dxs-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+
+.dxs-card {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column;
+  min-height: 224px; padding: 16px 17px;
+  background: #fff; border: var(--dx-border); border-radius: var(--dx-radius);
+  box-shadow: var(--dx-shadow);
+}
+/* The artwork slot. Right-anchored and held to a share of the card, so it
+   scales with the column instead of sitting at a fixed size, and it never
+   takes a click — the buttons sit above it. */
+.dxs-art {
+  position: absolute; z-index: 0; right: -6%; top: 50%; transform: translateY(-50%);
+  width: 38%; max-width: 190px; height: auto;
+  opacity: .55; pointer-events: none; user-select: none;
+}
+.dxs-card > *:not(.dxs-art) { position: relative; z-index: 1; }
+
+.dxs-head { display: flex; align-items: center; gap: 9px; }
+.dxs-marks { display: inline-flex; align-items: center; gap: 6px; }
+/* A square frame per platform, the glyph centred in it. The accent lives on
+   one token per card, so the frame, the mark and the CTA all move together
+   when a platform's colour changes. */
+.dxs-mark {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 9px;
+  background: var(--dxs-tint); color: var(--dxs-accent);
+}
+.dxs-mark > svg { display: block; }
+.dxs-platform {
+  font: 600 11px/15px var(--font-sans); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.dxs-title {
+  margin: 11px 0 0; font: 700 15px/20px var(--font-sans);
+  color: var(--ink); letter-spacing: -.015em;
+}
+/* Held clear of the artwork so no line ever runs underneath it. */
+.dxs-body {
+  margin: 6px 0 0; max-width: 64%;
+  font: 400 12px/18px var(--font-sans); color: var(--ink-soft);
+}
+/* Stacked, never side by side: two half-width buttons squeeze their labels
+   and read as one split control rather than two destinations. */
+.dxs-actions { margin-top: auto; padding-top: 13px; display: flex; flex-direction: column; gap: 8px; }
+
+/* One button shape for all four platforms; only the fill changes. Sized to
+   the platform floor of 44px, and never taller on a larger monitor. */
+.dxs-cta {
+  width: 100%; min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 12px; border: none; border-radius: 11px; cursor: pointer;
+  background: var(--dxs-accent); color: #fff; text-decoration: none;
+  font: 700 12.5px/1 var(--font-sans); white-space: nowrap;
+  box-shadow: 0 10px 20px -14px var(--dxs-accent);
+  transition: filter 160ms var(--ease), transform 160ms var(--ease);
+}
+.dxs-cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.dxs-cta:active { transform: translateY(0); }
+.dxs-cta-ico { display: inline-flex; flex: none; }
+/* Not yet linked: visibly inert rather than a live-looking button that does
+   nothing. The word "Soon" is the honest part. */
+.dxs-cta.is-soon {
+  background: #F2F3F8; color: var(--ink-soft); cursor: not-allowed;
+  box-shadow: none;
+}
+.dxs-cta.is-soon:hover { filter: none; transform: none; }
+.dxs-soon {
+  margin-left: 2px; padding: 2px 6px; border-radius: 999px;
+  background: #fff; font: 700 9.5px/13px var(--font-sans);
+  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint);
+}
+/* Locked: the card still sells what is behind the wall. */
+.dxs-locked {
+  flex: 1; margin: 0; display: inline-flex; align-items: center; gap: 6px;
+  font: 600 11.5px/15px var(--font-sans); color: var(--ink-soft);
+}
+.dxs-card:has(.dxs-locked) .dxs-actions { flex-direction: row; align-items: center; }
+.dxs-card:has(.dxs-locked) .dxs-cta { width: auto; flex: 0 0 auto; padding: 0 16px; }
+
+.dxs-whatsapp { --dxs-accent: #1FA855; --dxs-tint: #E6F6EC; }
+.dxs-social   { --dxs-accent: #C6339A; --dxs-tint: #FBEAF5; }
+.dxs-youtube  { --dxs-accent: #D6262B; --dxs-tint: #FDEBEB; }
+
+.dxs-card :is(a, button):focus-visible {
+  outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--dxs-accent);
+}
+
+/* ── In the deck ──────────────────────────────────────────────────────────
+   The last column's swapping stack shows one platform at a time, so each card
+   fills the slot rather than sharing it. Tighter than the three-up row because
+   the slot is narrow: the description gives up a line, the mark, the title and
+   the CTA carry the card. */
+.dxs-deck .dxs-card { height: 100%; padding: 15px 16px; }
+.dxs-deck .dxs-title { margin-top: 9px; font-size: 14px; line-height: 19px; }
+.dxs-deck .dxs-body {
+  margin-top: 5px; max-width: none; font-size: 11.5px; line-height: 17px;
+  /* Three lines, then an ellipsis: the card promises, the destination
+     delivers. Clamping beats a card that grows past its own slot. */
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.dxs-deck .dxs-actions { padding-top: 11px; gap: 7px; }
+.dxs-deck .dxs-cta { height: 42px; font-size: 12px; }
+/* Clear of the dots the deck draws under the stack. */
+.dxs-deck .dxs-card { padding-bottom: 17px; }
+.dxs-deck .dxs-art { width: 34%; opacity: .5; }
+
 /* ══ FRAME 20 · Mobile ═════════════════════════════════════════════════════
-   A deliberate composition, not a shrunk desktop. Order is preserved:
-   header/search · hero · metrics · media · calendar · event · actions. */
+   A deliberate phone composition, not a shrunk desktop. Four frames, in one
+   column, in the order a student needs them:
+
+     01 Welcome     branded and energetic, the strongest thing on the screen
+     02 Progress    compact: how far am I?
+     03 University  structured: where am I going?
+     04 Support     actionable: who can help me?
+
+   One frame system throughout — same radius, padding, border, shadow and CTA
+   height — so the four read as one dashboard while their heights differ with
+   their content. Everything is fluid: no frame carries a fixed width, and none
+   can overflow the viewport sideways. */
 @media (max-width: 767px) {
-  .dx-panel { border-radius: 16px; padding: 4px 16px 18px; }
+  /* ── Canvas ──
+     .sw-shell already gives the page 12px; the extra 3px brings the gutter to
+     15px without touching the shared shell. Nothing here may scroll sideways,
+     and the dashboard scrolls as an ordinary document, exactly like every other
+     module: `visible` drops the nested scroll container the desktop layout
+     needs, so the page itself scrolls instead of a box inside it. */
+  .sw-content:has(.dx-app) { overflow: visible; padding: 0 3px 24px; }
+  .dx-app { height: auto; max-width: 100%; overflow-x: clip; overflow-y: visible; }
+  /* One vertical rhythm for the whole page. */
+  .dx-center { gap: 14px; }
+  .dx-welcome, .dx-metrics { margin-bottom: 0; }
 
-  .dx-ico.sm { width: 40px; height: 40px; }
+  /* The utility panel is a desktop rail: on a phone it is not shown at all. */
+  .dx-panel { display: none; }
 
-  /* Greeting, supporting line, then the CTA — stacked, full width. */
-  .dx-welcome { grid-template-columns: 1fr; min-height: 0; padding: 20px 18px; gap: 16px; }
-  /* Behind stacked copy it would sit under the text, so it moves to the
-     top corner and fades further. */
-  .dx-welcome-mark { top: -14%; right: -16%; height: 170%; transform: none; opacity: .09; }
-  .dx-welcome-title { font-size: clamp(24px, 6.5vw, 28px); gap: 9px; }
-  .dx-welcome-sub { font-size: 13.5px; line-height: 20px; }
-  .dx-cta { justify-self: stretch; width: 100%; height: 52px; }
+  /* ── One frame system ── */
+  .dx-welcome { border-radius: 16px; }
+  .dx-card { border-radius: 16px; padding: 16px 17px; }
 
-  /* Two unequal cards do not fit side by side; the row scrolls instead. */
-  .dx-metrics {
-    display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory;
-    margin: 0 -16px; padding: 0 16px 2px; scrollbar-width: none;
+  /* ── 01 · Welcome ──
+     A slim card: greeting, supporting line, then the CTA straight underneath.
+     Nothing shares a row with anything, so the greeting owns the full width and
+     never wraps, and the student is no longer a column at all — he is a ghost
+     on the right, behind the words.
+     The long paragraph is desktop-only detail: on a phone it would push the
+     card taller for no new information, and the supporting line already
+     carries the message. */
+  .dx-welcome {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start; gap: 0;
+    min-height: 0; padding: 17px;
   }
-  .dx-metrics::-webkit-scrollbar { display: none; }
-  .dx-perf { flex: 0 0 84%; scroll-snap-align: start; }
-  .dx-courses { flex: 0 0 62%; scroll-snap-align: start; }
+  .dx-welcome-text { display: none; }
+  /* One line, always. It is given the full card width and a size that tracks
+     the viewport, so a long first name shrinks the greeting rather than
+     breaking it across two lines. */
+  .dx-welcome-title {
+    flex-wrap: nowrap; white-space: nowrap; min-width: 0;
+    font-size: clamp(16px, 5.3vw, 26px); gap: 8px;
+  }
+  .dx-welcome-anim { white-space: nowrap; }
+  .dx-welcome-sub { margin-top: 6px; font-size: 13.5px; line-height: 19px; }
+  /* Behind stacked copy the line art has to give way further still. */
+  .dx-welcome-bg { opacity: .06; }
+  /* No longer a column: taken out of the grid entirely and laid against the
+     right edge as a second background wash, under the copy and the button. The
+     drop shadow goes with it — a shadow on a layer this faint only muddies the
+     brand fill behind it. */
+  .dx-welcome-figure {
+    position: absolute; z-index: 0;
+    top: 0; right: 0; bottom: 0; left: auto;
+    width: 60%; height: 100%; margin: 0;
+    opacity: .2;
+  }
+  .dx-welcome-figure img {
+    width: 100%; height: 100%;
+    object-fit: contain; object-position: right bottom;
+    filter: none;
+  }
+  /* A button inside the card, centred, with the card's own padding left intact
+     on every side — it never reaches an edge. Slim, and still the full width
+     the padding allows, so it stays an easy target. */
+  .magic-btn {
+    grid-column: 1; justify-self: center;
+    width: 100%; height: 44px; margin-top: 13px;
+  }
 
-  .dx-mediarow { height: 52px; }
+  /* ── 02 · Progress, 03 · University, 04 · Support ──
+     The desktop row becomes a column. `order` puts the university card ahead
+     of support without moving either in the markup, so the desktop row keeps
+     the arrangement it was built with. */
+  .dx-metrics {
+    display: flex; flex-direction: column; gap: 14px;
+    margin: 0; padding: 0; overflow: visible;
+  }
+  .dx-uni { order: 2; }
+  .dx-support { order: 3; }
+
+  /* Progress stays the compact frame of the four: the dials shrink so the card
+     answers its one question inside ~180px instead of ~240px. */
+  .dx-perf-cols { gap: 2px; }
+  .dx-perf-col { gap: 5px; }
+  .dx-perf-col .dx-ring { max-width: 84px; }
+  .dx-perf-sub { font-size: 11.5px; line-height: 15px; }
+
+  /* The university card is wider than it is tall here, so the building shrinks
+     to keep clear of the programme and the facts, and the facts take back the
+     width they were holding for it. */
+  .dx-uni-art { width: 42%; right: -4%; opacity: .34; }
+  .dx-uni-facts { grid-template-columns: minmax(0, 66%); }
+
+  /* Support: the tools shrink, the copy takes back the width it needs, and the
+     composition rides higher so it stays clear of the full-width button. */
+  .dx-support-art { width: 38%; right: -6%; top: 44%; }
+  .dx-support-text { max-width: 68%; }
+  .dx-support-cta { height: 50px; }
+
+  /* Social modules stack, in the order the section declares them: support,
+     student life, learning. Each card takes the full width and its buttons
+     grow to match. */
+  .dxs-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .dxs-card { min-height: 0; padding: 16px 17px; border-radius: 16px; }
+  .dxs-body { max-width: 66%; }
+  .dxs-art { width: 32%; right: -4%; }
+  .dxs-cta { height: 46px; }
+
+  /* The Next Steps frame is a desktop snapshot of the Journey module, which has
+     its own screen on a phone. The four frames above are the mobile dashboard,
+     so the last row is left holding the card deck alone. It sits a little
+     further from Support than the four frames sit from each other, because it
+     is no longer one of them: the extra margin is the seam. */
+  .dx-next { display: none; }
+  .dx-lastrow { display: block; margin-top: 10px; }
+
+  .jr-preview { min-height: 56px; }
   .dx-cal-cell { min-height: 40px; font-size: 13px; }
-  .dx-btn { height: 46px; }
-  .dx-event-acts { gap: 10px; }
 }
 
 /* ══ Reduced motion ════════════════════════════════════════════════════════
@@ -405,7 +751,141 @@
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-  .dx-btn:active { transform: none; }
-  .dx-cta, .dx-wave { animation: none; }
-  .dx-cta:hover { transform: none; }
+  .dx-wave { animation: none; }
+  .magic-btn:hover { transform: none; }
+  .magic-btn .magic-btn__sheen { animation: none; }
+}
+
+/* ══ Ported godui components ═══════════════════════════════════════════════
+   These live in src/components/godui and are styled here so they take the
+   platform's own tokens rather than arriving with a kit's palette. */
+
+/* ── TextAnimate ── */
+.dx-welcome-anim { display: inline-block; }
+
+/* ── MagicButton — the welcome card's CTA ──────────────────────────────────
+   A conic sheen travels the border while the face stays still. The sheen is
+   its own layer, so the button's box never moves and nothing shifts. */
+.magic-btn {
+  position: relative; z-index: 1; justify-self: end; isolation: isolate;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: clamp(180px, 100%, 220px); height: 52px; padding: 2px;
+  border: none; border-radius: 999px; cursor: pointer; overflow: hidden;
+  background: rgba(255, 255, 255, .30);
+  box-shadow: 0 10px 24px -12px rgba(10, 12, 67, .55);
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+.magic-btn__sheen {
+  position: absolute; inset: -160%; z-index: -1;
+  background: conic-gradient(from 0deg, transparent 0 62%, #fff 78%, transparent 92% 100%);
+  animation: magicSpin 3.2s linear infinite;
+}
+@keyframes magicSpin { to { transform: rotate(1turn); } }
+.magic-btn__face {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; height: 100%; border-radius: 999px;
+  background: #fff; color: var(--dx-primary);
+  font: 700 14px/1 var(--font-sans); white-space: nowrap;
+}
+.magic-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -14px rgba(10, 12, 67, .65); }
+.magic-btn:active { transform: translateY(0) scale(.985); }
+.magic-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--dx-primary), 0 0 0 4px #fff; }
+.magic-btn--still .magic-btn__sheen { animation: none; background: rgba(255, 255, 255, .55); }
+.magic-btn--outline .magic-btn__face { background: transparent; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+
+/* ── BorderBeam ────────────────────────────────────────────────────────────
+   A short bead of light running the card's border. `offset-path` traces the
+   card's own rounded rect, so only offset-distance animates — one compositor
+   property, and the card's box is never touched. */
+.beam {
+  position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  border-radius: inherit;
+  /* The mask keeps the glow on the frame instead of washing over the face. */
+  padding: var(--beam-width);
+  -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.beam::after {
+  content: ""; position: absolute;
+  width: var(--beam-size); aspect-ratio: 1;
+  background: radial-gradient(circle, var(--beam-from), var(--beam-to) 45%, transparent 70%);
+  offset-path: rect(0 auto auto 0 round 18px);
+  animation: beamRun var(--beam-duration) linear infinite;
+  animation-delay: var(--beam-delay);
+}
+@keyframes beamRun { to { offset-distance: 100%; } }
+@media (prefers-reduced-motion: reduce) { .beam { display: none; } }
+
+/* ── AvatarGroup — who else is active, in the right panel ── */
+/* Sits under the calendar. Live presence — see ActiveCommunity. */
+.dx-community { flex: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid #F1F2F7; }
+
+/* ── Live community presence ── */
+.lca { display: flex; flex-direction: column; gap: 9px; }
+.lca-title { margin: 0; font: 700 13.5px/19px var(--font-sans); color: var(--ink); letter-spacing: -.01em; }
+.lca-cap {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 500 11px/15px var(--font-sans); color: var(--ink-soft);
+}
+.lca-empty { margin: 0; font: 400 11.5px/17px var(--font-sans); color: var(--ink-soft); }
+/* A slow pulse on the count — the one signal that says this is live rather
+   than a number fetched once. */
+.lca-pulse {
+  width: 7px; height: 7px; border-radius: 999px; flex: none;
+  background: var(--green-soft);
+  animation: lcaPulse 2.4s var(--ease) infinite;
+}
+@keyframes lcaPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(63, 140, 99, .45); }
+  70%      { box-shadow: 0 0 0 6px rgba(63, 140, 99, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .lca-pulse { animation: none; } }
+
+/* The last block, held open for whatever comes next. */
+/* Takes whatever the calendar and the community leave, so the panel always
+   reaches the foot of the frame. */
+.dx-panel-slot {
+  flex: 1; min-height: 72px; margin-top: 14px;
+  border: 1px dashed #DFE2EC; border-radius: 14px; background: #FCFCFE;
+}
+/* Wraps once the community outgrows one row, so a long stack never runs
+   off the edge of the panel. */
+.avgrp { display: flex; align-items: center; flex-wrap: wrap; row-gap: 8px; }
+.avgrp__item:nth-child(n) { margin-left: -9px; }
+.avgrp__item {
+  position: relative; width: 32px; height: 32px; border-radius: 999px; flex: none;
+  margin-left: -9px; display: grid; place-items: center; overflow: visible;
+  background: var(--indigo-tint); box-shadow: 0 0 0 2px #fff;
+  cursor: default;
+}
+.avgrp__item:first-child { margin-left: 0; }
+.avgrp__img { width: 100%; height: 100%; border-radius: 999px; object-fit: cover; display: block; }
+.avgrp__fallback { font: 700 11px/1 var(--font-sans); color: var(--indigo-text); }
+.avgrp__dot {
+  position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; border-radius: 999px;
+  background: var(--green-soft); box-shadow: 0 0 0 2px #fff;
+}
+.avgrp__more {
+  margin-left: -9px; width: 32px; height: 32px; border-radius: 999px; flex: none;
+  display: grid; place-items: center; background: var(--subtle); box-shadow: 0 0 0 2px #fff;
+  font: 700 10.5px/1 var(--font-sans); color: var(--ink-soft);
+}
+
+/* ── CardSwap — the deck beside the media list ── */
+.dx-lastrow { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(210px, 24%, 280px); gap: 14px; }
+.dx-deck { min-width: 0; min-height: 0; display: grid; place-items: center; }
+.cardswap { position: relative; width: 100%; height: 100%; }
+.cardswap__card { position: absolute; inset: 0; }
+.dx-swap { max-height: 100%; }
+.cardswap__dots { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+.cardswap__dot {
+  width: 5px; height: 5px; border-radius: 999px; border: none; padding: 0; cursor: pointer;
+  background: #D6D9E6; transition: background 180ms var(--ease), width 180ms var(--ease);
+}
+.cardswap__dot.on { width: 14px; background: var(--dx-primary); }
+
+@media (max-width: 767px) {
+  .dx-lastrow { grid-template-columns: minmax(0, 1fr); }
+  .dx-deck { min-height: 190px; }
 }

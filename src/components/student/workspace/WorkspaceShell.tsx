@@ -18,6 +18,7 @@ import { MobileNavigationHeader } from "./MobileNavigationHeader";
 import { DeviceAdvice } from "./DeviceAdvice";
 import RightPanel from "./RightPanel";
 import { DashboardWorkspace } from "./dashboard/DashboardWorkspace";
+import { Dock, DockItem } from "@/components/godui/dock";
 import Schedule from "./schedule/Schedule";
 import StudentChat from "@/components/student/StudentChat";
 import { planById } from "@/lib/plans";
@@ -244,17 +245,34 @@ export default function WorkspaceShell({
                 vertically centred, so a pill anchored to the nav would sit at
                 its top edge while the items sat in the middle — the offset
                 only has a fixed relationship to the first item here. */}
-            <div className="sw-nav-items" style={{ "--sw-active-i": miniActiveIndex } as React.CSSProperties}>
-              {/* One pill that slides between items instead of each item
-                  painting its own background, so switching module reads as
-                  movement rather than a hard swap. */}
-              {miniActiveIndex >= 0 && <span className="sw-nav-pill" aria-hidden />}
-              {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
-              {/* Everything above is a place in the journey; below is
-                  everything waiting for the student's attention.
-                  Notifications has no nav entry of its own — the bell in the
-                  top bar (with its popover) is the only way to reach them. */}
-            </div>
+            {sidebarMini ? (
+              /* Collapsed, the rail is a dock: icons magnify under the pointer
+                 and name themselves on hover, which is what makes an icon-only
+                 rail navigable. Expanded, the labels are already there, so the
+                 sliding pill stays. */
+              <Dock className="sw-dock" orientation="vertical">
+                {PRIMARY_NAV.map((n) => (
+                  <DockItem
+                    key={n.id} active={nav === n.id} label={n.label}
+                    onClick={() => navigate(n.id)}
+                  >
+                    {n.icon}
+                  </DockItem>
+                ))}
+              </Dock>
+            ) : (
+              <div className="sw-nav-items" style={{ "--sw-active-i": miniActiveIndex } as React.CSSProperties}>
+                {/* One pill that slides between items instead of each item
+                    painting its own background, so switching module reads as
+                    movement rather than a hard swap. */}
+                {miniActiveIndex >= 0 && <span className="sw-nav-pill" aria-hidden />}
+                {PRIMARY_NAV.map((n) => navItem(n.id, n.label, n.icon))}
+                {/* Everything above is a place in the journey; below is
+                    everything waiting for the student's attention.
+                    Notifications has no nav entry of its own — the bell in the
+                    top bar (with its popover) is the only way to reach them. */}
+              </div>
+            )}
           </nav>
           {/* Always last, always the same target size as a nav item, and
               pushed to the floor by the flexible space above it. */}

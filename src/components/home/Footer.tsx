@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SOCIAL, whatsappLink } from "@/lib/socialLinks";
 
 // href for every footer link (all real routes now, no /soon placeholders)
 const HREF: Record<string, string> = {
@@ -12,13 +13,17 @@ const COLS: { head: string; links: string[] }[] = [
   { head: "Legal", links: ["Terms", "Privacy", "Refunds"] },
 ];
 
-// TikTok URL is still a PLACEHOLDER — swap in the real handle when available.
+/* The handles live in src/lib/socialLinks.ts, which the dashboard's social
+   modules read too — one place to change when an account moves. TikTok there
+   is still marked UNVERIFIED. */
 const SOCIALS: { label: string; href: string; icon: React.ReactNode }[] = [
-  { label: "Instagram", href: "https://www.instagram.com/afaqway.platform/", icon: <InstagramIcon /> },
-  { label: "TikTok", href: "https://tiktok.com/@afaqway", icon: <TikTokIcon /> },
-  { label: "WhatsApp", href: "https://wa.me/212632501155", icon: <WhatsAppIcon /> },
+  { label: "Instagram", href: SOCIAL.instagramUrl, icon: <InstagramIcon /> },
+  { label: "TikTok", href: SOCIAL.tiktokUrl, icon: <TikTokIcon /> },
+  { label: "WhatsApp", href: whatsappLink() ?? "", icon: <WhatsAppIcon /> },
   { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61588760870063", icon: <FacebookIcon /> },
-];
+  /* An account that has not been created yet is dropped, never rendered as an
+     icon that leads nowhere. */
+].filter((sx) => sx.href.startsWith("http"));
 
 const colHead = { font: "600 10.5px/14px var(--font-sans)", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--ink-faint)", marginBottom: 16 };
 const colLink = { display: "block", font: "500 14px/20px var(--font-sans)", color: "var(--ink-soft)", marginTop: 10 };

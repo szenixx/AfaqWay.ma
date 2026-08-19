@@ -1,57 +1,18 @@
 "use client";
 
-/* FRAMES 10–14 — the right utility panel:
-   toolbar · calendar · today's event · two actions.
+/* The right utility panel: calendar · community · an open slot.
 
-   One continuous white column, not a stack of cards. Only the calendar is
-   given real weight; everything else stays compact underneath it. */
+   The header (profile, settings, notifications) and the event block are gone
+   — the shell's own top bar already carries identity and notifications, and
+   the event card duplicated the Schedule module. One continuous white column,
+   with the calendar carrying the weight. */
 
 import { useMemo, useState } from "react";
-import {
-  ChevronLeft, ChevronRight, CircleHelp, Clock3, Bell, Settings as SettingsIcon,
-} from "lucide-react";
-import { UserAvatar } from "@/components/ds";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ActiveCommunity } from "@/components/community/ActiveCommunity";
 import { iso, monthGrid } from "@/lib/schedule";
-import { EVENT, STUDENT } from "./demo";
-import type { WsProfile } from "../Modules";
 
 const WEEK = ["S", "M", "T", "W", "T", "F", "S"];
-
-/* ── FRAME 11 · Toolbar ─────────────────────────────────────────────────── */
-
-function Toolbar({ profile, unread, onNav }: {
-  profile: WsProfile; unread: number; onNav: (id: string) => void;
-}) {
-  return (
-    <header className="dx-tools">
-      <button type="button" className="dx-ico sm" onClick={() => onNav("support")} aria-label="Help">
-        <CircleHelp size={18} />
-      </button>
-      <button type="button" className="dx-ico sm" onClick={() => onNav("overview")} aria-label={`Notifications, ${unread} unread`}>
-        <Bell size={18} />
-        {unread > 0 && <span className="dx-dot" aria-hidden />}
-      </button>
-      <button type="button" className="dx-ico sm" onClick={() => onNav("settings")} aria-label="Settings">
-        <SettingsIcon size={18} />
-      </button>
-
-      <button type="button" className="dx-me" onClick={() => onNav("profile")}>
-        <UserAvatar
-          size={32}
-          user={{
-            id: profile.userId, name: profile.fullName ?? STUDENT.fullName, avatarUrl: profile.avatarUrl,
-            gender: profile.gender, avatarSeed: profile.avatarSeed,
-            avatarStyle: profile.avatarStyle, verified: profile.verified,
-          }}
-        />
-        <span className="dx-me-id">
-          <span className="dx-me-name">{profile.fullName ?? STUDENT.fullName}</span>
-          <span className="dx-me-mail">{profile.email ?? STUDENT.email}</span>
-        </span>
-      </button>
-    </header>
-  );
-}
 
 /* ── FRAME 12 · Calendar ────────────────────────────────────────────────── */
 
@@ -102,41 +63,21 @@ function Calendar({ selected, onSelect }: { selected: Date; onSelect: (d: Date) 
   );
 }
 
-/* ── FRAMES 13–14 · Event and actions ───────────────────────────────────── */
-
-function EventBlock({ onNav }: { onNav: (id: string) => void }) {
-  return (
-    <div className="dx-event">
-      <span className="dx-event-kicker">{EVENT.kicker}</span>
-      <h3 className="dx-event-title">{EVENT.title}</h3>
-      <p className="dx-event-detail">{EVENT.detail}</p>
-
-      <div className="dx-event-meta">
-        <span><Clock3 size={12} />{EVENT.time}</span>
-        <span>{EVENT.duration}</span>
-        <span className="dx-people" aria-label={`${EVENT.people.length} participants`}>
-          {EVENT.people.map((p, i) => <i key={i} aria-hidden>{p}</i>)}
-        </span>
-      </div>
-
-      {/* FRAME 14 — near-equal weight, secondary left, primary right. */}
-      <div className="dx-event-acts">
-        <button type="button" className="dx-btn outline" onClick={() => onNav("schedule")}>Reschedule</button>
-        <button type="button" className="dx-btn primary" onClick={() => onNav("schedule")}>Start meeting</button>
-      </div>
-    </div>
-  );
-}
-
-export function UtilityPanel({ profile, unread, onNav }: {
-  profile: WsProfile; unread: number; onNav: (id: string) => void;
-}) {
+export function UtilityPanel() {
   const [selected, setSelected] = useState(() => new Date());
+
   return (
     <aside className="dx-panel">
-      <Toolbar profile={profile} unread={unread} onNav={onNav} />
       <Calendar selected={selected} onSelect={setSelected} />
-      <EventBlock onNav={onNav} />
+
+      {/* Live presence, global: every country, every plan, students and
+          advisors alike. Reusable component, real roster — see
+          src/components/community/ActiveCommunity.tsx. */}
+      <ActiveCommunity className="dx-community" />
+
+      {/* Held open on purpose — the shape of the panel is settled before what
+          goes here is decided. */}
+      <section className="dx-panel-slot" aria-hidden />
     </aside>
   );
 }
