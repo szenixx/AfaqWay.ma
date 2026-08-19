@@ -339,3 +339,60 @@ anywhere in the file. Inventing them would have been worse than the gap.
 - Stopping to ask cost one question and settled three decisions at once.
 - The answer became a DRAFT stage with no steps: the roadmap has somewhere to
   unlock into, and a student never reaches a blank page.
+
+## Illustration placement is a layout decision, not a decoration (19 Aug 2026)
+Three of the four corrections on the dashboard illustrations were about where an
+image sits, never about the image itself: the student belonged between the copy
+and the CTA rather than pinned to the right edge, cropped to face and upper body
+rather than a full standing figure; the university facts wanted tuition above
+duration, in slimmer frames.
+- A generated asset is approved for its content, not its placement. Propose the
+  placement in words BEFORE cutting and installing the file, because the crop
+  and the export size follow from where it lands.
+- A tall full-body figure in a 200px-high card is always going to read thin. If
+  the maths says the visual will be ~70px wide, say so up front instead of
+  shipping it and waiting for the correction.
+- Facts that a student weighs hardest go on top. Cost before length.
+
+## Generated visuals: never bake in what CSS must own (19 Aug 2026)
+The support card needs a live "online" indicator. Prompting for a green status
+light in the image would have made it a dead pixel, since the brief calls for a
+real animated HTML element.
+- Prompt the generator to LEAVE ROOM for anything that has to move, and say so
+  when presenting the result.
+
+## When a brief lists the sections, ask what gets dropped (19 Aug 2026)
+The mobile dashboard brief named exactly four frames. I kept the utility panel
+and Next Steps below them on the assumption that "do not add sections between
+them" allowed extra sections after them. Two corrections followed: the panel is
+not displayed on mobile, and Next Steps is hidden too.
+- A brief that enumerates the sections is also telling you what is NOT there.
+  When existing sections are missing from that list, ask in one line which are
+  dropped instead of silently keeping them.
+- Hiding is still the right mechanism: `display: none` inside the mobile query,
+  never deleting the component, so desktop keeps every feature.
+
+## A breakpoint is an architecture decision, not a number (19 Aug 2026)
+The platform switched from desktop to mobile at 1023px, so every tablet, and a
+half-size desktop window, got the phone build: sidebar hidden, mobile pill nav,
+panels stacked. That was invisible for months because nobody resized a laptop
+window below 1024.
+- Grep the breakpoint census before touching responsive CSS:
+  `grep -rhoE "max-width: ?[0-9]+px" src/app/*.css | sort | uniq -c | sort -rn`
+  The counts tell you which numbers are load-bearing.
+- Separate MODE switches (nav disappears, page restructures) from COMPONENT
+  adjustments (a 2-col row becomes 1-col). Only mode switches belong on the
+  one global boundary; component adjustments can sit anywhere.
+- After moving a boundary, re-audit every query that now lands on the OTHER
+  side of it. Rules written for "mobile" at 820/860/900px suddenly fire while
+  the desktop shell is on screen.
+
+## vw/vh in chrome is a slow leak (19 Aug 2026)
+`clamp(300px, 23vw, 372px)` looks disciplined and is not: it grows the panel
+continuously from 1304px to 1617px of viewport, so a 1366 laptop and a 1920
+monitor render different products.
+- Fix by pinning to the value the clamp already produced at the design
+  baseline, so the baseline is untouched and only the growth stops.
+- `vw`/`vh` are legitimate for the app shell and inside `max-width`/`min()`
+  overflow guards. They are not legitimate for type, padding, control heights
+  or panel widths.

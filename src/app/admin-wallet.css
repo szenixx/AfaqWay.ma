@@ -1,0 +1,420 @@
+/* ══ Admin Wallet — HeroUI, wearing AfaqWay ════════════════════════════════
+
+   The theme lives in admin-overview.css: `.afq-hui` declares every semantic
+   token HeroUI reads, and this page wears the same class, so the two pages
+   cannot drift apart on colour, radius or depth. Only layout lives here.
+
+   Spacing contract, shared with the Overview:
+     outer 20px · section 16px · card gap 14px · card pad 16px.
+
+   One screen, fixed. The only thing that scrolls is the transactions table
+   inside its own card.                                                       */
+
+.wa-root {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 16px;
+  /* Same frame as .ao-root: the shell's 22px either side plus the 4px
+     .adm-main leaves, so the two pages sit in an identical box. */
+  height: calc(var(--adm-vh, 100vh) - 52px);
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 26px;
+  box-shadow: 0 20px 54px rgba(23, 35, 58, .12);
+  font-family: var(--font-sans);
+}
+/* .adm-main pads 32px at the foot for scrolling pages; this one does not
+   scroll, so that padding would push the frame off-screen. */
+.adm-main:has(.wa-root) { padding: 4px; }
+.wa-head, .wa-summary, .wa-kpis, .wa-content { min-height: 0; }
+
+/* ══ Header ════════════════════════════════════════════════════════════════ */
+.wa-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 48px;
+}
+.wa-head-title {
+  margin: 0; font: 700 19px/25px var(--font-sans);
+  color: #17233A; letter-spacing: -.02em;
+}
+.wa-head-sub { margin: 2px 0 0; font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+.wa-head-actions { display: flex; align-items: center; gap: 9px; flex: none; }
+
+/* ══ Summary row ═══════════════════════════════════════════════════════════
+   Two separate cards, stretched to the same height: the money, and the targets
+   it is measured against. The brand fill belongs to the revenue alone — the
+   goals card stays white like the rest of the page. */
+.wa-summary { display: grid; grid-template-columns: 62fr 38fr; gap: 16px; align-items: stretch; }
+
+/* ── Approved revenue — the one card carrying the brand fill ── */
+.afq-hui .wa-hero {
+  display: flex; flex-direction: column; gap: 14px;
+  min-height: 132px; padding: 16px 20px 15px;
+  border: none; border-radius: 16px;
+  background: linear-gradient(104deg, #3B41C9 0%, #3B41C9 54%, #1C328B 100%);
+  box-shadow: 0 16px 36px -24px rgba(59, 65, 201, .95);
+}
+/* The lockup, top-left: mark, hairline, wordmark. */
+.wa-hero-brand { display: flex; align-items: center; gap: 9px; }
+.wa-hero-glyph { width: 17px; height: 17px; flex: none; }
+.wa-hero-brand-sep { width: 1px; height: 13px; background: rgba(255,255,255,.30); }
+.wa-hero-brand-name {
+  font: 700 12px/16px var(--font-sans); color: #fff;
+  letter-spacing: .01em;
+}
+
+/* The figure and its three qualifiers share one row. */
+.wa-hero-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 22px; flex: 1; min-width: 0;
+}
+.wa-hero-main { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.wa-hero-ico {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 13px;
+  background: rgba(255, 255, 255, .16); color: #fff;
+}
+.wa-hero-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wa-hero-label {
+  font: 600 11px/15px var(--font-sans); letter-spacing: .05em;
+  text-transform: uppercase; color: rgba(255, 255, 255, .74);
+}
+.wa-hero-value {
+  font: 700 30px/36px var(--font-sans); color: #fff;
+  letter-spacing: -.025em; font-variant-numeric: tabular-nums;
+}
+.wa-hero-note { font: 400 11.5px/16px var(--font-sans); color: rgba(255, 255, 255, .66); }
+
+/* Three qualifying figures, divided by hairlines rather than boxed. */
+.wa-hero-side { display: flex; align-items: stretch; gap: 22px; flex: none; }
+.wa-hero-fig {
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  padding-left: 22px; border-left: 1px solid rgba(255, 255, 255, .18);
+}
+.wa-hero-fig:first-child { padding-left: 0; border-left: none; }
+.wa-hero-fig-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 500 11px/15px var(--font-sans); color: rgba(255, 255, 255, .70);
+  white-space: nowrap;
+}
+.wa-hero-fig-value {
+  font: 700 16px/21px var(--font-sans); color: #fff;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* The one chip that sits on the brand gradient. HeroUI's soft warning fill is
+   a pale gold on pale gold — legible on white, muddy on this card — so it goes
+   solid white with the tertiary as its ink, the strongest contrast the palette
+   allows here. */
+/* Three qualifying lines under a hairline: context for the figure, at a
+   weight that cannot compete with it. */
+.wa-hero-facts {
+  list-style: none; margin: 0; padding: 11px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, .16);
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+}
+.wa-hero-facts li { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wa-hero-fact-k {
+  font: 500 9.5px/13px var(--font-sans); letter-spacing: .06em;
+  text-transform: uppercase; color: rgba(255, 255, 255, .58);
+}
+.wa-hero-fact-v {
+  font: 600 11.5px/16px var(--font-sans); color: rgba(255, 255, 255, .94);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.afq-hui .wa-hero .wa-chip-xs {
+  background: #FFFFFF;
+  color: #1C328B;
+  border-color: transparent;
+  font: 700 9px/13px var(--font-sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding-inline: 6px;
+}
+
+
+/* ── Revenue goals ── */
+/* A brand-coloured stroke ties it to the revenue card beside it without
+   taking the fill: the money keeps that on its own. */
+.afq-hui .wa-goals-card {
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 132px; padding: 15px 17px; border-radius: 16px;
+  border: 1.5px solid var(--accent);
+  box-shadow: 0 1px 2px rgba(59, 65, 201, .05), 0 12px 28px -22px rgba(59, 65, 201, .55);
+}
+.wa-goals-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wa-goals-title { font: 600 13.5px/18px var(--font-sans); color: #17233A; }
+.wa-goals-sub { font: 400 11px/15px var(--font-sans); color: #8695AB; }
+.wa-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wa-goal-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wa-goal-name { font: 500 11.5px/16px var(--font-sans); color: #17233A; }
+.wa-goal-val {
+  font: 700 11.5px/16px var(--font-sans); color: #17233A;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.wa-goal-val i { font: 500 10.5px/15px var(--font-sans); color: #8695AB; font-style: normal; }
+.afq-hui .wa-goals-card .wa-bar { margin-top: 4px; }
+.afq-hui .wa-goals-card .wa-sep { margin: 2px 0 0; }
+
+/* ══ KPI row ═══════════════════════════════════════════════════════════════ */
+.wa-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.afq-hui .wa-kpi {
+  min-height: 84px; padding: 14px 16px; gap: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.afq-hui .wa-kpi:hover {
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--border));
+  box-shadow: 0 1px 2px rgba(23,35,58,.03), 0 12px 26px -18px rgba(23,35,58,.28);
+  transform: translateY(-1px);
+}
+.wa-kpi-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.wa-kpi-label {
+  font: 500 11px/15px var(--font-sans); color: #5A6B85;
+  letter-spacing: .02em; min-width: 0;
+}
+.wa-kpi-ico {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 8px;
+}
+.wa-kpi-bottom { display: flex; align-items: baseline; gap: 8px; }
+.wa-kpi-value {
+  font: 700 19px/25px var(--font-sans); color: #17233A;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.wa-kpi-value i { font: 500 11.5px/16px var(--font-sans); color: #5A6B85; font-style: normal; }
+
+/* Semantic accents live in the icon tile only, so the surfaces stay neutral. */
+.wa-t-accent  .wa-kpi-ico { background: rgba(59,65,201,.10);  color: #3B41C9; }
+.wa-t-success .wa-kpi-ico { background: rgba(63,140,99,.12);  color: #256B49; }
+.wa-t-warning .wa-kpi-ico { background: rgba(176,121,11,.12); color: #B0790B; }
+.wa-t-danger  .wa-kpi-ico { background: rgba(178,59,39,.12);  color: #B23B27; }
+.wa-t-purple  .wa-kpi-ico { background: rgba(107,75,168,.12); color: #6B4BA8; }
+
+/* ══ Content grid ══════════════════════════════════════════════════════════ */
+.wa-content { display: grid; grid-template-columns: 66fr 34fr; gap: 16px; align-items: stretch; }
+.afq-hui .wa-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.afq-hui .wa-card-head {
+  flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+
+/* ── Transactions ── */
+.wa-filters { display: flex; align-items: center; gap: 8px; flex: none; }
+.afq-hui .wa-search .input-group { height: 34px; }
+.afq-hui .wa-search input { width: 190px; font-size: 12px; }
+.afq-hui .wa-select { width: 140px; }
+.afq-hui .wa-select .select__trigger { height: 34px; font-size: 12px; }
+
+/* The one thing on the page allowed to scroll. */
+.afq-hui .wa-table-wrap { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.afq-hui .wa-table th {
+  font: 600 10.5px/14px var(--font-sans); letter-spacing: .05em;
+  text-transform: uppercase; color: #8695AB; height: 40px;
+}
+.afq-hui .wa-table td { height: 56px; font: 500 12.5px/17px var(--font-sans); color: #17233A; }
+.afq-hui .wa-trow { cursor: pointer; }
+.wa-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.wa-person-id { display: flex; flex-direction: column; min-width: 0; }
+.wa-person-name {
+  font: 600 12.5px/17px var(--font-sans); color: #17233A;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wa-person-meta { font: 400 10.5px/14px var(--font-sans); color: #8695AB; }
+.wa-type {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 600 11.5px/16px var(--font-sans); color: #5A6B85;
+}
+.wa-type.is-credit { color: #256B49; }
+.afq-hui .wa-amount { font-variant-numeric: tabular-nums; font-weight: 600; }
+.afq-hui .wa-amount.is-credit { color: #256B49; }
+.afq-hui .wa-nums { font-variant-numeric: tabular-nums; color: #5A6B85; }
+.afq-hui .wa-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; color: #8695AB; letter-spacing: -.02em;
+}
+.wa-tx-foot { padding-top: 10px; }
+.afq-hui .wa-pager { width: 100%; }
+.afq-hui .pagination__summary { font: 500 11px/15px var(--font-sans); color: #8695AB; }
+
+/* ── Right column ── */
+.wa-side { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 14px; min-height: 0; }
+.afq-hui .wa-side-card { min-height: 0; }
+.afq-hui .wa-side-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+.wa-queue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.wa-queue-row {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border: none; background: none; cursor: pointer; text-align: left;
+  border-bottom: 1px solid var(--separator);
+}
+.wa-queue li:last-child .wa-queue-row { border-bottom: none; }
+.wa-queue-row:hover .wa-queue-name { color: #3B41C9; }
+.wa-queue-ini {
+  flex: none; width: 30px; height: 30px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(176,121,11,.12); color: #B0790B;
+  font: 700 11px/1 var(--font-sans);
+}
+.wa-queue-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.wa-queue-name {
+  font: 600 12.5px/17px var(--font-sans); color: #17233A;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color 150ms ease;
+}
+.wa-queue-meta { font: 400 10.5px/15px var(--font-sans); color: #8695AB; }
+
+/* ── Payment-method donut ──
+   The chart sits beside its legend rather than above it: the card is narrow
+   and tall is the dimension it cannot spare. */
+/* The ring leads, the roster reads underneath it: at this size the two cannot
+   sit side by side in a column this narrow without squeezing the names. */
+.wa-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.wa-donut { position: relative; flex: none; width: 136px; height: 136px; }
+.wa-donut-mid {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px; pointer-events: none;
+}
+.wa-donut-num {
+  font: 700 22px/27px var(--font-sans); color: #17233A;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.wa-donut-cap {
+  font: 500 9.5px/13px var(--font-sans); letter-spacing: .05em;
+  text-transform: uppercase; color: #8695AB;
+}
+/* Two columns, because the roster is every supported method rather than only
+   the used ones — six of them stacked would be taller than the card. */
+.wa-legend {
+  width: 100%; min-width: 0; list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+}
+.wa-legend li { display: flex; align-items: center; gap: 7px; min-width: 0; }
+/* Supported but not yet used, or not switched on: present, and visibly quiet. */
+.wa-legend li.is-idle { opacity: .55; }
+.wa-legend-dot { flex: none; width: 8px; height: 8px; border-radius: 3px; }
+.wa-legend-name {
+  flex: 1; min-width: 0; font: 500 11.5px/16px var(--font-sans); color: #17233A;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wa-legend-pct {
+  flex: none; font: 600 11.5px/16px var(--font-sans); color: #5A6B85;
+  font-variant-numeric: tabular-nums;
+}
+
+.wa-methods, .wa-goals {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 11px;
+}
+.wa-method-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wa-method-name { font: 500 12px/16px var(--font-sans); color: #17233A; }
+.wa-method-pct {
+  font: 600 11px/15px var(--font-sans); color: #5A6B85;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.afq-hui .wa-bar { margin-top: 5px; }
+.afq-hui .wa-sep { margin: 12px 0; }
+.wa-figures { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wa-goals-card .wa-figures { margin-top: auto; padding-top: 2px; }
+.wa-figures dt { font: 400 10.5px/14px var(--font-sans); color: #8695AB; }
+.wa-figures dd {
+  margin: 2px 0 0; font: 700 13px/18px var(--font-sans);
+  color: #17233A; font-variant-numeric: tabular-nums;
+}
+
+/* ── States ── */
+.wa-rows-skel { display: flex; flex-direction: column; gap: 8px; padding: 2px 0; }
+.wa-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 26px 16px; text-align: center; color: #8695AB;
+}
+.wa-empty p { margin: 0; font: 400 12px/17px var(--font-sans); }
+.wa-empty-ok { color: #256B49; }
+
+/* ── Details modal ── */
+.afq-hui .wa-modal-ico { background: rgba(59,65,201,.10); color: #3B41C9; }
+.wa-modal-amount { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wa-modal-value {
+  font: 700 24px/30px var(--font-sans); color: #17233A;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.wa-modal-value.is-credit { color: #256B49; }
+.wa-modal-rows { margin: 0; display: flex; flex-direction: column; gap: 9px; }
+.wa-modal-rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.wa-modal-rows dt { font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+.wa-modal-rows dd {
+  margin: 0; font: 600 12.5px/17px var(--font-sans); color: #17233A;
+  text-align: right; min-width: 0;
+}
+.wa-modal-foot { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ══ Narrow desktop · 768–1279 ═════════════════════════════════════════════
+   Tablets are desktop here, per the platform's responsive contract. The page
+   keeps its architecture; the columns just stop being viable side by side. */
+@media (max-width: 1279px) {
+  .wa-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wa-content { grid-template-columns: 60fr 40fr; }
+  .wa-summary { grid-template-columns: 58fr 42fr; }
+  .afq-hui .wa-search input { width: 130px; }
+  .afq-hui .wa-select { width: 118px; }
+}
+@media (max-width: 1023px) {
+  /* Too narrow to hold two columns of finance data, so the page gives up the
+     fixed frame and scrolls as an ordinary document. */
+  .wa-root { height: auto; overflow: visible; }
+  .adm-main:has(.wa-root) { padding: 4px 4px 32px; }
+  .wa-summary, .wa-content { grid-template-columns: minmax(0, 1fr); }
+  .wa-side { grid-template-rows: none; }
+  .afq-hui .wa-table-wrap, .afq-hui .wa-side-body { overflow: visible; }
+  .wa-hero { flex-wrap: wrap; }
+}
+
+/* ══ Mobile · ≤767 ═════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  .wa-root { padding: 14px; border-radius: 18px; gap: 14px; }
+  .wa-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .wa-head-actions { width: 100%; }
+
+  /* The hero stacks: the figure first, its qualifiers under it. */
+  .afq-hui .wa-hero { flex-direction: column; align-items: flex-start; gap: 16px; padding: 17px; }
+  .wa-hero-side { width: 100%; gap: 0; justify-content: space-between; }
+  .wa-hero-fig { padding-left: 12px; }
+  .wa-hero-fig:first-child { padding-left: 0; }
+  .wa-hero-value { font-size: 25px; line-height: 31px; }
+  .wa-hero-facts { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .wa-hero-facts li { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+  .wa-summary { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .wa-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .wa-content { gap: 14px; }
+
+  /* Filters wrap to their own row and take the full width rather than
+     squeezing three controls onto one line. */
+  .afq-hui .wa-card-head { flex-direction: column; align-items: stretch; }
+  .wa-filters { flex-wrap: wrap; }
+  .afq-hui .wa-search { flex: 1 1 100%; }
+  .afq-hui .wa-search input { width: 100%; }
+  .afq-hui .wa-select { flex: 1 1 0; width: auto; }
+
+  /* A six-column ledger cannot survive a phone. The row becomes a stacked
+     record: who and how much on the first line, the rest beneath it. */
+  .afq-hui .wa-table thead { display: none; }
+  .afq-hui .wa-table tr {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 10px;
+    padding: 11px 2px; border-bottom: 1px solid var(--separator);
+  }
+  .afq-hui .wa-table td { height: auto; padding: 0; border: none; }
+  .afq-hui .wa-table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .afq-hui .wa-table td:nth-child(3) { grid-column: 2; grid-row: 1; text-align: right; }
+  .afq-hui .wa-table td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .afq-hui .wa-table td:nth-child(4) { grid-column: 2; grid-row: 2; justify-self: end; }
+  /* Date and reference are lookup detail: the modal carries them. */
+  .afq-hui .wa-table td:nth-child(5), .afq-hui .wa-table td:nth-child(6) { display: none; }
+
+  .wa-donut { width: 120px; height: 120px; }
+  .wa-figures { grid-template-columns: 1fr 1fr; }
+  .afq-hui .pagination__summary { display: none; }
+}

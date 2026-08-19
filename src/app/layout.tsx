@@ -11,6 +11,9 @@ import "./globals.css";
 /* The dashboard's own sheet. Imported here rather than @import-ed from
    globals.css so Turbopack tracks it as its own entry and hot-reloads it. */
 import "./dashboard.css";
+/* The admin Overview's HeroUI theme + layout, scoped to `.afq-hui`. */
+import "./admin-overview.css";
+import "./admin-wallet.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 

@@ -123,12 +123,12 @@ const AFAQ_ACCOUNT = { beneficiary: "Abel SARL", rib: "007201000814730040057065"
 // Static config (logo, kind, brand color). Availability + account details can be
 // overridden from the payment_methods table by the super-admin (see catalog usage).
 export const PAY_METHODS: PayMethod[] = [
-  { id: "cashplus", name: "Cash Plus", desc: "Pay cash at any Cash Plus agency", kind: "manual", available: true, recommended: true, logoSrc: "/pay/cashplus.png", color: "#F58220", account: { beneficiary: "Abderrahmane Almoustansir" } },
+  { id: "cashplus", name: "Cash Plus", desc: "Pay cash at any Cash Plus agency", kind: "manual", available: true, recommended: true, logoSrc: "/pay/cashplus.png", color: "#A6C21B", account: { beneficiary: "Abderrahmane Almoustansir" } },
   { id: "attijari", name: "Attijariwafa Bank", desc: "Bank transfer or deposit", kind: "manual", available: true, logoSrc: "/pay/attijari.png", color: "#E9761E", account: AFAQ_ACCOUNT },
-  { id: "simple", name: "Simple", desc: "Transfer via Simple", kind: "manual", available: true, logoSrc: "/pay/simple.png", color: "#3B41C9", account: AFAQ_ACCOUNT },
-  { id: "bank", name: "Bank Transfer", desc: "Transfer from any bank", kind: "manual", available: true, logoSrc: "/pay/bank.png", color: "#3A6EA5", account: AFAQ_ACCOUNT },
-  { id: "paypal", name: "PayPal", desc: "Instant online payment", kind: "instant", available: false, logoSrc: "/pay/paypal.svg", color: "#003087" },
-  { id: "card", name: "Credit / Debit Card", desc: "Visa or Mastercard", kind: "instant", available: false, logoSrc: "/pay/card.png", color: "#1A1F71" },
+  { id: "simple", name: "Simple", desc: "Transfer via Simple", kind: "manual", available: true, logoSrc: "/pay/simple.png", color: "#7A3BE8", account: AFAQ_ACCOUNT },
+  { id: "bank", name: "Bank Transfer", desc: "Transfer from any bank", kind: "manual", available: true, logoSrc: "/pay/bank.png", color: "#16305C", account: AFAQ_ACCOUNT },
+  { id: "paypal", name: "PayPal", desc: "Instant online payment", kind: "instant", available: false, logoSrc: "/pay/paypal.svg", color: "#0070BA" },
+  { id: "card", name: "Credit / Debit Card", desc: "Visa or Mastercard", kind: "instant", available: false, logoSrc: "/pay/card.png", color: "#15171C" },
 ];
 
 export const methodById = (id: string | null | undefined) => PAY_METHODS.find((m) => m.id === id) ?? null;

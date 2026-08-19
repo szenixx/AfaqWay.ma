@@ -2,7 +2,8 @@
 
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useReviewAlerts } from "@/lib/reviewAlerts";
-import { BrandLogo, Pill, Toaster, Status, Portal } from "@/components/ds";
+import { BrandLogo, Pill, Toaster, Status, Portal, AnimatedModal, DialogHead, DialogFoot } from "@/components/ds";
+import { JrButton } from "@/components/student/workspace/journey/parts";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
@@ -19,8 +20,8 @@ import UserManagement from "@/components/admin/UserManagement";
 import AdminChat from "@/components/admin/AdminChat";
 import { JourneyManager } from "@/components/admin/journey/JourneyManager";
 import { JourneyApprovals } from "@/components/admin/journey/JourneyApprovals";
-import OverviewGrid from "@/components/admin/dashboard/OverviewGrid";
-import WalletGrid from "@/components/admin/dashboard/WalletGrid";
+import AdminOverview from "@/components/admin/dashboard/overview/AdminOverview";
+import AdminWallet from "@/components/admin/dashboard/wallet/AdminWallet";
 import { Flag } from "@/components/ds";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
@@ -95,6 +96,7 @@ function PasscodeGate({ onPass, onLogout }: { onPass: () => void; onLogout: () =
         <div style={{ height: 20, marginTop: 12, font: "500 13px/20px var(--font-sans)", color: err ? "var(--red)" : "var(--ink-faint)" }}>{checking ? "Checking…" : err}</div>
         <button type="button" onClick={onLogout} style={{ marginTop: 8, background: "none", border: "none", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink-faint)" }}>Log out</button>
       </div>
+
     </div>
   );
 }
@@ -317,6 +319,7 @@ export default function AdminPage() {
   /* Administrators appear online to everyone else as well. */
   usePresenceBroadcast(meId, { name: email || null, role: "admin" });
   const [highlightPayment, setHighlightPayment] = useState<string | null>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ LT: true });
   const [chatUnread, setChatUnread] = useState(false);
   const pageRef = useRef(page);
@@ -488,7 +491,7 @@ export default function AdminPage() {
           {/* Footer group: account + logout */}
           <div className="adm-foot">
             {!collapsed && <div style={{ font: "400 11px/15px var(--font-sans)", color: "var(--ink-faint)", padding: "2px 12px 4px", wordBreak: "break-all" }}>{email}</div>}
-            <button type="button" onClick={() => logout(router)} title={lbl("Log out")} className={cls(false, "danger")}>
+            <button type="button" onClick={() => setConfirmSignOut(true)} title={lbl("Log out")} className={cls(false, "danger")}>
               <span className="adm-item-ico"><LogOut size={16} /></span>
               {!collapsed && "Log out"}
             </button>
@@ -496,8 +499,33 @@ export default function AdminPage() {
         </aside>
 
         <main className="adm-main">
-          {page === "dash-overview" ? <div className="dash-embed"><OverviewGrid /></div>
-            : page === "dash-wallet" ? <div className="dash-embed"><WalletGrid /></div>
+          {page === "dash-overview" ? (
+            <AdminOverview
+              isSuper={isSuper}
+              onNav={(target, id) => {
+                /* Every action on the Overview lands somewhere real. */
+                /* A student row opens that student's conversation — the one
+                   admin surface that takes a user id directly. */
+                if (target === "users") { if (id) openChat(id); else setPage("users"); }
+                else if (target === "chat") setPage("chat");
+                else if (target === "admins") setPage("admins");
+                /* A receipt row opens the Payment Reviews page focused on
+                   that exact receipt — the page already supports highlighting. */
+                else if (target === "reviews") { if (id) setHighlightPayment(id); setPage("reviews"); }
+                else if (target === "signout") setConfirmSignOut(true);
+              }}
+            />
+          )
+            : page === "dash-wallet" ? (
+              <AdminWallet
+                onNav={(target, id) => {
+                  /* The same destinations the Overview uses, so a receipt row
+                     behaves identically on both pages. */
+                  if (target === "users") { if (id) openChat(id); else setPage("users"); }
+                  else if (target === "reviews") { if (id) setHighlightPayment(id); setPage("reviews"); }
+                }}
+              />
+            )
             : page === "reviews" ? <PaymentReviews highlightId={highlightPayment} onHighlightDone={() => setHighlightPayment(null)} />
             : page === "admins" ? <AdminManagement />
             : page === "methods" ? <PaymentMethodsAdmin />
@@ -523,6 +551,24 @@ export default function AdminPage() {
             : <Placeholder title={[...PAGES, ...ALL_SUB_PAGES].find((p) => p.id === page)?.label ?? page} />}
         </main>
       </div>
+
+      {/* One sign-out confirmation for the whole admin console — raised by the
+          sidebar's Log out and by the Overview header alike, so the action
+          never fires on a stray click and looks the same either way. */}
+      {confirmSignOut && (
+        <AnimatedModal ariaLabel="Sign out" className="dlg" open onClose={() => setConfirmSignOut(false)}>
+          <DialogHead title="Sign out of the admin console?">
+            You will need to sign in and re-enter the passcode to get back in. Nothing you have
+            reviewed or changed is lost.
+          </DialogHead>
+          <DialogFoot>
+            <JrButton size="md" tone="quiet" onClick={() => setConfirmSignOut(false)}>Stay signed in</JrButton>
+            <JrButton icon={<LogOut size={15} />} size="md" tone="danger" onClick={() => void logout(router)}>
+              Sign out
+            </JrButton>
+          </DialogFoot>
+        </AnimatedModal>
+      )}
     </div>
   );
 }

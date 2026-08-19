@@ -205,7 +205,7 @@ export function MiniTable<T>({ cols, rows, render }: { cols: string[]; rows: T[]
 
 // ── Live data hooks ──────────────────────────────────────────────────────────
 type Student = { id: string; full_name: string | null; destination_country: string | null; plan: string | null; created_at: string; plan_status: string | null };
-type Payment = { id: string; user_id: string; plan: string; amount: number; method: string; status: string; created_at: string };
+export type Payment = { id: string; user_id: string; plan: string; amount: number; method: string; status: string; created_at: string };
 
 export type OverviewData = ReturnType<typeof useOverviewData>;
 export function useOverviewData() {
@@ -290,6 +290,14 @@ export function useWalletData() {
       methodDist: Object.entries(byMethod).map(([m, v]) => ({ label: m, value: v })),
       revenueByCountry,
       revenueSeries: months.map((d) => ({ label: d.toLocaleString("en-US", { month: "short" }), value: approved.filter((p) => { const c = new Date(p.created_at); return c.getMonth() === d.getMonth() && c.getFullYear() === d.getFullYear(); }).reduce((s, p) => s + (p.amount || 0), 0) })),
+      /* The full window the query pulled, so the wallet can filter, page and
+         inspect without a second round trip. `recent` stays for the callers
+         that only ever wanted the head of it. */
+      all: payments,
+      /* Destination per student, so a caller can filter by country without
+         re-reading profiles. Country-agnostic by construction: it is whatever
+         destinations the data actually holds. */
+      countryOf,
       recent: payments.slice(0, 12),
       pendingRows: payments.filter((p) => p.status === "under_review").slice(0, 8),
     };
