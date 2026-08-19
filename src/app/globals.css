@@ -1,5 +1,54 @@
 @import "./ds.css";
 
+/* ══ RESPONSIVE CONTRACT ═══════════════════════════════════════════════════
+   The single source of truth for how this platform responds to screen size.
+   Read this before adding a media query anywhere in the codebase.
+
+   TWO MODES, ONE BOUNDARY
+
+     <= 767px    MOBILE     phone. A deliberate composition, never a squeezed
+                            desktop: mobile navigation, stacked sections,
+                            full-width cards, utility panels moved below or
+                            dropped.
+     >= 768px    DESKTOP    everything else, TABLETS INCLUDED. An iPad is a
+                            small desktop, not a large phone: it keeps the
+                            sidebar, the desktop header, the desktop page
+                            structure, tables and side panels.
+
+   There is no third, tablet-specific design system. 768px is the only place
+   the architecture changes. Write `max-width: 767px` for phone rules and
+   `min-width: 768px` for desktop ones, and nothing else.
+
+   NARROW-DESKTOP ADJUSTMENTS
+
+   A component that genuinely cannot hold its desktop shape in a narrow
+   desktop window may adjust inside the desktop mode, at 1279px or 1023px.
+   That is a component adjustment, not a mode switch: the shell, the
+   navigation and the page architecture stay desktop on both sides of it.
+
+   DESKTOP SCALE IS FIXED, NOT FLUID
+
+   The baseline is 1440x900. Above it the UI does not grow: 1366, 1920 and
+   2560 all show the same button heights, type sizes, icon sizes, sidebar
+   width and card proportions. Extra width becomes whitespace and room for
+   content, never a bigger interface.
+
+   So, in desktop rules: no `vw`/`vh` sizing of chrome — no viewport-scaled
+   type, padding, control heights, icons, panel or sidebar widths. Use fixed
+   px, or `%`/`fr` of a container that is itself bounded. `vw`/`vh` are for
+   the application shell and for `max-width`/`min()` overflow guards only.
+
+   Fluid type IS allowed on mobile, where a phone's width genuinely varies
+   from 320 to 430 and a heading has to fit either way.
+
+   COMPONENT FLOORS
+
+     buttons   44-52px tall, on every screen size
+     icons     20-28px desktop, 20-26px mobile
+     cards     fixed proportions on desktop, fluid width on mobile
+     never     horizontal page overflow, at any width from 320px up
+   ═════════════════════════════════════════════════════════════════════════ */
+
 *,
 *::before,
 *::after {
@@ -47,7 +96,7 @@ body {
    skipped. Also stops .ex-node.current's infinite box-shadow pulse, a
    continuous repaint for as long as Explore stays open. Desktop keeps every
    animation exactly as it was. */
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .rp-card, .ex-stat, .ex-exp-body, .ex-city, .jr-stage-body { animation: none; }
   .ex-node.current { animation: none; }
 }
@@ -330,14 +379,20 @@ a {
    Hidden outright above the mobile breakpoint: on a desktop the advice is
    not just irrelevant, it is wrong. */
 .dvc-advice { display: none; }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   :root { --dvc-advice-h: 46px; }
   .dvc-advice {
     /* Above page content, deliberately below the hamburger dropdown (20)
        and the notification popover (60): both open from the bar directly
        over this strip, and an advisory should never cover a menu the
-       student just opened. */
-    position: fixed; top: var(--mnav-clear); left: 12px; right: 12px; z-index: 10;
+       student just opened.
+
+       Absolute, not fixed, so on an ordinary module it behaves like a
+       notification: it sits at the top of the page, and scrolling past it
+       leaves it behind rather than carrying it down the whole screen. The
+       dashboard opts back into pinning — see dashboard.css, where the
+       advice is the first thing above the welcome card and stays put. */
+    position: absolute; top: var(--mnav-clear); left: 12px; right: 12px; z-index: 10;
     display: flex; align-items: center; gap: 10px;
     padding: 8px 13px; border-radius: 14px;
     background: var(--red-tint); border: 1px solid var(--red-line);
@@ -426,7 +481,7 @@ a {
    continuously and exclusively (every other workspace page was unaffected).
    Runs once on mount instead of looping — same watermark, same settle-in,
    just not forever. Desktop keeps the original infinite breathing loop. */
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .stu-chat-texture::before { animation: afChatMark 900ms ease-out 1 both; }
 }
 /* phone-only chrome: hidden on desktop */
@@ -601,9 +656,9 @@ a {
 
 .dash-card { background: rgba(255,255,255,.5); backdrop-filter: blur(26px) saturate(1.8); -webkit-backdrop-filter: blur(26px) saturate(1.8); border: 1px solid rgba(255,255,255,.6); border-radius: 22px; box-shadow: 0 10px 30px rgba(23,35,58,.1), inset 0 1px 0 rgba(255,255,255,.75); display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; transition: box-shadow .2s ease, transform .2s ease; }
 .dash-card:hover { box-shadow: 0 18px 42px rgba(23,35,58,.16), inset 0 1px 0 rgba(255,255,255,.85); transform: translateY(-1px); }
-.dash-card-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: clamp(10px, 1.4vh, 15px) clamp(12px, 1.4vw, 16px) 6px; }
-.dash-card-body { flex: 1; min-height: 0; padding: 6px clamp(12px, 1.4vw, 16px) clamp(10px, 1.4vh, 15px); }
-.dash-stat { padding: clamp(11px, 1.5vh, 16px) clamp(12px, 1.4vw, 16px); }
+.dash-card-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 6px; }
+.dash-card-body { flex: 1; min-height: 0; padding: 6px 16px 14px; }
+.dash-stat { padding: 15px 16px; }
 .dash-row:hover td { background: var(--subtle); }
 
 .dash-navitem { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 13px; border: none; background: transparent; color: var(--ink-soft); cursor: pointer; font: 600 13px/18px var(--font-sans); width: 100%; text-align: left; text-decoration: none; }
@@ -912,7 +967,7 @@ a {
 .sw-mobilebar { display: none; }
 /* Tablet / small laptop: the sidebar becomes icon-only automatically, with the
    same hover, active and tooltip behaviour as the manual collapsed state. */
-@media (min-width: 1024px) and (max-width: 1279px) {
+@media (min-width: 768px) and (max-width: 1279px) {
   .sw-sidebar { width: 84px; padding: 14px 10px; }
   .sw-sidebar .sw-brand, .sw-sidebar .sw-navlabel, .sw-sidebar .sw-group-label, .sw-sidebar .sw-carousel-dots { display: none; }
   .sw-sidebar .sw-brandrow { justify-content: center; }
@@ -927,7 +982,7 @@ a {
   .sw-2col { grid-template-columns: 1fr !important; }
   .sw-explore { grid-template-columns: repeat(2, 1fr) !important; }
 }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .sw-root { height: auto; overflow-x: hidden; overflow-y: visible; }
   /* Top padding clears the fixed pill bar (see .mnav-header, --mnav-clear)
      PLUS the fixed device-advice strip below it (--dvc-advice-h), so page
@@ -995,8 +1050,8 @@ body {
 }
 
 /* Marketing / legal cards: richer resting depth + a restrained hover elevation. */
-.card { transition: box-shadow 220ms var(--ease), transform 220ms var(--ease); }
-.card:hover { box-shadow: var(--shadow-soft); transform: translateY(-2px); }
+.ds-card { transition: box-shadow 220ms var(--ease), transform 220ms var(--ease); }
+.ds-card:hover { box-shadow: var(--shadow-soft); transform: translateY(-2px); }
 
 /* Pills: a faint top highlight so they sit slightly above the surface. */
 .pill { box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
@@ -1018,8 +1073,8 @@ body {
 .dash-stat { box-shadow: 0 10px 30px rgba(23,35,58,.10), inset 0 1px 0 rgba(255,255,255,.8); }
 
 @media (prefers-reduced-motion: reduce) {
-  .card { transition: none; }
-  .card:hover { transform: none; }
+  .ds-card { transition: none; }
+  .ds-card:hover { transform: none; }
 }
 
 /* Messages takes the whole workspace area (the chat scrolls internally). */
@@ -1078,7 +1133,7 @@ body {
 .mnav-dropdown .mnav-subgroup .sw-menu-row::before { content: ""; position: absolute; left: -10px; top: 50%; width: 8px; height: 1px; background: var(--indigo-line); }
 .mnav-acct-chev { margin-left: auto; transition: transform 180ms var(--ease); color: var(--ink-faint); }
 .mnav-acct-toggle.open .mnav-acct-chev { transform: rotate(180deg); }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .mnav-header { display: flex; }
   .sw-header { display: none; }
   /* The notification popover gets the same centred treatment as the
@@ -1088,7 +1143,7 @@ body {
 
 /* ── Mobile chat launcher (WhatsApp-extension badge, floating bottom-right) ── */
 .sw-mobile-fab { display: none; }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .sw-mobile-fab {
     display: flex; align-items: center; justify-content: center;
     position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 25;
@@ -1210,7 +1265,7 @@ body {
   .sw-withpanel { grid-template-columns: minmax(0, 1fr) 34%; gap: 12px; }
   .rp-panel { gap: 12px; }
 }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .sw-withpanel { grid-template-columns: 1fr; height: auto; }
   .sw-withpanel > :first-child { height: auto; overflow: visible; padding: 0; }
   /* The right panel (university/calendar/journey/documents summary cards) is
@@ -1273,7 +1328,7 @@ body {
 .ex-h3 { font: 700 16px/22px var(--font-sans); color: var(--ink); margin: 8px 0 0; }
 
 .ex-photo { margin: 0; border-radius: 20px; overflow: hidden; box-shadow: 0 16px 38px -26px rgba(23,35,58,.5); }
-.ex-photo img { display: block; width: 100%; height: clamp(200px, 30vh, 300px); object-fit: cover; transition: transform 700ms var(--ease); }
+.ex-photo img { display: block; width: 100%; height: 268px; object-fit: cover; transition: transform 700ms var(--ease); }
 .ex-photo:hover img { transform: scale(1.03); }
 .ex-photo figcaption { font: 400 11.5px/16px var(--font-sans); color: var(--ink-faint); padding: 9px 12px; background: var(--card); }
 .ex-photo.left figcaption { text-align: left; }
@@ -1478,7 +1533,7 @@ body {
 .sch-hour-add { flex: none; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 999px; background: none; color: var(--ink-faint); cursor: pointer; opacity: 0; transition: opacity 140ms var(--ease), color 140ms var(--ease), border-color 140ms var(--ease); }
 .sch-hour-row:hover .sch-hour-add { opacity: 1; }
 .sch-hour-add:hover { color: var(--indigo-600); border-color: var(--indigo-line); }
-@media (max-width: 1023px) { .sch-grid { grid-auto-rows: minmax(68px, auto); } .sch-row2 { grid-template-columns: 1fr; } }
+@media (max-width: 767px) { .sch-grid { grid-auto-rows: minmax(68px, auto); } .sch-row2 { grid-template-columns: 1fr; } }
 
 /* Onboarding: full name 75% / gender 25% on one row, stacked on mobile. */
 .af-row-name { display: grid; grid-template-columns: 3fr 1fr; gap: 16px; align-items: start; }
@@ -1496,7 +1551,7 @@ body {
 
 /* Generated university media in Explore. */
 .ex-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.ex-gallery img { width: 100%; height: clamp(90px, 12vh, 130px); object-fit: cover; border-radius: 14px; box-shadow: 0 10px 24px -20px rgba(23,35,58,.6); transition: transform 260ms var(--ease); }
+.ex-gallery img { width: 100%; height: 118px; object-fit: cover; border-radius: 14px; box-shadow: 0 10px 24px -20px rgba(23,35,58,.6); transition: transform 260ms var(--ease); }
 .ex-gallery img:hover { transform: scale(1.02); }
 .ex-uni-cover { width: calc(100% + 30px); height: 128px; object-fit: cover; margin: -15px -15px 4px; border-radius: 18px 18px 0 0; }
 @media (max-width: 1100px) { .ex-gallery { grid-template-columns: repeat(2, 1fr); } }
@@ -2687,7 +2742,7 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
    keeps the existing .acc (separate-card) presentation untouched. */
 .af-faq { display: none; }
 .af-faq-desktop { display: block; }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .af-faq { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
   .af-faq-desktop { display: none; }
 }
@@ -3033,7 +3088,7 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .um-row > td { border-bottom: 1px solid var(--divider); }
 
 @media (prefers-reduced-motion: reduce) {
-  .card:hover, .sw-tile:hover, .rp-card:hover, .sup-card:hover, .dm-card:hover, .upd-item:hover { transform: none; }
+  .ds-card:hover, .sw-tile:hover, .rp-card:hover, .sup-card:hover, .dm-card:hover, .upd-item:hover { transform: none; }
 }
 
 /* ── Documents list: the same light frame the Journey uses ────────────────
@@ -3172,7 +3227,7 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 @media (max-width: 640px) { .uh-pop { width: calc(100vw - 48px); right: auto; left: 0; } }
 
 /* ── Admin desktop: sidebar and header fixed, only content scrolls ────────── */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   /* The page itself never scrolls; the main column owns the scrollbar. */
   .adm-shell { height: var(--adm-vh); max-height: var(--adm-vh); overflow: hidden; }
   .adm-sidebar { position: sticky; top: 22px; height: calc(var(--adm-vh) - 44px); overflow: hidden; }
@@ -3229,7 +3284,7 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .sch-cal-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 /* Rows share the height evenly, so a 5-week and a 6-week month both fit. */
 .sch-cal-body .sch-grid { height: 100%; grid-auto-rows: minmax(72px, 1fr); }
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .sch-main, .sw-withpanel > .sch-main { height: auto; overflow: visible; }
   .sch-cal-body { overflow: visible; }
   .sch-cal-body .sch-grid { height: auto; }
@@ -3348,3 +3403,39 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 .jr-step-title .ds-status { text-transform: none; letter-spacing: 0; flex: none; }
 /* The stage nav badge is the plain variant at the list's own small size. */
 .jr-navbadge { font-size: 9.5px; }
+
+/* ══ Dock — the collapsed sidebar rail ═════════════════════════════════════
+   Ported from godui (src/components/godui/dock.tsx). Vertical here, because
+   the rail is a column; icons magnify under the pointer and name themselves
+   on hover, which is what makes an icon-only rail navigable. */
+.sw-dock, .dock { display: flex; align-items: center; gap: 6px; }
+.dock--v { flex-direction: column; }
+.dock-item {
+  position: relative; flex: none; border: none; background: none; padding: 0; cursor: pointer;
+  display: grid; place-items: center; border-radius: 16px;
+  color: var(--ink-soft);
+  transition: background 160ms var(--ease), color 160ms var(--ease);
+}
+.dock-item:hover { background: var(--indigo-50); color: var(--indigo-600); }
+.dock-item--on { background: var(--indigo-tint); color: var(--indigo-text); }
+.dock-item__icon { display: grid; place-items: center; }
+.dock-item__dot {
+  position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 999px;
+  background: var(--red); box-shadow: 0 0 0 2px #fff;
+}
+/* The label is the tooltip — an icon-only control has to be able to say what
+   it is, and it also gives the button its accessible name via aria-label. */
+.dock-item__label {
+  position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%) scale(.9);
+  padding: 5px 9px; border-radius: 8px; white-space: nowrap; pointer-events: none;
+  background: var(--ink); color: #fff; font: 600 11px/15px var(--font-sans);
+  opacity: 0; transition: opacity 150ms var(--ease), transform 150ms var(--ease);
+  z-index: 40; box-shadow: 0 8px 20px -10px rgba(23,35,58,.6);
+}
+.dock-item:hover .dock-item__label,
+.dock-item:focus-visible .dock-item__label { opacity: 1; transform: translateY(-50%) scale(1); }
+.dock-item:focus-visible { outline: 2px solid var(--indigo-600); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-item, .dock-item__label { transition: none; }
+}
