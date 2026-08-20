@@ -2,7 +2,7 @@
    background and geometric-background components. Drop as the first child of
    a `position: relative` container; content sits above them.
 
-   Both are recoloured to the platform's primary blue (--indigo-600 #3B41C9
+   Both are recoloured to the platform's primary blue (--indigo-600 #2E3BC7
    and its tints) instead of the sources' violet defaults, per the design
    system rule that colours come from the platform, never from a UI kit.
    Inline gradients cannot read CSS custom properties through the style
@@ -21,7 +21,7 @@ export function DecorativeBackground({ style, ...props }: HTMLAttributes<HTMLDiv
       {...props}
       style={{
         ...base,
-        background: "radial-gradient(circle at 30% 60%, #F5F5FD 0%, #E2E3F8 15%, #C1C2EE 30%, #878BDE 45%, #5B60D2 60%, #494ECD 75%, #3B41C9 90%, #262CA3 100%)",
+        background: "radial-gradient(circle at 30% 60%, #F5F5FD 0%, #E1E3F9 15%, #BFC2F0 30%, #838BE2 45%, #5560D8 60%, #424ED4 75%, #2E3BC7 90%, #202CA9 100%)",
         ...style,
       }}
     />
@@ -37,10 +37,10 @@ export function GeometricBackground({ style, ...props }: HTMLAttributes<HTMLDivE
       style={{
         ...base,
         backgroundImage: [
-          "linear-gradient(to right, rgba(59,65,201,.05) 1px, transparent 1px)",
-          "linear-gradient(to bottom, rgba(59,65,201,.05) 1px, transparent 1px)",
-          "radial-gradient(circle 600px at 0% 200px, rgba(59,65,201,.16), transparent)",
-          "radial-gradient(circle 600px at 100% 200px, rgba(59,65,201,.16), transparent)",
+          "linear-gradient(to right, rgba(46, 59, 199,.05) 1px, transparent 1px)",
+          "linear-gradient(to bottom, rgba(46, 59, 199,.05) 1px, transparent 1px)",
+          "radial-gradient(circle 600px at 0% 200px, rgba(46, 59, 199,.16), transparent)",
+          "radial-gradient(circle 600px at 100% 200px, rgba(46, 59, 199,.16), transparent)",
         ].join(","),
         backgroundSize: "20px 20px, 20px 20px, 100% 100%, 100% 100%",
         ...style,

@@ -52,7 +52,7 @@ export default function PricingPage() {
       {/* CTA */}
       <section style={{ padding: "48px 24px 80px" }}>
         <Container width={760}>
-          <div style={{ background: "linear-gradient(135deg, var(--indigo-600), var(--tertiary))", borderRadius: 22, padding: "44px 32px", textAlign: "center", boxShadow: "0 20px 50px rgba(59,65,201,.28)" }}>
+          <div style={{ background: "linear-gradient(135deg, var(--indigo-600), var(--tertiary))", borderRadius: 22, padding: "44px 32px", textAlign: "center", boxShadow: "0 20px 50px rgba(46, 59, 199,.28)" }}>
             <h2 style={{ font: "800 var(--font-sans)", fontSize: "clamp(24px, 3.2vw, 34px)", lineHeight: 1.2, color: "#fff", margin: 0 }}>Get your personalized price</h2>
             <p style={{ font: "400 15px/24px var(--font-sans)", color: "rgba(255,255,255,.9)", maxWidth: 480, margin: "14px auto 0" }}>
               Start your roadmap to see the plan and price built for your destination, or contact us for a personalized quote.

@@ -28,9 +28,9 @@ export type InvoiceData = {
 const INK = rgb(0.09, 0.137, 0.227); // #17233A
 const INK_SOFT = rgb(0.353, 0.42, 0.522); // #5A6B85
 const INK_FAINT = rgb(0.525, 0.584, 0.671); // #8695AB
-const INDIGO = rgb(0.231, 0.255, 0.788); // #3B41C9 — brand primary
+const INDIGO = rgb(0.231, 0.255, 0.788); // #2E3BC7 — brand primary
 const LINE = rgb(0.863, 0.886, 0.918); // #DCE2EA
-const TINT = rgb(0.886, 0.890, 0.973); // #E2E3F8
+const TINT = rgb(0.886, 0.890, 0.973); // #E1E3F9
 
 const PAGE_W = 595.28; // A4
 const PAGE_H = 841.89;

@@ -13,7 +13,7 @@ type Piece = { x: number; y: number; vx: number; vy: number; rot: number; vr: nu
 /* Brand triad first (primary, hover step, tertiary), then the pale brand line
    and two status hues, then white. Canvas paints pixels, so these have to be
    literal — they are the primary and tertiary ramp values, not new colours. */
-const COLORS = ["#3B41C9", "#494ECD", "#1C328B", "#B6B8EA", "#256B49", "#8A5A0C", "#FFFFFF"];
+const COLORS = ["#2E3BC7", "#424ED4", "#1C328B", "#B3B8ED", "#256B49", "#8A5A0C", "#FFFFFF"];
 
 export function Confetti({ bursts = 2, particles = 70, spread = 260, height = 160 }: {
   /** How many times to fire, total. Never loops beyond this. */

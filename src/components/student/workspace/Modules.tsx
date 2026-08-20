@@ -72,7 +72,7 @@ export function Overview({ profile, onNav }: { profile: WsProfile; onNav: (id: s
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Stat row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }} className="sw-statrow">
-        <StatTile label="Journey progress" value={`${j.pct}%`} accent="#3B41C9" icon={<Route size={16} />} sub={j.stageCount ? `Stage ${j.stageIndex} of ${j.stageCount}` : "Not started"} />
+        <StatTile label="Journey progress" value={`${j.pct}%`} accent="#2E3BC7" icon={<Route size={16} />} sub={j.stageCount ? `Stage ${j.stageIndex} of ${j.stageCount}` : "Not started"} />
         <StatTile label="Documents approved" value={`${j.docsApproved}/${j.docsTotal}`} accent="#20C997" icon={<CircleCheckBig size={16} />} sub="Verified by our team" />
         <StatTile label="Pending items" value={String(j.docsPending)} accent="#F76707" icon={<Clock3 size={16} />} sub="Awaiting you or review" />
         <StatTile label="Notifications" value={String(unread)} accent="#845EF7" icon={<Bell size={16} />} sub="Unread updates" />

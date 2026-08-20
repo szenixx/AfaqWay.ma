@@ -31,8 +31,10 @@
      Card 700 x 827 at y=56, horizontally centred and NOT vertically centred.
      Content column 650 (700 - 2 x 24 padding), which every row inside the card
      spans: progress, options and Continue all start at the same x. */
-  --onb-blue: #2E3BC7;          /* the field */
-  --onb-brand: #2E3BC7;         /* progress fill, Continue, selected border */
+  /* Both are the platform primary, taken from the token rather than repeated:
+     the brand colour changes in ds.css and this surface follows it. */
+  --onb-blue: var(--brand-primary);   /* the field */
+  --onb-brand: var(--brand-primary);  /* progress fill, Continue, selected border */
   --onb-track: #ABB1E9;         /* progress, unfilled */
   --onb-edge: #DFDFDF;          /* option border */
   --onb-ink: #282828;           /* question, option name */
@@ -48,8 +50,8 @@
   --onb-slow: 260ms;
 
   /* ── HeroUI semantic tokens, wearing AfaqWay ───────────────────────── */
-  --accent: #2E3BC7;            --accent-foreground: #FFFFFF;
-  --focus: #2E3BC7;
+  --accent: var(--brand-primary); --accent-foreground: #FFFFFF;
+  --focus: var(--brand-primary);
   --success: #3F8C63;           --success-foreground: #FFFFFF;
   --warning: #B0790B;           --warning-foreground: #FFFFFF;
   --danger: #B23B27;            --danger-foreground: #FFFFFF;
@@ -90,7 +92,7 @@
 
 .onb-boot {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: #2E3BC7; color: rgba(255, 255, 255, .78); font: 400 15px/24px var(--font-sans);
+  background: var(--brand-primary); color: rgba(255, 255, 255, .78); font: 400 15px/24px var(--font-sans);
 }
 
 .onb-sr {

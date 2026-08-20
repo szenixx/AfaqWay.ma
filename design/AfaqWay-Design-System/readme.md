@@ -67,7 +67,7 @@ tracker, and real people behind every step."*
   135° gradient (`#E7ECF7 → #EDF1F9 → #E8EEF9`) with two enormous blurred indigo
   blobs. Content sits on it as white cards. **Hierarchy comes from elevation and
   whitespace, not borders and rules.**
-- **Colour:** one brand family, **Indigo** — `--indigo-600 #3B41C9` default,
+- **Colour:** one brand family, **Indigo** — `--indigo-600 #2E3BC7` default,
   `500` hover, `700` pressed, `100`/`50` tints. Five status tones (green, amber,
   red, indigo-info, grey), each a text + tint + line triplet. Max 1–2 background
   colours per surface. No purple-blue hero gradients, no invented colours — add
@@ -85,7 +85,7 @@ tracker, and real people behind every step."*
   `1px solid rgba(23,35,58,.05)`.
 - **Shadows:** ink-hued (`rgba(23,35,58,…)`) — `--shadow-card` resting → `--elev-2`
   default card → `--elev-3` prominent. The **one exception**: hover on
-  interactive brand elements uses an indigo hue (`rgba(59,65,201,…)`).
+  interactive brand elements uses an indigo hue (`rgba(46, 59, 199,…)`).
 - **Backgrounds:** flat white cards; recessed rows `--subtle`; glass appears in
   exactly two places (the sidebar and modal scrims — `blur(22px) saturate(1.5)`).
   Marketing hero adds an animated masked grid. No textures, no patterns on

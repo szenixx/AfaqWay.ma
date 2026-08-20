@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 export function BorderBeam({
   size = 70, duration = 6, delay = 0, className,
-  colorFrom = "#3B41C9", colorTo = "#6B4BA8", borderWidth = 1.6,
+  colorFrom = "#2E3BC7", colorTo = "#6B4BA8", borderWidth = 1.6,
 }: {
   size?: number;
   /** Seconds for one full lap. */

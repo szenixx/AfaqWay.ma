@@ -14,7 +14,7 @@
      No 24–32px radii, no heavy shadow, no gradient fills, no oversized type.
 
    FRAME 18 — colour
-     primary #3B41C9 · white · tertiary #1C328B · green/gold/neutral support.
+     primary #2E3BC7 · white · tertiary #1C328B · green/gold/neutral support.
 
    FRAME 19 — type
      card titles 13–15 · body 12–14 · metadata 10–12 · metric value 22–28.
@@ -76,9 +76,9 @@
      artwork is fitted to the card, never the other way round. */
   min-height: 190px; padding: 24px 30px; margin-bottom: 18px;
   border-radius: 18px;
-  /* #3B41C9 holds the identity; the tertiary only deepens the far corner. */
+  /* #2E3BC7 holds the identity; the tertiary only deepens the far corner. */
   background: linear-gradient(104deg, var(--dx-primary) 0%, var(--dx-primary) 52%, var(--dx-tertiary) 100%);
-  box-shadow: 0 16px 36px -24px rgba(59, 65, 201, .95);
+  box-shadow: 0 16px 36px -24px rgba(46, 59, 199, .95);
 }
 .dx-welcome-glow {
   position: absolute; inset: 0; pointer-events: none;
@@ -243,12 +243,12 @@
   height: 46px; border: none; border-radius: 12px; cursor: pointer;
   background: var(--dx-primary); color: #fff;
   font: 700 13px/1 var(--font-sans); white-space: nowrap;
-  box-shadow: 0 10px 22px -14px rgba(59, 65, 201, .9);
+  box-shadow: 0 10px 22px -14px rgba(46, 59, 199, .9);
   transition: background 160ms var(--ease), transform 160ms var(--ease), box-shadow 160ms var(--ease);
 }
 .dx-support-cta:hover {
   background: var(--indigo-500); transform: translateY(-1px);
-  box-shadow: 0 14px 28px -14px rgba(59, 65, 201, 1);
+  box-shadow: 0 14px 28px -14px rgba(46, 59, 199, 1);
 }
 .dx-support-cta:active { transform: translateY(0) scale(.99); }
 

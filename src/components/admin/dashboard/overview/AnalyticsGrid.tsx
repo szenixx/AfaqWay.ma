@@ -23,7 +23,7 @@ type Day = { label: string; date: string; activated: number; signups: number; va
 
 const SERIES = [
   { key: "signups", label: "Signups", color: "#8A93C9" },
-  { key: "activated", label: "Activated", color: "#3B41C9" },
+  { key: "activated", label: "Activated", color: "#2E3BC7" },
 ] as const;
 
 function ChartTip({ active, payload, label }: {
@@ -195,7 +195,7 @@ function Flag({ code }: { code: string }) {
   );
 }
 
-const SLICE_COLORS = ["#3B41C9", "#6B4BA8", "#0F8A7E", "#B0790B", "#B23B27"];
+const SLICE_COLORS = ["#2E3BC7", "#6B4BA8", "#0F8A7E", "#B0790B", "#B23B27"];
 
 export function DestinationsCard({ countries, loading }: {
   countries: { code: string; label: string; value: number }[]; loading: boolean;

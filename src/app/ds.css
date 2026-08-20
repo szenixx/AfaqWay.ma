@@ -34,7 +34,7 @@
   --card-border:1px solid rgba(15,23,42,.045); /* @kind other */ /* the card hairline — should almost disappear */
 
   /* ── Brand — the AfaqWay triad ─────────────────────────────────────────
-     Primary   #3B41C9  the brand blue. Buttons, links, active states, focus,
+     Primary   #2E3BC7  the brand blue. Buttons, links, active states, focus,
                         selection, progress — the majority of interactive ink.
      Secondary #FFFFFF  white. The neutral the whole system is built on; it is
                         --card / --brand-secondary, not a third accent.
@@ -45,22 +45,22 @@
 
      Every state below is a tonal step off the primary (see the --primary-*
      ramp), never the same hex reused at a different opacity. */
-  --brand-primary:#3B41C9;
+  --brand-primary:#2E3BC7;
   --brand-secondary:#FFFFFF;
   --brand-tertiary:#1C328B;
 
   /* The --indigo-* names are what ~150 components already render with, so the
      migration is a value swap here rather than a rename across the app. They
      now resolve to the new primary ramp. */
-  --indigo-700:#262CA3; /* pressed */
-  --indigo-600:#3B41C9; /* primary / default — buttons, links, active icons */
-  --indigo-500:#494ECD; /* hover */
-  --indigo-100:#E2E3F8; /* focus glow, ghost hover */
+  --indigo-700:#202CA9; /* pressed */
+  --indigo-600:#2E3BC7; /* primary / default — buttons, links, active icons */
+  --indigo-500:#424ED4; /* hover */
+  --indigo-100:#E1E3F9; /* focus glow, ghost hover */
   --indigo-50:#F5F5FD;  /* palest surface */
-  --indigo-text:#262CA3;/* text on indigo tint — 8.4:1 on --indigo-tint */
-  --indigo-tint:#E2E3F8;/* pill / callout background */
-  --indigo-line:#B6B8EA;/* pill / callout border, hover border */
-  --focus-ring:rgba(59,65,201,.28);
+  --indigo-text:#202CA9;/* text on indigo tint — 8.4:1 on --indigo-tint */
+  --indigo-tint:#E1E3F9;/* pill / callout background */
+  --indigo-line:#B3B8ED;/* pill / callout border, hover border */
+  --focus-ring:rgba(46, 59, 199,.28);
 
   /* ── Status: text · tint · line per family ── */
   --green:#256B49;  --green-tint:#E3F0E9;  --green-line:#9CCBB2;  /* success, approved, paid, online */
@@ -76,7 +76,7 @@
   --scrim:rgba(23,35,58,.42);          /* modal scrim (+ blur 6px) */
   --scrim-strong:rgba(23,35,58,.55);   /* celebration scrim */
   --shadow-ink:rgba(23,35,58,1);       /* the single shadow hue */
-  --shadow-brand:rgba(59,65,201,1);    /* hover lift on brand elements */
+  --shadow-brand:rgba(46, 59, 199,1);    /* hover lift on brand elements */
 
   /* ── Semantic aliases ── */
   --text-body:var(--ink); --text-secondary:var(--ink-soft); --text-hint:var(--ink-faint);
@@ -110,12 +110,12 @@
      built shifts colour. Never hand-pick a new hex outside this ramp. */
 
   /* Primary — the brand blue (same hue as --indigo-*, extended both ways).
-     600 IS #3B41C9, the canonical brand primary; every other step is a tonal
+     600 IS #2E3BC7, the canonical brand primary; every other step is a tonal
      derivation of it, so states never need a hand-picked hex. Contrast on
-     white: 400 5.2:1 · 500 6.5:1 · 600 7.5:1 · 700 10.7:1. */
-  --primary-50:#F5F5FD; --primary-100:#E2E3F8; --primary-200:#C1C2EE; --primary-300:#878BDE;
-  --primary-400:#5B60D2; --primary-500:#494ECD; --primary-600:#3B41C9; --primary-700:#262CA3;
-  --primary-800:#1B1F83; --primary-900:#111562; --primary-950:#0A0C43;
+     white: 400 5.2:1 · 500 6.4:1 · 600 8.2:1 · 700 10.5:1. */
+  --primary-50:#F5F5FD; --primary-100:#E1E3F9; --primary-200:#BFC2F0; --primary-300:#838BE2;
+  --primary-400:#5560D8; --primary-500:#424ED4; --primary-600:#2E3BC7; --primary-700:#202CA9;
+  --primary-800:#161F88; --primary-900:#0D1566; --primary-950:#070C46;
 
   /* Tertiary — the deeper supporting blue. 600 IS #1C328B, the former primary,
      kept for secondary emphasis, deep states, gradient ends and outlines. */
@@ -284,7 +284,7 @@
   --elev-2:0 16px 40px -14px rgba(15,23,42,.07);         /* default card */
   --elev-3:0 28px 64px -18px rgba(15,23,42,.10);         /* prominent */
   --elev-hover:0 22px 48px -16px rgba(15,23,42,.09);     /* card hover */
-  --shadow-brand-hover:0 16px 36px -18px rgba(59,65,201,.35); /* hover on brand elements — softened */
+  --shadow-brand-hover:0 16px 36px -18px rgba(46, 59, 199,.35); /* hover on brand elements — softened */
 
   --shadow-xs:var(--shadow-card);
   --shadow-sm:var(--elev-1);
@@ -489,7 +489,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 
 /* Card roles share one hover so every list, grid and dashboard reacts alike. */
 .af-card{transition:box-shadow 180ms var(--ease),transform 180ms var(--ease),border-color 180ms var(--ease);}
-.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(59,65,201,.5);transform:translateY(-1px);}
+.af-card-info:hover,.af-card-feature:hover,.af-card-action:hover,.af-card-compact:hover{border-color:var(--indigo-line);box-shadow:0 10px 26px -18px rgba(46, 59, 199,.5);transform:translateY(-1px);}
 
 /* ══ Chat workspace ════════════════════════════════════════════════════════
    One visual language for both chats: the admin console (3 columns) and the
@@ -659,7 +659,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 /* ── Composer + send ── */
 .chat-composer{flex:none;padding:14px 16px;border-top:1px solid var(--line-soft);background:var(--card);}
 .chat-send{display:inline-flex;align-items:center;gap:7px;height:40px;flex:none;padding:0 20px;border-radius:var(--radius-pill);border:none;background:var(--indigo-600);color:#fff;font:600 13.5px/1 var(--font-sans);cursor:pointer;transition:background 140ms var(--ease),transform 120ms var(--ease),box-shadow 140ms var(--ease);}
-.chat-send:hover:not(:disabled){background:var(--indigo-500);box-shadow:0 8px 20px -10px rgba(59,65,201,.8);}
+.chat-send:hover:not(:disabled){background:var(--indigo-500);box-shadow:0 8px 20px -10px rgba(46, 59, 199,.8);}
 .chat-send:active:not(:disabled){transform:scale(.97);background:var(--indigo-700);}
 .chat-send:disabled{opacity:.5;cursor:not-allowed;}
 /* Destructive variant of the same control, for a confirmed delete. Same shape,
@@ -675,7 +675,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .chat-panel-title{flex:1;min-width:0;font:700 12.5px/17px var(--font-sans);color:var(--ink);}
 .chat-panel-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
 .chat-panel-item{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card);transition:border-color 160ms var(--ease),box-shadow 160ms var(--ease);}
-.chat-panel-item:hover{border-color:var(--indigo-line);box-shadow:0 6px 16px -12px rgba(59,65,201,.7);}
+.chat-panel-item:hover{border-color:var(--indigo-line);box-shadow:0 6px 16px -12px rgba(46, 59, 199,.7);}
 .chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:12px;animation:afFadeUp 320ms var(--ease) both;}
 .chat-empty img{width:100%;max-width:150px;height:auto;opacity:.92;}
 @keyframes afFadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
@@ -792,7 +792,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 /* ══ User avatar ═══════════════════════════════════════════════════════════
    Uploaded photo → generated avatar, always circular, skeleton before load. */
 .ua{position:relative;display:inline-flex;flex:none;border-radius:999px;overflow:visible;}
-.ua-img,.ua-gen{display:block;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,#EEF2F9,#E1E8F3);border:1px solid rgba(59,65,201,.10);object-fit:cover;opacity:0;transform:scale(.96);transition:opacity 200ms var(--ease),transform 200ms var(--ease);}
+.ua-img,.ua-gen{display:block;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,#EEF2F9,#E1E8F3);border:1px solid rgba(46, 59, 199,.10);object-fit:cover;opacity:0;transform:scale(.96);transition:opacity 200ms var(--ease),transform 200ms var(--ease);}
 .ua-img.in,.ua-gen.in{opacity:1;transform:none;}
 .ua-gen{display:flex;align-items:center;justify-content:center;}
 .ua-skeleton{display:block;width:100%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--subtle) 25%,#E9EDF5 37%,var(--subtle) 63%);background-size:400% 100%;animation:afShimmer 1.4s ease infinite;}
@@ -881,7 +881,7 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
   -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 10%,#000 90%,transparent 100%);
   mask-image:linear-gradient(to bottom,transparent 0%,#000 10%,#000 90%,transparent 100%);}
 .af-tl-rail-fill{position:absolute;inset:0;width:1px;transform-origin:top;border-radius:999px;
-  background:linear-gradient(to top,var(--indigo-600),rgba(59,65,201,0));}
+  background:linear-gradient(to top,var(--indigo-600),rgba(46, 59, 199,0));}
 @media (max-width:820px){
   .af-tl-row{gap:0;padding-top:28px;}
   .af-tl-side{width:auto;}
@@ -916,13 +916,13 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 .af-lamp-cone{position:absolute;height:224px;width:60%;
   -webkit-mask-image:linear-gradient(to top,transparent,#fff);mask-image:linear-gradient(to top,transparent,#fff);}
 .af-lamp-cone.left{right:50%;transform-origin:right;
-  background-image:conic-gradient(from 70deg at center top,rgba(59,65,201,.30),transparent,transparent);}
+  background-image:conic-gradient(from 70deg at center top,rgba(46, 59, 199,.30),transparent,transparent);}
 .af-lamp-cone.right{left:50%;transform-origin:left;
-  background-image:conic-gradient(from 290deg at center top,transparent,transparent,rgba(59,65,201,.30));}
+  background-image:conic-gradient(from 290deg at center top,transparent,transparent,rgba(46, 59, 199,.30));}
 .af-lamp-bar{position:absolute;top:50%;height:2px;width:50%;border-radius:999px;filter:blur(4px);
   transform:translateY(-56px);background:var(--indigo-600);}
 .af-lamp-halo{position:absolute;top:50%;height:144px;width:100%;transform:translateY(-96px);
-  background:radial-gradient(ellipse at center top,rgba(59,65,201,.16),transparent 60%);}
+  background:radial-gradient(ellipse at center top,rgba(46, 59, 199,.16),transparent 60%);}
 
 /* ══ Jelly press (godui jelly-button motion: squash on press, spring back) ══ */
 .af-jelly{transform-origin:bottom center;will-change:transform;transition:scale 300ms cubic-bezier(.3,.7,.4,1.5);}
@@ -931,11 +931,11 @@ a{color:var(--indigo-600);}a:hover{color:var(--indigo-500);}
 
 /* ══ Animated grid pattern (hero background) ═══════════════════════════════ */
 .af-grid{position:absolute;inset:0;pointer-events:none;overflow:hidden;
-  background-image:linear-gradient(to right,rgba(59,65,201,.08) 1px,transparent 1px),linear-gradient(to bottom,rgba(59,65,201,.08) 1px,transparent 1px);
+  background-image:linear-gradient(to right,rgba(46, 59, 199,.08) 1px,transparent 1px),linear-gradient(to bottom,rgba(46, 59, 199,.08) 1px,transparent 1px);
   background-size:44px 44px;
   -webkit-mask-image:radial-gradient(ellipse at center,#000 45%,transparent 78%);
   mask-image:radial-gradient(ellipse at center,#000 45%,transparent 78%);}
-.af-grid-cell{position:absolute;width:44px;height:44px;background:rgba(59,65,201,.14);animation:afGridCell 4s ease-in-out infinite;}
+.af-grid-cell{position:absolute;width:44px;height:44px;background:rgba(46, 59, 199,.14);animation:afGridCell 4s ease-in-out infinite;}
 @keyframes afGridCell{0%,100%{opacity:0;}45%,55%{opacity:1;}}
 /* Mobile only: confirmed live on a real iPhone (isolating the CSS animation
    from the mask, the layer and the JS reroll individually) as the cause of
