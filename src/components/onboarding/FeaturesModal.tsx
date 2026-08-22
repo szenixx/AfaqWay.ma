@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, X } from "lucide-react";
+import { Button } from "@heroui/react";
 import { PLANS } from "@/lib/plans";
 
 /* Both plans, feature for feature. Same source as the plan cards — this only
@@ -37,6 +38,14 @@ export default function FeaturesModal({ onClose }: { onClose: () => void }) {
               </ul>
             </section>
           ))}
+        </div>
+
+        {/* Phone only. Full screen means the X at the top is off-screen by the
+            time you reach the last line, so the way out sits at the end too. */}
+        <div className="onb-feat-foot">
+          <Button className="onb-next onb-feat-done" size="lg" fullWidth onPress={onClose}>
+            {ar ? "تم" : "Done"}
+          </Button>
         </div>
       </div>
     </div>

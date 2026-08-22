@@ -38,6 +38,12 @@ export const PLANS: Plan[] = [
       "Live document status on every upload",
       "Learning resources on every step",
       "24/7 support access",
+      "Reminders before every deadline",
+      "A calendar with every deadline and intake",
+      "One inbox for every update on your file",
+      "A downloadable invoice for every payment",
+      "Fees and English requirements kept current",
+      "You mark your own steps done",
     ],
     features: [
       "Free program-matching guidance before you pay for anything",
@@ -84,6 +90,10 @@ export const PLANS: Plan[] = [
       "Priority review, from start to settled",
       "Service and support after you arrive",
       "Post-arrival checklist once your permit lands",
+      "One inbox for every update on your file",
+      "Fees and requirements kept current for you",
+      "The platform drives every step, not just guides it",
+      "Human document review, average 48 hours",
     ],
     features: [
       "Free program-matching guidance before you pay for anything",

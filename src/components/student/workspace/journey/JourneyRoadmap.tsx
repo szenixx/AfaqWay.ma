@@ -37,6 +37,36 @@ import { InfoCard, JrButton } from "./parts";
 
 const STAGE_ICONS = [Landmark, GraduationCap, Route, FileText, Plane, Clock3];
 
+/* One 3D render per stage: explore, admission, migration papers, appointment,
+   arrival — in that order.
+
+   POSITION first, tone second. `tone` reads from the database before it falls
+   back to the TONES table (see assembleRoadmap in lib/journey.ts), so a stage
+   whose row carries any other colour — teal, indigo, nothing at all — matches
+   no entry and silently renders no art. Stage 5 did exactly that. The order is
+   what the roadmap actually means, so the order is what selects the render, and
+   tone only covers a stage that falls outside the first five. */
+type StageArt = { key: string; src: string };
+
+/* The `key` rides onto the markup as a data attribute so a single stage can be
+   nudged in CSS without a per-index selector that breaks the moment the list
+   changes. Named for what the stage means, not for its colour or its number. */
+const STAGE_ART_ORDER: StageArt[] = [
+  { key: "explore", src: "/assets/journey/purple.webp" },
+  { key: "admission", src: "/assets/journey/pink.webp" },
+  { key: "papers", src: "/assets/journey/amber.webp" },
+  { key: "appointment", src: "/assets/journey/blue.webp" },
+  { key: "arrival", src: "/assets/journey/green.webp" },
+];
+const STAGE_ART_BY_TONE: Partial<Record<JourneyStage["tone"], StageArt>> = {
+  purple: STAGE_ART_ORDER[0], pink: STAGE_ART_ORDER[1], amber: STAGE_ART_ORDER[2],
+  blue: STAGE_ART_ORDER[3], green: STAGE_ART_ORDER[4],
+};
+/* Undefined past the fifth stage with an unrecognised tone, and an undefined
+   slot renders no image at all rather than a broken src. */
+const stageArt = (stage: JourneyStage, i: number): StageArt | undefined =>
+  STAGE_ART_ORDER[i] ?? STAGE_ART_BY_TONE[stage.tone];
+
 export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile; onNav: (id: string) => void; isAdmin?: boolean }) {
   const [stages, setStages] = useState<JourneyStage[]>([]);
   const [uploads, setUploads] = useState<DbDocument[]>([]);
@@ -544,6 +574,19 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
     <div className="jr-root">
       {/* ── Header ── */}
       <header className="jr-head">
+        {/* The journey the whole module describes: the destination on the left,
+            then the path, its milestones, the flight and the university at the
+            end. One right-anchored row rather than two independently placed
+            images, so the pair can never drift apart as the header resizes.
+            Decorative, and a layer below every word here. */}
+        <span className="jr-headart-row" aria-hidden>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="jr-headart-globe" src="/assets/journey/roadmap-globe.webp" alt="" loading="lazy" decoding="async" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="jr-headart-compass" src="/assets/journey/roadmap-compass.webp" alt="" loading="lazy" decoding="async" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="jr-headart" src="/assets/journey/roadmap.webp" alt="" loading="lazy" decoding="async" />
+        </span>
         <div style={{ minWidth: 0 }}>
           <h1 className="jr-title">Your roadmap</h1>
           <p className="jr-sub">
@@ -588,6 +631,21 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
                   reason: this one never opens with time, only with a plan. The
                   badge is the only thing that says so up here. */}
               {s.planLocked && <span className="jr-navplan" aria-hidden>Full Service</span>}
+              {/* The stage's own object, sitting in the corner the card's rows
+                  leave free. Background layer, under the icon, title and bar. */}
+              {(() => {
+                const art = stageArt(s, i);
+                if (!art) return null;
+                /* The clip box lives on the artwork, not on the card: the card
+                   cannot carry overflow:hidden because .jr-navplan straddles
+                   its top edge by design. */
+                return (
+                  <span className="jr-navart-slot" data-art={art.key} aria-hidden>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="jr-navart" src={art.src} alt="" loading="lazy" decoding="async" />
+                  </span>
+                );
+              })()}
               <span className="jr-navtop">
                 <span className={`jr-navico tone-${s.tone}`}>{locked ? <Lock size={15} /> : <Icon size={17} />}</span>
                 <span className="jr-navnum">Stage {String(s.index).padStart(2, "0")}</span>

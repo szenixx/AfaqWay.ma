@@ -249,6 +249,16 @@ export default function ProfileSetup() {
         {/* The plan screen is the one decision with a price on it, so the card
             gets a drafting-table field behind it. Nowhere else. */}
         {isPricing && priceSub === 0 && <BlueprintGrid variant="dots" size={22} />}
+        {/* Both halves of the pricing step — choosing the plan and paying for it —
+            carry the same watermark: leave, choose and pay, arrive. Sunk far
+            enough back that it is texture behind the cards, never an
+            illustration competing with them. */}
+        {isPricing && (
+          <div className="onb-cardart" data-step={priceSub === 1 ? "pay" : "plan"} aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/illustrations/plans.webp?v=2" alt="" width={1500} height={581} />
+          </div>
+        )}
         {finishing && (
           <div className="onb-done" role="status" aria-live="assertive">
             <svg className="onb-done-mark" viewBox="0 0 52 52" aria-hidden>

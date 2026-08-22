@@ -62,9 +62,21 @@ function YouTubeMark(props: { size?: number }) {
 }
 
 /* ── One card ─────────────────────────────────────────────────────────────
-   The artwork slot is `art`. It stays undefined until a generated visual is
-   approved, and an undefined slot renders no <img> at all — a card is never
-   left pointing at a file that does not exist. */
+   The artwork slot is `art`, and it is a PAIR: the two card shapes are
+   different enough that one drawing cannot serve both. Desktop is a narrow
+   column, so its render is a compact square cluster; a phone card is full
+   width and short, so its render is a wide two-object spread with more air.
+   Neither is a crop of the other.
+
+   Still optional: an undefined slot renders no image at all, so a card is
+   never left pointing at a file that does not exist. */
+
+type Art = {
+  /** Square cutout for the three-up column and the deck. */
+  desktop: string;
+  /** Wide cutout for the full-width phone card. */
+  mobile: string;
+};
 
 type Action = {
   key: string;
@@ -82,16 +94,24 @@ function SocialCard({ tone, marks, platform, title, body, art, actions, locked }
   platform: string;
   title: string;
   body: string;
-  art?: string;
+  art?: Art;
   actions: Action[];
   locked?: { note: string; label: string; onClick: () => void };
 }) {
   return (
     <section className={`dxs-card dxs-${tone}`}>
       {art && (
-        /* Decorative only, and untouchable: the buttons below sit above it. */
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img className="dxs-art" src={art} alt="" aria-hidden loading="lazy" decoding="async" />
+        /* Decorative only, and untouchable: every button sits above it.
+           <picture> rather than a CSS background so the browser picks the
+           right render at the breakpoint itself, downloads only that one, and
+           still gets to lazy-load it. No JS, no second request.
+
+           No aria-hidden on the <picture>: it is not an a11y-tree element, and
+           the empty alt on the image is what actually marks this decorative. */
+        <picture className="dxs-art">
+          <source media="(max-width: 767px)" srcSet={art.mobile} type="image/webp" />
+          <img src={art.desktop} alt="" loading="lazy" decoding="async" />
+        </picture>
       )}
 
       <header className="dxs-head">
@@ -104,7 +124,9 @@ function SocialCard({ tone, marks, platform, title, body, art, actions, locked }
       <h3 className="dxs-title">{title}</h3>
       <p className="dxs-body">{body}</p>
 
-      <div className="dxs-actions">
+      {/* Two destinations share a row; one keeps the full width. The flag is
+          on the container so the CSS never has to count children. */}
+      <div className="dxs-actions" data-pair={(!locked && actions.length > 1) || undefined}>
         {locked ? (
           <>
             <p className="dxs-locked"><Lock size={13} aria-hidden />{locked.note}</p>
@@ -116,14 +138,16 @@ function SocialCard({ tone, marks, platform, title, body, art, actions, locked }
           actions.map((a) =>
             a.href ? (
               <a key={a.key} className="dxs-cta" href={a.href} target="_blank" rel="noopener noreferrer">
-                <span className="dxs-cta-ico" aria-hidden>{a.icon}</span>{a.label}
+                <span className="dxs-cta-ico" aria-hidden>{a.icon}</span>
+                <span className="dxs-cta-txt">{a.label}</span>
               </a>
             ) : (
               /* No link configured yet. Disabled and labelled, never a button
                  that looks live and does nothing when tapped. */
               <button key={a.key} type="button" className="dxs-cta is-soon" disabled
                 title={`${a.label} is not linked yet`}>
-                <span className="dxs-cta-ico" aria-hidden>{a.icon}</span>{a.label}
+                <span className="dxs-cta-ico" aria-hidden>{a.icon}</span>
+                <span className="dxs-cta-txt">{a.label}</span>
                 <span className="dxs-soon">Soon</span>
               </button>
             )
@@ -159,6 +183,7 @@ export function SocialSection({ unlocked, onUpgrade, deck }: {
       platform="YouTube"
       marks={[<YouTubeMark key="yt" size={16} />]}
       title="AfaqWay Learning Center"
+      art={{ desktop: "/assets/dashboard/card-youtube.webp", mobile: "/assets/dashboard/card-youtube-m.webp" }}
       body="Learn how to complete your study-abroad process from zero, step by step."
       actions={[{
         key: "yt",
@@ -181,10 +206,11 @@ export function SocialSection({ unlocked, onUpgrade, deck }: {
       platform="Instagram · TikTok"
       marks={[<InstagramMark key="ig" size={16} />, <TikTokMark key="tt" size={15} />]}
       title="Student Life Abroad"
+      art={{ desktop: "/assets/dashboard/card-social.webp", mobile: "/assets/dashboard/card-social-m.webp" }}
       body="See real student experiences, tips, life abroad, and short videos from the AfaqWay community."
       actions={[
-        { key: "ig", label: "Instagram", icon: <InstagramMark size={16} />, href: socialLink("instagram") },
         { key: "tt", label: "TikTok", icon: <TikTokMark size={15} />, href: socialLink("tiktok") },
+        { key: "ig", label: "Instagram", icon: <InstagramMark size={16} />, href: socialLink("instagram") },
       ]}
     />
   );
@@ -196,6 +222,7 @@ export function SocialSection({ unlocked, onUpgrade, deck }: {
       platform="WhatsApp"
       marks={[<WhatsAppMark key="wa" size={16} />]}
       title="WhatsApp Support"
+      art={{ desktop: "/assets/dashboard/card-whats.webp", mobile: "/assets/dashboard/card-whats-m.webp" }}
       body="Need help? Talk to AfaqWay Support directly about your application, documents, admissions and residence procedures."
       actions={[{
         key: "wa",

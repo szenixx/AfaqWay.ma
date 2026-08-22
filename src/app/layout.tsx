@@ -17,10 +17,15 @@ import "./admin-wallet.css";
 /* The onboarding journey's own sheet, scoped to `.onb-root`. Separate from
    globals.css on purpose: /profile-setup is not built from the platform shell. */
 import "./onboarding.css";
-import { Geist } from "next/font/google";
+import { Geist, Space_Grotesk } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+/* The one face on the platform that is not the system font, and it earns that
+   by carrying exactly one thing: the "Most popular" mark on a plan. A wide
+   grotesque holds its shape at badge size, where the body face turns to mush.
+   One weight, nothing else uses it. */
+const badge = Space_Grotesk({subsets:['latin'],weight:'700',variable:'--font-badge'});
 
 const DESCRIPTION =
   "AfaqWay walks non-EU students through every step of the study-abroad journey, a personalized roadmap, human-reviewed documents, and a live tracker so nothing slips through the cracks.";
@@ -51,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("font-sans", geist.variable, badge.variable)}>
       <body>
         {children}
         <SpeedInsights />

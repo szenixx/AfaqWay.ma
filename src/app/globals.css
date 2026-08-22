@@ -84,6 +84,20 @@ body {
      just the outer one). */
   .sw-root.af-desktop-zoom { height: calc(100dvh / 1.1); }
   .sw-root.af-desktop-zoom .sw-shell { height: calc(100dvh / 1.1); }
+
+  /* The workspace cancels browser zoom; the homepage and the auth screens
+     above keep the plain 1.1 they already had. Gated on @supports because a
+     calc that resolves invalid does NOT fall back to the rule before it — it
+     unsets the property, which would drop the workspace to zoom 1 on an
+     engine without tan()/atan2(). */
+  @supports (width: calc(1px * tan(atan2(1px, 1px)))) {
+    .sw-root.af-desktop-zoom {
+      --sw-unzoom: clamp(var(--sw-unzoom-floor), tan(atan2(100vw, var(--sw-anchor-w))), 1);
+      zoom: calc(1.1 * var(--sw-unzoom));
+      height: calc(100dvh / (1.1 * var(--sw-unzoom)));
+    }
+    .sw-root.af-desktop-zoom .sw-shell { height: calc(100dvh / (1.1 * var(--sw-unzoom))); }
+  }
 }
 
 /* Mobile-only: every workspace module fires its own entrance animation on
@@ -708,7 +722,31 @@ a {
    Expanded 256px / icon-only 60px, 32px menu rows, 8px radius, flat accent
    highlight on hover + active, group labels that fade out when collapsed,
    badges pinned right, tooltips on the right while collapsed. */
-:root { --sw-side: 224px; --sw-side-icon: 66px; --sw-head: 56px; }
+:root {
+  --sw-side: 224px; --sw-side-icon: 66px; --sw-head: 56px;
+
+  /* ── Browser-zoom neutralisation ──────────────────────────────────────
+     The screen this workspace is judged on. Everything below is anchored to
+     it: at this width the UI renders exactly as it does today, and browser
+     zoom stops changing its physical size.
+
+     Browsers do not expose page zoom to CSS, and devicePixelRatio conflates
+     it with OS display scaling. The one thing that does track it is `vw`:
+     the CSS viewport shrinks in exact proportion to zoom, so
+
+         100vw / --sw-anchor-w  ==  1 / browser-zoom
+
+     `tan(atan2(a, b))` is how CSS divides one length by another and gets a
+     plain number back. Multiplying the existing 1.1 by that cancels the zoom.
+
+     The floor matters: CSS cannot tell a zoomed window from a genuinely
+     narrow one, so without it a half-width browser window would scale the
+     interface down as if it were zoomed. 0.55 fully cancels zoom up to 175%
+     and stops there. Raise it to protect narrow windows, lower it to cancel
+     deeper zoom. */
+  --sw-anchor-w: 1920px;
+  --sw-unzoom-floor: 0.55;
+}
 /* Collapsed-rail geometry, in one place: the sliding pill is positioned
    from these numbers, so a change here moves the pill with the items
    instead of leaving it behind. */
@@ -1558,7 +1596,12 @@ body {
 
 /* ══ Journey roadmap — floating glass, iOS-inspired ═══════════════════════ */
 .jr-root { display: flex; flex-direction: column; gap: 16px; }
-.jr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px 20px; border-radius: 24px; }
+/* Sized to the render it carries and nothing more. The floor is the artwork's
+   own height plus a little clearance, so the card is as slim as it can be
+   without the illustration having to shrink or be clipped to fit.
+   `center` rather than `flex-end` because with a min-height the old bottom
+   alignment would leave the copy hanging off the floor of the card. */
+.jr-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; min-height: 138px; padding: 16px 20px; border-radius: 24px; }
 .jr-title { margin: 0; font: 800 23px/29px var(--font-sans); color: var(--ink); letter-spacing: -.3px; }
 .jr-sub { margin: 5px 0 0; font: 400 12.5px/19px var(--font-sans); color: var(--ink-soft); max-width: 560px; }
 .jr-overall { text-align: right; flex: none; }
@@ -1585,6 +1628,140 @@ body {
   border-color: rgba(255,255,255,1);
   box-shadow: 0 1px 1px rgba(23,35,58,.03), 0 22px 52px -28px rgba(23,35,58,.58);
   transform: translateY(-2px);
+}
+
+/* ── Journey artwork ═══════════════════════════════════════════════════════
+   One 3D render summarising the roadmap in the header, and one per stage in
+   the navigator, all from the same set. Every one of them is a BACKGROUND
+   layer: z-index 0, with each piece of content in the card raised a layer
+   above, so wherever a render sits it can never cover a word or a control. */
+
+/* The roadmap summary sits right beside the progress figure, at the end of the
+   header where the journey it draws also ends.
+
+   Sized by HEIGHT, not width. The header is only about 110px tall and the
+   render is 16:9, so a width-driven size ran it past the top and bottom edges
+   and `overflow: hidden` cropped it. Bounding the height instead means the
+   whole illustration is always visible and its width simply follows. */
+.jr-head { position: relative; overflow: hidden; }
+.jr-head > *:not(.jr-headart-row) { position: relative; z-index: 1; }
+/* Both renders in ONE right-anchored row. Placing them as two absolutes with
+   their own offsets meant the gap between them changed every time the header
+   resized; a flex row keeps it fixed and grows leftwards from the progress
+   figure. */
+.jr-headart-row {
+  position: absolute; z-index: 0;
+  top: 50%; right: 132px; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 14px;
+  pointer-events: none; user-select: none;
+}
+/* The destination, left of the path that leads to it. Smaller than the roadmap
+   itself so it reads as the companion piece, not a second subject.
+
+   Shown only where there is genuinely room: the band between the copy (capped
+   at 560px) and the roadmap render is 516px wide on a 1920 screen but only
+   80px at 1440, and negative below that. This is a decorative element being
+   revealed, not an architecture switch, which is why it sits on its own
+   threshold rather than the usual component breakpoints. */
+/* The destination, standing ON the card's bottom border rather than floating
+   in the middle of the row: aligned to the row's foot and given the few pixels
+   back that centring the row inside a taller card had left underneath it. */
+.jr-headart-globe {
+  display: none; align-self: flex-end;
+  height: 120px; width: auto; margin-bottom: -4px; opacity: .95;
+}
+/* And the compass between them, entering from ABOVE: aligned to the row's head
+   and lifted past it, so its lanyard runs off the top of the card and the card
+   clips it. That is what makes it read as hanging into the frame rather than
+   sitting in it. */
+.jr-headart-compass {
+  display: none; align-self: flex-start;
+  height: 116px; width: auto; margin-top: -32px; opacity: .95;
+}
+/* Both are revealed only where the band is genuinely wide enough to hold the
+   three of them; below this the roadmap render stands alone. */
+@media (min-width: 1500px) {
+  .jr-headart-globe, .jr-headart-compass { display: block; }
+}
+.jr-headart {
+  position: relative; z-index: 0;
+  /* A FIXED height, not a share of the card. Tied to the card's height the
+     render shrank whenever the card did, so the card could never be slimmed
+     without the illustration going with it. The calc is only a guard: on a
+     taller card (a tester banner pushes it down) the art holds 130px, and on a
+     shorter one it gives way rather than being clipped by the frame. */
+  height: 130px; width: auto;
+  object-fit: contain;
+  opacity: .95;
+}
+
+/* The stage mark. Deliberately NO overflow:hidden on the card — .jr-navplan
+   straddles the top edge by design and clipping would cut the badge in half —
+   so the render stays inside the card's bounds rather than bleeding past them.
+
+   Width is a share of the card, not a fixed size: the five columns are `1fr`
+   each with no minimum, so they get narrow long before any breakpoint fires. */
+.jr-navcard { position: relative; }
+.jr-navcard > *:not(.jr-navart-slot) { position: relative; z-index: 1; }
+/* The clip layer covers the WHOLE card and carries its radius, so the artwork
+   is cut by the card's own boundary. It lives here rather than as overflow on
+   the card itself because .jr-navplan straddles the card's top edge by design:
+   as a sibling of this layer that badge is untouched, while anything inside it
+   is clipped. */
+.jr-navart-slot {
+  position: absolute; z-index: 0; inset: 0;
+  overflow: hidden; border-radius: 18px;
+  pointer-events: none; user-select: none;
+}
+/* The AfaqWay Support card's treatment, at this card's scale: right-anchored
+   with a small bleed the frame clips, vertically centred, a share of the width,
+   and the same low opacity. See .dx-support-art in dashboard.css, which these
+   numbers follow so the two surfaces read as one system.
+
+   The oversized corner-hung version this replaces cut the object on two sides
+   at once, which read as a picture trimmed by accident rather than artwork the
+   frame happens to run past. */
+.jr-navart {
+  position: absolute; right: -9%; top: 50%; transform: translateY(-52%);
+  width: 56%; max-width: 118px; height: auto;
+  opacity: .55;
+  transition: opacity 220ms var(--ease);
+}
+/* The render holds ONE opacity in every state: inactive, hovered, current,
+   waiting approval, open, completed. Which stage is live is already said by the
+   card's background, its border, the accent, the status badge and the progress
+   bar, and a decorative object brightening on top of all that only competes
+   with the content it is meant to sit behind. */
+/* ── Per-stage nudges ────────────────────────────────────────────────
+   Two stages need a hair of adjustment the shared rule cannot give them,
+   because each object has its own proportions inside a square canvas. */
+
+/* Stage 1's laptop is the widest of the five (316x216), so at a shared width
+   it is also the shortest, and centring left it sitting low against the taller
+   objects beside it. `top` rather than the translate, because translateY is a
+   share of the ELEMENT's height and this is the flattest one, so the same
+   percentage moves it least. */
+.jr-navart-slot[data-art="explore"] .jr-navart { top: 40%; }
+
+/* Stage 5 is the end of the roadmap and was the most hidden of the five: the
+   plane's nose ran off the right edge into the bleed. It keeps almost all of
+   its width inside the card and sits a little larger. */
+.jr-navart-slot[data-art="arrival"] .jr-navart {
+  right: -1%; width: 62%; max-width: 126px;
+}
+
+/* A locked stage dims its furniture, and the render is furniture — the same
+   treatment the icon, badge and bar already get. */
+.jr-navcard.locked .jr-navart { opacity: .28; }
+
+/* Under this width the header has no band left and the render runs behind the
+   sentence: the copy is capped at 560px and the roadmap art needs the header to
+   be at least ~967px wide to clear it, which is a 1253px viewport. 1023px was
+   measured against the card rather than against the copy inside it, so between
+   1024 and 1279 the artwork was sitting under the text.
+   The stage marks stay, they scale with their own cards. */
+@media (max-width: 1279px) {
+  .jr-headart-row { display: none; }
 }
 
 /* Compact stage timeline — every stage in one row. */

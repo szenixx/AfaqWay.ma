@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SOCIAL, whatsappLink } from "@/lib/socialLinks";
+import { WhatsAppIcon } from "@/components/ds/WhatsAppIcon";
 
 // href for every footer link (all real routes now, no /soon placeholders)
 const HREF: Record<string, string> = {
@@ -94,14 +95,6 @@ function TikTokIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
       <path d="M16.5 3c.4 2.3 1.7 3.7 3.9 3.9v2.5c-1.3.1-2.5-.3-3.9-1.1v5.9c0 3.4-2.5 5.9-5.8 5.9-3 0-5.2-2.2-5.2-5.1 0-3.1 2.6-5.4 5.9-4.9v2.7c-.4-.1-.9-.2-1.3-.2-1.4 0-2.4 1-2.4 2.4 0 1.4 1 2.4 2.4 2.4 1.5 0 2.5-1.1 2.5-2.9V3h3.9z" />
-    </svg>
-  );
-}
-function WhatsAppIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.5 20.5l1.3-4.2A8 8 0 1 1 8 19.4l-4.5 1.1z" />
-      <path d="M9 9.2c.2-.6.4-.6.7-.6h.5c.2 0 .4 0 .6.5l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.1-.2.3-.1.5.3.6 1.3 1.7 2.3 2.1.2.1.4.1.5-.1l.5-.6c.2-.2.3-.2.5-.1l1.5.8c.2.1.3.2.3.4 0 .5-.4 1.3-.8 1.5-.5.3-1.4.5-3-.2-2-.9-3.3-3-3.5-3.3-.1-.2-.9-1.3-.9-2.4 0-1.1.6-1.6.8-1.8z" fill="currentColor" stroke="none" />
     </svg>
   );
 }

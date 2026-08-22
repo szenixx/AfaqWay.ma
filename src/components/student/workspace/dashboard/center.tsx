@@ -42,6 +42,22 @@ export function Welcome({ name, started, onAction }: {
       {/* Depth from the primary's own light, not from a second hue. */}
       <span className="dx-welcome-glow" aria-hidden />
 
+      {/* Four objects from the journey scattered around the student: the visa,
+          the checklist, the university and the roadmap. They sit a layer ABOVE the line-art
+          wash and BELOW every word, the student and the button, so wherever
+          they fall they can never cover something that has to be read.
+          Decorative statics, like the rest of this card's artwork. */}
+      <span className="dx-welcome-props" aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/assets/dashboard/prop-visa.webp" alt="" loading="lazy" decoding="async" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/assets/dashboard/prop-checklist.webp" alt="" loading="lazy" decoding="async" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/assets/dashboard/prop-university.webp" alt="" loading="lazy" decoding="async" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/assets/dashboard/prop-roadmap.webp" alt="" loading="lazy" decoding="async" />
+      </span>
+
       {/* Two beams, half a lap apart, chasing each other round the border.
           White on the brand fill, so they read as light rather than as a
           second colour. */}
@@ -62,9 +78,7 @@ export function Welcome({ name, started, onAction }: {
         </h1>
         <p className="dx-welcome-sub">Let&rsquo;s continue your study journey.</p>
         <p className="dx-welcome-text">
-          Everything you need is in one place: track your application, upload and verify
-          your documents, follow each stage of your move, and talk to your advisor whenever
-          you need a hand.
+          Track your application, verify your documents, and reach your advisor, all in one place.
         </p>
       </div>
 

@@ -396,3 +396,99 @@ monitor render different products.
 - `vw`/`vh` are legitimate for the app shell and inside `max-width`/`min()`
   overflow guards. They are not legitimate for type, padding, control heights
   or panel widths.
+
+## A positioned wrapper you did not write still owns your offsets (22 Aug 2026)
+The "Most popular" badge was pinned with `top: -11px` and landed on the frame on
+a phone but 11px INSIDE it on desktop. `SpotlightCard` wraps its children in
+`.af-spotlight-content`, which ds.css gives `position: relative` — so the badge
+measured from the CONTENT box, and on desktop that box started 22px in because
+the padding sat on `.onb-plan`.
+- Before hanging anything off a card's edge, find the nearest positioned
+  ancestor. In a wrapper component that is rarely the element you styled:
+  `grep -n "position: *relative" ds.css` for the wrapper's own classes.
+- The fix was to move the padding from the card onto the content wrapper, so
+  the positioning box and the visible frame are the same rectangle. Do not
+  paper over it by subtracting the padding in the offset — that number breaks
+  the moment the padding changes.
+
+## "Mobile only" means a JS branch, not just a media query (22 Aug 2026)
+The phone plan step is a different STRUCTURE (tap to pick, one sticky CTA), not
+a narrower copy (a CTA per card). CSS alone cannot move a commit from a card's
+button to a shared bar.
+- Use `matchMedia` in a lazy `useState` initializer, not in an effect. An
+  effect renders the desktop tree for one frame first, so a phone flashes two
+  competing primary buttons. The lazy initializer is safe here only because
+  the journey gates on `if (loading) return <Boot/>` and never server-renders
+  that subtree — check for that gate before reaching for it.
+- Everything that is purely presentational still belongs in the media query.
+  The extra `<span class="onb-plan-radio">` renders on both and is
+  `display: none` on desktop, so there is one DOM and no duplicated markup.
+
+## A card that stretches to a fixed frame reads as oversized (22 Aug 2026)
+`.onb-plans { flex: 1 }` inside an 862px card inflated two short plan cards into
+slabs with bands of white inside them. The original comment defended it: "the
+pair fills the frame rather than sitting as two short cards with a void
+underneath."
+- Filling the frame and sizing to content are not the only two options.
+  `align-content: safe center` on the grid sizes the row to its content and
+  centres it, so there is no void AND no stretch, and `align-items: stretch`
+  still levels the two cards so their buttons stay on one line.
+- When a comment defends the thing you are about to change, the fix has to
+  answer the comment, not delete it.
+
+## Ask once about a font, then expect to be asked again (22 Aug 2026)
+I asked which face the badge should use, got Instrument Serif italic, shipped
+it at 12.5px, and was told to change it. An italic serif inside a small filled
+pill is genuinely hard to read — that was predictable from the size.
+- When presenting type options, present them AT THE SIZE they will be used.
+  "Instrument Serif italic" reads beautifully in a preview and turns to mush at
+  10px in a pill.
+- Wire the choice as one variable (`--onb-badge-font`) so swapping the face is
+  one line in one file plus one import. That is what made the second round cheap.
+
+## Placement is a separate approval from content (22 Aug 2026)
+The plans illustration was approved as an image and then moved three times: a
+foreground band at the top, then a low-opacity watermark, then across two steps
+instead of one. Each move was a layout decision, not a complaint about the
+drawing.
+- Ask "where does it sit and what does it displace" BEFORE cutting and
+  installing, not after. The first install cost a crop, a webp, a component
+  branch and a media query that all had to come back out.
+- Build the placement so it is cheap to move: the art lives in ONE element with
+  ONE class. Moving it from content band to card watermark was a delete plus a
+  new rule, not a rewrite.
+- Related: an earlier note already said a generated asset is approved for its
+  content, not its placement. This is the second occurrence. Treat "here is the
+  image" and "here is where it goes" as two separate questions, always.
+
+## Filling space with stretch is not the same as filling it with content (22 Aug 2026)
+Told the cards looked oversized, I sized them to content. Told to fill the free
+space, I stretched them again with `justify-content: space-between`, which
+spread the feature lines into a gappy ladder. That got rejected too.
+- Three different things can fill a tall frame: MORE CONTENT (ten features
+  instead of six), STRETCH (slack pushed into the gaps), or ANOTHER ELEMENT
+  (the WhatsApp consultation row). Only the first and third read as designed.
+  Stretch always reads as a layout that gave up.
+- When free space keeps coming back after you remove it, it is telling you the
+  frame wants one more component, not that the existing ones want to be bigger.
+
+## Look for the config before inventing the value (22 Aug 2026)
+The WhatsApp row needed a number, an icon and a link. All three already existed:
+`SUPPORT_WHATSAPP_URL` in config/support.ts, `whatsappLink()` in
+lib/socialLinks.ts, and a hand-drawn `WhatsAppIcon` inside home/Footer.tsx.
+- Grep for the concept before writing it: `grep -rniE "whatsapp|wa\.me" src/`
+  took one call and produced the real number, so the button was never dead.
+- The icon was a local function in a marketing component. Extracting it to
+  components/ds and importing it in both places is the rule the project already
+  states; importing Footer into onboarding would have been the wrong coupling.
+- Two sources held the same number. Both agreed this time. That is luck, and
+  the reason the config comment says to keep one copy.
+
+## next build and next dev share .next (22 Aug 2026)
+After a production build, the running dev server kept serving a stale CSS chunk:
+the source had nine occurrences of a new class and the served bundle had zero,
+while the log still printed a cheerful "Compiled".
+- Verifying against a dev server that has had a `next build` run underneath it
+  proves nothing. Restart it first, then re-fetch the chunk.
+- "Compiled in 91ms" is not evidence the change shipped. Grep the SERVED asset
+  for the new selector; that is the check that actually catches this.

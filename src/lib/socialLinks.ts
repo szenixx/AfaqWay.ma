@@ -28,10 +28,12 @@ export const SOCIAL = {
 } as const;
 
 /** wa.me link, or null when no support number is configured yet. */
-export function whatsappLink(): string | null {
+export function whatsappLink(message?: string): string | null {
   const digits = SOCIAL.whatsappNumber.replace(/\D/g, "");
   if (!digits) return null;
-  const text = SOCIAL.whatsappMessage.trim();
+  /* A caller can open the thread on its own subject; everything else keeps
+     the generic support opener. */
+  const text = (message ?? SOCIAL.whatsappMessage).trim();
   return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 }
 

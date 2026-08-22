@@ -45,6 +45,10 @@
   --onb-card-top: 42px;
   --onb-card-pad: 24px;         /* horizontal, and the card's bottom inset */
 
+  /* The badge face, loaded once in the root layout. It falls back to the body
+     face, so the mark is still legible in the frame before the webfont lands. */
+  --onb-badge-font: var(--font-badge), var(--font-sans), system-ui, sans-serif;
+
   --onb-ease: cubic-bezier(.32, .72, 0, 1);
   --onb-fast: 180ms;
   --onb-slow: 260ms;
@@ -173,7 +177,22 @@
   transition: width var(--onb-slow) var(--onb-ease);
 }
 /* Everything in the card sits above the optional BlueprintGrid behind it. */
-.onb-card > *:not(.blueprint) { position: relative; z-index: 1; }
+.onb-card > *:not(.blueprint):not(.onb-cardart) { position: relative; z-index: 1; }
+
+/* The pricing watermark. Bottom-anchored because the drawing stands on a
+   ground line, so the card's own floor is the one it belongs on. */
+.onb-cardart {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none; user-select: none; overflow: hidden;
+  border-bottom-left-radius: inherit; border-bottom-right-radius: inherit;
+  opacity: .07;
+}
+.onb-cardart img { width: 100%; max-width: 940px; height: auto; }
+/* The payment half ends in a CTA row, so the drawing lifts clear of it instead
+   of running underneath the buttons. The offset is that row's own height:
+   .onb-paynext is 52px and .onb-payfoot adds the card's bottom pad. */
+.onb-cardart[data-step="pay"] { bottom: calc(52px + var(--onb-card-pad)); }
 
 /* ── Progress ──────────────────────────────────────────────────────────
    One quiet bar across the very top of the card. */
@@ -354,32 +373,96 @@
 /* The pair fills the frame rather than sitting as two short cards with a void
    underneath: the answer area becomes a column and the grid takes what is left. */
 .onb-answer:has(.onb-plans) { display: flex; flex-direction: column; }
-/* The pair never touches the bottom of the card: the gap is what keeps them
-   reading as cards inside a frame rather than as the frame itself. */
-.onb-plans { flex: 1; min-height: 380px; margin-bottom: 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+/* The pair takes the height its content needs and CENTRES in what is left,
+   rather than stretching to fill the frame: a fixed 862px card stretched two
+   short cards into slabs with bands of empty white inside them. The row is
+   still one track, so `stretch` keeps both cards the height of the taller one
+   and the two buttons stay on the same line.
+   `safe` so an overlong list scrolls from the top instead of centring its
+   overflow out of reach; browsers that cannot parse it fall back to stretch. */
+/* Everything in this column sits at the top and runs down: the pill, the
+   notice, then the pair. Twelve features apiece is what closes the frame, so
+   there is no band left to stretch into and the gap between lines never has to
+   grow to hide one. */
+.onb-plans {
+  flex: 1; min-height: 0; margin-bottom: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px;
+  align-items: stretch; align-content: start;
+}
+
+/* The consultation offer: a slim pill at the very top of the column, sized to
+   its own words rather than stretched across the frame, so it reads as one
+   quiet button and never competes with the two plans below it. Green is the
+   one thing on this surface that is not brand indigo, because the mark names
+   WhatsApp rather than AfaqWay; the value is the platform's existing one. */
+/* ONE pill, worn by every quick action on this step: the consultation offer at
+   the top of the desktop column, and both of the phone's side-by-side buttons.
+   Same geometry and same weight everywhere, so a pair of them reads as a pair.
+   Only the mark's colour differs, and the mark carries that itself with
+   nothing behind it. */
+.onb-quickbtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 42px; padding: 0 16px;
+  border: 1px solid var(--onb-edge); border-radius: 999px; background: #fff;
+  text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  font: 500 13.5px/19px var(--font-sans); color: var(--onb-ink);
+  transition: border-color var(--onb-fast) var(--onb-ease), background var(--onb-fast) var(--onb-ease);
+}
+.onb-quickbtn > svg, .onb-quickico { flex: none; }
+.onb-quickico { display: flex; }
+.onb-quickbtn > svg:first-child { color: var(--onb-brand); }
+.onb-quickbtn:hover { border-color: #C4C8EE; background: #FAFBFF; }
+.onb-quickbtn:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: 2px; }
+/* WhatsApp names itself, not AfaqWay, so its mark keeps the platform's green. */
+.onb-quickbtn-wa .onb-quickico { color: #1FA855; }
+.onb-quickbtn-wa:hover { border-color: #1FA855; background: #FAFDFB; }
+.onb-quickbtn-wa:focus-visible { outline-color: #1FA855; }
+
+/* The pill is an aside, not part of the notice under it, so it keeps a clear
+   gap rather than sitting on its shoulder. */
+.onb-plan-help { flex: none; display: flex; justify-content: center; margin-bottom: 18px; }
+
 /* SpotlightCard wraps the children in .af-spotlight-content, so the box lives
    on the card and the column layout lives on that inner element. */
+/* The padding lives on the content wrapper, not on the card. SpotlightCard
+   makes that wrapper the positioned ancestor, so anything hung off the card's
+   EDGE — the badge — has to measure from a box that is the card's own box.
+   With the padding on .onb-plan the wrapper started 22px inboard and the badge
+   landed inside the frame instead of on it. */
 .onb-plan {
-  position: relative; overflow: hidden;
-  padding: 22px 20px 20px; border: 1px solid var(--onb-edge); border-radius: 18px; background: #fff;
+  position: relative; overflow: visible;
+  padding: 0; border: 1px solid var(--onb-edge); border-radius: 18px; background: #fff;
   transition: border-color var(--onb-fast) var(--onb-ease);
 }
-.onb-plan > .af-spotlight-content { display: flex; flex-direction: column; height: 100%; }
+/* The card no longer clips, so the pointer glow has to hold its own corners —
+   otherwise it paints a rectangle over the card's rounded edges on hover. */
+.onb-plan .af-spotlight-glow { border-radius: inherit; }
+.onb-plan > .af-spotlight-content { display: flex; flex-direction: column; height: 100%; padding: 20px 19px 18px; }
 .onb-plan:hover { border-color: #C4C8EE; }
 .onb-plan[data-on] { border-color: var(--onb-brand); background: #FAFAFF; }
 .onb-plan-head { display: flex; align-items: center; gap: 10px; }
+/* Pinned to the card's own edge rather than sitting in the content: it is a
+   mark ON the frame, so it never competes with the plan name for the row and
+   never pushes the card taller. Filled instead of tinted — it is the one
+   recommendation on the screen — and set in the badge face, which holds its
+   shape at this size where the body face turns to mush. */
 .onb-plan-tab {
-  margin-left: auto; flex: none;
-  padding: 4px 10px; border-radius: 999px; background: #EDEEFC; color: var(--onb-brand);
-  font: 600 10px/14px var(--font-sans); letter-spacing: .05em; text-transform: uppercase;
+  position: absolute; top: -11px; right: 18px; z-index: 3;
+  margin: 0; flex: none; padding: 3px 11px 4px; border-radius: 999px;
+  background: var(--onb-brand); color: #fff;
+  box-shadow: 0 6px 14px -7px rgba(46, 59, 199, .9);
+  font: 700 10.5px/14px var(--onb-badge-font); letter-spacing: .08em; text-transform: uppercase;
 }
 .onb-plan h3 { margin: 0; font: 600 17px/24px var(--font-sans); color: var(--onb-ink); }
 .onb-plan-tagline { margin: 8px 0 0; font: 400 13px/19px var(--font-sans); color: var(--onb-ink-3); }
-.onb-plan-price { display: flex; align-items: baseline; gap: 6px; margin: 16px 0 0; padding-bottom: 18px; border-bottom: 1px solid #F0F0F3; }
-.onb-plan-price strong { font: 700 34px/38px var(--font-sans); color: var(--onb-ink); letter-spacing: -.02em; }
+.onb-plan-price { display: flex; align-items: baseline; gap: 6px; margin: 13px 0 0; padding-bottom: 15px; border-bottom: 1px solid #F0F0F3; }
+.onb-plan-price strong { font: 700 29px/33px var(--font-sans); color: var(--onb-ink); letter-spacing: -.02em; }
 .onb-plan-price span { font: 600 15px/20px var(--font-sans); color: var(--onb-ink-3); }
-.onb-plan-list { flex: 1; list-style: none; margin: 18px 0 20px; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.onb-plan-list { flex: 1; list-style: none; margin: 15px 0 18px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .onb-plan-list li { display: flex; gap: 9px; font: 400 13px/19px var(--font-sans); color: var(--onb-ink); }
+/* The selection tick on a plan row. Phone only — desktop commits on the
+   card's own button and has no selected-but-not-confirmed state. */
+.onb-plan-radio { display: none; }
 .onb-feat-tick {
   flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 999px;
   background: #EDEEFC; color: var(--onb-brand); display: flex; align-items: center; justify-content: center;
@@ -388,7 +471,7 @@
    white on a translucent shell, which is invisible on a white card. Scoped, so
    the dashboard's own MagicButton is untouched. */
 .onb-root .onb-plan-cta {
-  width: 100%; height: 50px; padding: 2px; border-radius: 13px;
+  width: 100%; height: 46px; padding: 2px; border-radius: 13px;
   justify-self: stretch; margin: 0;
   background: var(--onb-brand);
   box-shadow: 0 10px 22px -14px rgba(46, 59, 199, .8);
@@ -454,7 +537,6 @@
   display: block; margin: 0 2px 16px;
   font: 600 22px/28px var(--font-sans); color: var(--onb-ink); letter-spacing: -.01em;
 }
-@keyframes onbReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 .onb-note-line { margin: 10px 2px 0; font: 400 12.5px/18px var(--font-sans); color: var(--onb-ink-3); }
 .onb-err { margin: 10px 2px 0; font: 500 13px/19px var(--font-sans); color: var(--red); animation: onbShake 220ms var(--onb-ease); }
@@ -824,6 +906,12 @@
 .onb-modal-card p { margin: 10px 0 20px; font: 400 14px/22px var(--font-sans); color: #4A5568; }
 .onb-modal-foot { display: flex; justify-content: flex-end; gap: 10px; }
 
+/* The comparison sheet's closing action. Only the phone build shows it: on a
+   desktop the panel is a floating card with its X in view at all times. */
+.onb-feat-foot { display: none; }
+@keyframes onbSheet { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes onbReveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
 /* ══ Narrow desktop / tablet ═══════════════════════════════════════════════
    The card stays the card; only the frame's corner gutters come in, so the
    utilities never sit over it. */
@@ -833,6 +921,7 @@
 @media (max-height: 800px) {
   .onb-root { --onb-card-top: 22px; }
 }
+
 
 /* ══ Mobile — recomposed, not shrunk ══════════════════════════════════════
    The card becomes the screen: full bleed under the corner utilities, with
@@ -876,16 +965,149 @@
   .onb-proinfo { right: 8px; width: 28px; height: 28px; }
   .onb-prowatermark { width: 66px; height: 66px; top: -8px; left: -10px; }
 
-  .onb-plans { grid-template-columns: minmax(0, 1fr); }
   .onb-payfoot { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
+  .onb-cardart[data-step="pay"] { bottom: calc(52px + 10px + 19px + var(--onb-card-pad)); }
   .onb-root .onb-paynext { width: 100%; margin-left: 0; }
   .onb-payback { text-align: center; }
-  .onb-root .onb-plan-cta { height: 48px; }
-  .onb-feat-cols { grid-template-columns: minmax(0, 1fr); gap: 26px; padding: 18px; }
-  .onb-feat-cols > section + section { border-left: none; padding-left: 0; margin-left: 0; border-top: 1px solid #F0F0F3; padding-top: 22px; }
-  .onb-feat-cols[dir="rtl"] > section + section { border-right: none; padding: 22px 0 0; margin: 0; border-top: 1px solid #F0F0F3; }
-  .onb-feat-head { padding: 20px 18px 16px; }
-  .onb-feat-lang { margin-right: 38px; }
+
+  /* ── Plans on a phone: a different structure, not a narrower one ─────
+     The list scrolls, the action does not. A card carrying its own button
+     puts two primary actions on one screen and scrolls the one you want
+     out from under your thumb exactly when you reach for it — so picking
+     and confirming become two acts: tap a row, then one button at the
+     bottom that names what you picked. */
+
+  /* The answer area gives up its scroll so the plan list can own it: one
+     scroll region on the screen, and the bar below it never moves. */
+  .onb-answer:has(.onb-plans) { overflow: hidden; padding-bottom: 0; }
+
+  .onb-readfirst { margin: 0 0 12px; text-align: center; font-size: 13px; line-height: 19px; }
+
+  /* The two things a student reaches for before choosing, side by side and
+     the same size. `flex: 1 1 0` rather than auto so the pair splits the row
+     evenly whatever the two labels measure, and `stretch` keeps them level
+     when the narrower phones wrap one of them to a second line. */
+  .onb-plan-quick { flex: none; display: flex; align-items: stretch; gap: 10px; margin: 0 0 12px; }
+  .onb-plan-quick > .onb-quickbtn {
+    flex: 1 1 0; min-width: 0; gap: 8px; padding: 7px 10px; text-align: center;
+  }
+
+  .onb-plans {
+    flex: 1; min-height: 0; margin-bottom: 0; gap: 20px;
+    grid-template-columns: minmax(0, 1fr); align-content: start;
+    /* The top inset is the badge's room: it sits on the card's edge, so the
+       first card would otherwise have it clipped by the scroller. */
+    padding: 12px 2px 4px;
+    overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+  }
+  .onb-plans::-webkit-scrollbar { display: none; }
+
+  /* The padding moves onto the tap target, so the whole head of the card
+     is the button rather than a region inside it. */
+  .onb-plan { border-radius: 22px; }
+  .onb-plan > .af-spotlight-content { padding: 0; }
+  .onb-plan[data-on] { box-shadow: inset 0 0 0 1px var(--onb-brand); }
+  .onb-plan-pick {
+    display: flex; flex-direction: column; width: 100%;
+    padding: 16px 16px 15px; border: none; border-radius: 22px; background: none;
+    text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .onb-plan-pick:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: -3px; }
+
+  /* "Most popular" takes its own line: on a 320px row it would otherwise
+     squeeze the plan name down to an ellipsis. Filled rather than tinted, and
+     set in its own face, because it is the one thing on this screen that is
+     not a fact about a plan — it is a recommendation. */
+  .onb-plan-head { gap: 9px; }
+  .onb-plan h3 { min-width: 0; font-size: 16px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* The tick leads the row, so the row states its own selection rather than
+     leaving it to the border colour alone. */
+  .onb-plan-radio {
+    flex: none;
+    display: flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 999px;
+    border: 1.5px solid var(--onb-edge); background: #fff; color: transparent;
+    transition: background var(--onb-fast) var(--onb-ease), border-color var(--onb-fast) var(--onb-ease), color var(--onb-fast) var(--onb-ease);
+  }
+  .onb-plan[data-on] .onb-plan-radio { background: var(--onb-brand); border-color: var(--onb-brand); color: #fff; }
+
+  /* Cost before length: the number a student weighs hardest sits directly
+     under the name, and the sentence explaining the plan follows it. */
+  .onb-plan-price { order: 1; margin: 9px 0 0; padding-bottom: 0; border-bottom: none; }
+  .onb-plan-price strong { font-size: 26px; line-height: 30px; }
+  .onb-plan-price span { font-size: 13px; line-height: 18px; }
+  .onb-plan-tagline { order: 2; margin: 3px 0 0; font-size: 13px; line-height: 19px; }
+
+  /* What a picked plan reveals: four lines and the door to the rest. */
+  .onb-plan-more { flex: none; border-top: 1px solid #EFEFF3; animation: onbReveal 220ms var(--onb-ease) both; }
+  .onb-plan-list { flex: none; margin: 0; padding: 13px 16px 0; gap: 10px; }
+  .onb-plan-list li { font-size: 13px; line-height: 19px; }
+  .onb-plan-readmore {
+    display: flex; align-items: center; gap: 5px;
+    margin: 0; padding: 11px 16px 14px; border: none; background: none; cursor: pointer;
+    font: 600 13px/18px var(--font-sans); color: var(--onb-brand);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .onb-plan-readmore > svg { flex: none; }
+  .onb-plan-readmore:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: -2px; border-radius: 8px; }
+
+  /* One action, where the thumb already is, and it never scrolls away. */
+  .onb-plan-bar { flex: none; padding: 12px 0 var(--onb-card-pad); border-top: 1px solid #EFEFF3; }
+  .onb-root .onb-plan-bar .onb-plan-cta { height: 52px; }
+  .onb-root .onb-plan-cta:disabled { opacity: .45; box-shadow: none; cursor: not-allowed; }
+  .onb-root .onb-plan-cta:disabled:hover { transform: none; box-shadow: none; }
+
+  /* ── The comparison, full screen ─────────────────────────────────────
+     Twenty lines of detail do not belong in a box inside a box. The sheet
+     takes the whole screen, scrolls as one region, and closes from the bar
+     at the top AND the button at the end, so leaving it is never a hunt
+     for a small X in a corner. */
+  .onb-modal-focus { padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .onb-feat {
+    max-width: none; width: 100%; height: 100dvh; max-height: 100dvh;
+    border-radius: 0; box-shadow: none;
+    animation: onbSheet 240ms var(--onb-ease);
+  }
+  .onb-feat-head {
+    flex-wrap: wrap; align-items: center; gap: 0;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 64px 14px 16px;
+  }
+  .onb-feat-head > div:first-child { flex: 1 1 100%; padding-right: 0; }
+  .onb-feat-head h2 { font-size: 18px; line-height: 25px; }
+  .onb-feat-head p { font-size: 13px; line-height: 19px; }
+  .onb-feat-lang { margin: 12px 0 0; padding: 4px; }
+  .onb-feat-lang button { min-width: 46px; height: 34px; font-size: 13px; }
+  .onb-feat .onb-prosheet-x {
+    top: calc(10px + env(safe-area-inset-top, 0px)); right: 10px; width: 44px; height: 44px;
+  }
+
+  /* Each plan becomes its own card on a pale field, and each feature its own
+     row with a hairline under it. A hyphen-less wall of twenty lines is what
+     made the desktop column unreadable on a phone. */
+  .onb-feat-cols {
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch; background: #F2F3FB;
+    grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 14px 14px 20px;
+  }
+  .onb-feat-cols > section {
+    background: #fff; border: 1px solid #ECEDF5; border-radius: 20px; padding: 16px 16px 6px;
+  }
+  .onb-feat-cols > section + section { border-left: none; border-top: 1px solid #ECEDF5; padding-left: 16px; padding-top: 16px; margin-left: 0; }
+  .onb-feat-cols[dir="rtl"] > section + section { border-right: none; padding: 16px 16px 6px; margin: 0; border-top: 1px solid #ECEDF5; }
+  /* Sized to be read on a phone rather than scaled down from the desktop
+     column: the whole point of opening it is the detail. */
+  .onb-feat-cols h3 { font-size: 17px; line-height: 23px; }
+  .onb-feat-tag { margin: 3px 0 4px; font-size: 12.5px; line-height: 18px; }
+  .onb-feat-cols ul { gap: 0; }
+  .onb-feat-cols li { gap: 11px; padding: 12px 0; border-top: 1px solid #F2F3F7; font-size: 13.5px; line-height: 20px; }
+  .onb-feat-cols li .onb-feat-tick { margin-top: 0; }
+
+  .onb-feat-foot {
+    display: block; flex: none; background: #fff; border-top: 1px solid #EFEFF3;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .onb-root .onb-feat-done { height: 52px; }
   .onb-prosheet { padding: 22px 18px 18px; }
   .onb-prosheet-facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .onb-prosheet-head h2 { font-size: 19px; line-height: 26px; }
@@ -917,6 +1139,7 @@
 
 /* ── Reduced motion ──────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .onb-note-emoji, .onb-recap li, .onb-err, .onb-pop, .onb-modal, .onb-modal-card { animation: none; }
+  .onb-note-emoji, .onb-recap li, .onb-err, .onb-pop, .onb-modal, .onb-modal-card,
+  .onb-feat, .onb-plan-more { animation: none; }
   .onb-progress-fill, .onb-opt-in, .onb-card { transition-duration: 1ms; }
 }

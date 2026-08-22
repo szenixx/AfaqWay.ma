@@ -70,11 +70,12 @@
   position: relative; overflow: hidden;
   /* Three lanes: greeting, student, CTA. The student stands between the words
      and the action, facing back toward both. */
-  display: grid; grid-template-columns: minmax(0, 43%) minmax(0, 34%) minmax(0, 1fr);
-  align-items: center; gap: 20px;
-  /* The card keeps the height it had before the illustration arrived: the
-     artwork is fitted to the card, never the other way round. */
-  min-height: 190px; padding: 24px 30px; margin-bottom: 18px;
+  display: grid; grid-template-columns: minmax(0, 46%) minmax(0, 28%) minmax(0, 1fr);
+  align-items: center; gap: 18px;
+  /* Slimmer than it was, and the artwork is still fitted to the card rather
+     than the card to the artwork: the height comes from what the copy needs at
+     its current size, and the student's lane narrows to match. */
+  min-height: 156px; padding: 20px 28px; margin-bottom: 18px;
   border-radius: 18px;
   /* #2E3BC7 holds the identity; the tertiary only deepens the far corner. */
   background: linear-gradient(104deg, var(--dx-primary) 0%, var(--dx-primary) 52%, var(--dx-tertiary) 100%);
@@ -96,6 +97,40 @@
   object-fit: cover; object-position: center;
   opacity: .08; pointer-events: none; user-select: none;
 }
+/* The journey props, scattered around the student rather than ranked in a row:
+   four different sizes, four different tilts, none of them level with
+   another. z-index 0 puts them above the line-art wash and below the copy, the
+   student and the CTA — all of which carry z-index 1 — so their placement can
+   never cost readability. Percentage offsets so the scatter holds its shape as
+   the card widens. */
+.dx-welcome-props {
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none; user-select: none;
+}
+.dx-welcome-props img {
+  position: absolute; display: block; height: auto;
+  width: clamp(36px, 6.4%, 64px);
+  opacity: .92;
+  filter: drop-shadow(0 7px 14px rgba(10, 18, 70, .3));
+}
+/* Visa, high on the student's left. */
+.dx-welcome-props img:nth-child(1) { left: 45%; top: 8%; transform: rotate(-9deg); }
+/* Checklist, low and slightly further in, so the two never read as a column. */
+.dx-welcome-props img:nth-child(2) { left: 49.5%; bottom: 4%; transform: rotate(8deg); }
+/* University, the largest of the set, high on his right and clear of the
+   button's lane. */
+.dx-welcome-props img:nth-child(3) {
+  left: 66%; top: 6%; transform: rotate(4deg);
+  width: clamp(40px, 7.5%, 73px);
+}
+/* The roadmap, stacked under the university on the same side, tucked in a
+   little so the two read as a pair on his right rather than a stripe. Its own
+   tilt again, so no two objects in the scatter sit at the same angle. */
+.dx-welcome-props img:nth-child(4) {
+  left: 61%; bottom: 5%; transform: rotate(-6deg);
+  width: clamp(36px, 6.6%, 65px);
+}
+
 /* The student's lane. The frame stretches to the row and carries no layout
    weight of its own; the artwork inside is absolute, so it sizes off the frame
    and never feeds back into the card's height. The negative margins run the
@@ -104,7 +139,7 @@
    card's own size is untouched. */
 .dx-welcome-figure {
   grid-column: 2; position: relative; align-self: stretch; z-index: 1;
-  min-width: 0; margin: -16px 0 -24px; pointer-events: none;
+  min-width: 0; margin: -10px 0 -20px; pointer-events: none;
 }
 /* Fitted inside the frame rather than bleeding out of it, so the whole upper
    body reads: nothing is cropped at any card size. He rests on the card's
@@ -118,8 +153,8 @@
 }
 .dx-welcome-copy { position: relative; z-index: 1; min-width: 0; }
 .dx-welcome-title {
-  margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  font: 600 32px/1.18 var(--font-sans);
+  margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font: 600 26px/1.2 var(--font-sans);
   color: #fff; letter-spacing: -.03em;
 }
 /* The colour-emoji font, not the page font — otherwise the glyph renders
@@ -416,10 +451,10 @@
   /* The illustration gives ground first: the copy and the button are what have
      to stay usable as the card narrows. */
   .dx-welcome {
-    grid-template-columns: minmax(0, 41%) minmax(0, 30%) minmax(0, 1fr);
-    padding: 20px 22px; gap: 14px;
+    grid-template-columns: minmax(0, 44%) minmax(0, 26%) minmax(0, 1fr);
+    padding: 18px 20px; gap: 14px;
   }
-  .dx-welcome-figure { margin: -12px 0 -20px; }
+  .dx-welcome-figure { margin: -8px 0 -16px; }
   .dx-uni-art { width: 68%; opacity: .4; }
 }
 
@@ -452,7 +487,11 @@
     grid-template-columns: minmax(0, 1fr);
     align-items: start; gap: 0; min-height: 0; padding: 20px 22px;
   }
-  .dx-welcome-title { font-size: 26px; }
+  .dx-welcome-title { font-size: 23px; }
+  /* The three-lane grid is gone here and the student is a background wash, so
+     the scatter has nothing to sit around. It goes rather than piling up in a
+     corner of a stacked card. */
+  .dx-welcome-props { display: none; }
   .dx-welcome-text { max-width: none; }
   .dx-welcome-figure {
     position: absolute; z-index: 0;
@@ -505,20 +544,57 @@
 .dxs-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 
 .dxs-card {
+  /* The resting button sits on a wash of the card's own colour, so its label
+     has to clear AA at 12.5px against that wash. The accents are display
+     colours, not text colours: magenta and red need a hair of darkening and
+     get it from themselves, but the WhatsApp green is only 3.1:1 on white and
+     never gets there by darkening a little, so it borrows the platform's own
+     success green rather than a shade invented here. */
+  --dxs-ink: color-mix(in srgb, var(--dxs-accent) 92%, #000);
+  /* How far the artwork sinks BELOW the button's top edge. The button is
+     opaque and paints a layer above, so this crops the render's foot rather
+     than covering it: the object reads as rising out from behind the CTA. */
+  --dxs-art-drop: 26px;
   position: relative; overflow: hidden; isolation: isolate;
   display: flex; flex-direction: column;
   min-height: 224px; padding: 16px 17px;
   background: #fff; border: var(--dx-border); border-radius: var(--dx-radius);
   box-shadow: var(--dx-shadow);
 }
-/* The artwork slot. Right-anchored and held to a share of the card, so it
-   scales with the column instead of sitting at a fixed size, and it never
-   takes a click — the buttons sit above it. */
+/* The artwork slot. A cutout render with no rectangular edge of its own, so it
+   reads as part of the card surface rather than a picture pasted onto it, and
+   it bleeds off the right edge (the card clips it) so the composition carries
+   on past the frame.
+
+   TOP-RIGHT, not centred. The card ends in a full-width CTA band — 44px on the
+   single-button cards, 96px on Student Life, which carries two — and centring
+   the art ran it straight through that band. Anchored to the top instead, it
+   occupies the one region the copy (held to 64%) and the buttons both leave
+   free. `max-height` is the belt to that braces: whatever the column width, the
+   art stops before the shortest card's action row.
+
+   `aspect-ratio` rather than `height: auto` because the two renders have
+   deliberately different shapes; pinning the box means one width rule gives a
+   predictable height at every card size. */
 .dxs-art {
-  position: absolute; z-index: 0; right: -6%; top: 50%; transform: translateY(-50%);
-  width: 38%; max-width: 190px; height: auto;
-  opacity: .55; pointer-events: none; user-select: none;
+  position: absolute; z-index: 0;
+  /* Centred, with its bottom edge resting on the top edge of the button — the
+     same placement the deck card uses, so the row and the deck read as one
+     treatment. The offset is the card's own bottom padding plus the button
+     height, so the render tracks the CTA rather than drifting off it if either
+     value changes. Pairing Student Life's two buttons onto one row is what
+     made a single offset work for all three cards. */
+  top: auto; bottom: calc(16px + 44px - var(--dxs-art-drop));
+  left: 50%; right: auto; transform: translateX(-50%);
+  /* Height-driven, not width-driven: what the render has to fit is the band
+     above the button, and the three cards in a row share a height, so a
+     percentage of it keeps all three identical. */
+  width: auto; height: 52%; max-width: 94%; aspect-ratio: 1;
+  line-height: 0; opacity: .62; pointer-events: none; user-select: none;
 }
+/* The canvas ratio matches the box exactly, so `contain` is a 1:1 fit and the
+   composition inside the file is what positions the object. */
+.dxs-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .dxs-card > *:not(.dxs-art) { position: relative; z-index: 1; }
 
 .dxs-head { display: flex; align-items: center; gap: 9px; }
@@ -545,31 +621,66 @@
   margin: 6px 0 0; max-width: 64%;
   font: 400 12px/18px var(--font-sans); color: var(--ink-soft);
 }
-/* Stacked, never side by side: two half-width buttons squeeze their labels
-   and read as one split control rather than two destinations. */
+/* Stacked by default. The pair on Student Life is the exception and now sits
+   side by side: the two stacked buttons were costing that card ~52px, which is
+   the whole band the artwork needs above the action row, and it is the card
+   that sets the height of the whole three-up row. The old worry that a split
+   row reads as one control is answered by the gap and by each half carrying
+   its own platform mark, and .dxs-cta-txt keeps a long label from overflowing
+   its half at the narrowest column. */
 .dxs-actions { margin-top: auto; padding-top: 13px; display: flex; flex-direction: column; gap: 8px; }
+.dxs-actions[data-pair] { flex-direction: row; align-items: stretch; }
+.dxs-actions[data-pair] .dxs-cta { flex: 1 1 0; min-width: 0; gap: 6px; padding: 0 8px; }
+.dxs-cta-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* One button shape for all four platforms; only the fill changes. Sized to
    the platform floor of 44px, and never taller on a larger monitor. */
+/* At rest the button is a WASH of the card's colour rather than a slab of it,
+   so the card reads as one quiet surface and the artwork sunk behind the
+   button still shows faintly through. Pressing it fills the whole button with
+   the colour — the state the button used to wear all the time. */
+/* The button reads as OFF until the cursor reaches it. Only the interior fades
+   — the border keeps its full strength in every state, so the control is always
+   legible as a control and only its colour is switched on. Hover and
+   focus-visible share the on state, so a keyboard reaches it too, and :active
+   carries it on touch, where there is no hover at all. */
 .dxs-cta {
   width: 100%; min-width: 0;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: 44px; padding: 0 12px; border: none; border-radius: 11px; cursor: pointer;
-  background: var(--dxs-accent); color: #fff; text-decoration: none;
+  height: 44px; padding: 0 12px; border-radius: 11px; cursor: pointer;
+  /* Mostly-white and translucent rather than clear: the artwork passes behind
+     the button now, and a fully transparent interior would leave the label
+     reading against whatever part of the render happened to be underneath. */
+  background: color-mix(in srgb, var(--dxs-accent) 8%, rgba(255, 255, 255, .82));
+  border: 1px solid color-mix(in srgb, var(--dxs-accent) 34%, transparent);
+  /* The label and, through currentColor, the mark inside it. */
+  color: color-mix(in srgb, var(--dxs-ink) 72%, transparent);
+  text-decoration: none;
   font: 700 12.5px/1 var(--font-sans); white-space: nowrap;
-  box-shadow: 0 10px 20px -14px var(--dxs-accent);
-  transition: filter 160ms var(--ease), transform 160ms var(--ease);
+  box-shadow: none;
+  transition: background 260ms var(--ease), border-color 260ms var(--ease),
+              color 260ms var(--ease), box-shadow 260ms var(--ease),
+              transform 260ms var(--ease);
 }
-.dxs-cta:hover { filter: brightness(1.07); transform: translateY(-1px); }
-.dxs-cta:active { transform: translateY(0); }
+.dxs-cta:hover, .dxs-cta:focus-visible, .dxs-cta:active {
+  background: var(--dxs-accent);
+  border-color: var(--dxs-accent);
+  color: #fff;
+  box-shadow: 0 10px 24px -12px var(--dxs-accent);
+  transform: translateY(-1px);
+}
+.dxs-cta:active { transform: translateY(0) scale(.985); }
 .dxs-cta-ico { display: inline-flex; flex: none; }
 /* Not yet linked: visibly inert rather than a live-looking button that does
    nothing. The word "Soon" is the honest part. */
 .dxs-cta.is-soon {
-  background: #F2F3F8; color: var(--ink-soft); cursor: not-allowed;
-  box-shadow: none;
+  background: #F2F3F8; border-color: transparent; color: var(--ink-soft);
+  cursor: not-allowed; box-shadow: none;
 }
-.dxs-cta.is-soon:hover { filter: none; transform: none; }
+.dxs-cta.is-soon:hover, .dxs-cta.is-soon:focus-visible, .dxs-cta.is-soon:active {
+  background: #F2F3F8; border-color: transparent; color: var(--ink-soft);
+  box-shadow: none; transform: none;
+}
 .dxs-soon {
   margin-left: 2px; padding: 2px 6px; border-radius: 999px;
   background: #fff; font: 700 9.5px/13px var(--font-sans);
@@ -583,7 +694,7 @@
 .dxs-card:has(.dxs-locked) .dxs-actions { flex-direction: row; align-items: center; }
 .dxs-card:has(.dxs-locked) .dxs-cta { width: auto; flex: 0 0 auto; padding: 0 16px; }
 
-.dxs-whatsapp { --dxs-accent: #1FA855; --dxs-tint: #E6F6EC; }
+.dxs-whatsapp { --dxs-accent: #1FA855; --dxs-tint: #E6F6EC; --dxs-ink: var(--green); }
 .dxs-social   { --dxs-accent: #C6339A; --dxs-tint: #FBEAF5; }
 .dxs-youtube  { --dxs-accent: #D6262B; --dxs-tint: #FDEBEB; }
 
@@ -608,7 +719,37 @@
 .dxs-deck .dxs-cta { height: 42px; font-size: 12px; }
 /* Clear of the dots the deck draws under the stack. */
 .dxs-deck .dxs-card { padding-bottom: 17px; }
-.dxs-deck .dxs-art { width: 34%; opacity: .5; }
+/* In the deck the card is the whole 332px panel, not a third of a row, so the
+   artwork takes the AfaqWay Support card's treatment rather than the row's:
+   a big share of the width, bled hard past the right edge, and vertically
+   centred instead of pinned to the corner. Like that card, it is allowed to
+   pass behind the action row — the buttons are opaque and sit a layer above,
+   and holding it clear at this size would shrink it back to a token. */
+/* Where the artwork centres. It sits between the foot of the copy and the top
+   of the button, so the render fills the card's middle without either of them
+   having to move. */
+.dxs-deck .dxs-card { --dxs-art-cy: 62%; }
+.dxs-deck .dxs-art {
+  top: var(--dxs-art-cy); bottom: auto;
+  left: 50%; right: auto; transform: translate(-50%, -50%);
+  /* Height-driven: the render is square and the card is wider than it is tall,
+     so height is the binding dimension. 80% of the card, up from 54%, which
+     is what turns it from a decoration into the subject of the card. */
+  width: auto; height: 80%; max-width: 96%; aspect-ratio: 1;
+  opacity: .95;
+}
+/* A wash across the top of the card so the heading and the sentence keep their
+   contrast now that the render runs the full height behind them. It paints
+   above the artwork and below every piece of content: ::before comes first in
+   paint order among children sharing z-index 1. */
+.dxs-deck .dxs-card::before {
+  content: ""; position: absolute; z-index: 1; inset: 0 0 auto 0; height: 54%;
+  background: linear-gradient(180deg, #fff 30%, rgba(255, 255, 255, .84) 60%, transparent 100%);
+  pointer-events: none;
+}
+/* The button stays at the foot of the card, in the flow, where a card's action
+   belongs. The artwork runs behind it rather than the button sitting on the
+   artwork's centre. */
 
 /* ══ FRAME 20 · Mobile ═════════════════════════════════════════════════════
    A deliberate phone composition, not a shrunk desktop. Four frames, in one
@@ -727,8 +868,34 @@
   .dxs-row { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .dxs-card { min-height: 0; padding: 16px 17px; border-radius: 16px; }
   .dxs-body { max-width: 66%; }
-  .dxs-art { width: 32%; right: -4%; }
+  /* The phone card is full width and short, so the wide render gets a wider
+     box and a shallower one. Slightly softer too: behind stacked copy on a
+     small screen it has to give way further. */
+  .dxs-art {
+    top: -10px; bottom: auto; left: auto; right: -18px; transform: none;
+    width: clamp(168px, 52%, 208px); height: auto; aspect-ratio: 3 / 2; opacity: .6;
+  }
   .dxs-cta { height: 46px; }
+
+  /* The welcome card's scatter is tuned to the three-lane desktop grid, and on
+     a phone that grid is gone and the student is a background wash. The rule
+     that hides it lives in the 768-1023 block, which is a RANGE and so never
+     reaches this width — it has to be repeated here. */
+  .dx-welcome-props { display: none; }
+
+  /* The deck is the only shape this section is ever rendered in, so on a phone
+     it is what carries the render. Against the right edge here rather than
+     centred: the copy runs the full width of a phone card, so a centred object
+     sits under the sentence instead of beside it.
+     Specificity, not order, is why this repeats the .dxs-deck prefix — the
+     plain .dxs-art rule above cannot override a two-class selector. */
+  /* The <picture> serves the WIDE render at this width, so the box has to be
+     wide too: left at 1:1 it letterboxed a 3:2 image inside a square and drew
+     the object smaller than the space allowed. It keeps the shared vertical
+     axis, so only the horizontal anchor changes. */
+  .dxs-deck .dxs-art {
+    left: auto; right: -5%; transform: translateY(-50%); aspect-ratio: 3 / 2;
+  }
 
   /* The Next Steps frame is a desktop snapshot of the Journey module, which has
      its own screen on a phone. The four frames above are the mobile dashboard,
