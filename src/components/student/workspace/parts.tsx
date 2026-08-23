@@ -69,7 +69,7 @@ export function EmptyState({ icon, title, sub }: { icon: ReactNode; title: strin
 
 export function BtnPrimary({ children, onClick, disabled, style }: { children: ReactNode; onClick?: () => void; disabled?: boolean; style?: React.CSSProperties }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 16px", borderRadius: 12, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1, font: "600 13px/1 var(--font-sans)", ...style }}>{children}</button>
+    <button type="button" onClick={onClick} disabled={disabled} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 17px", borderRadius: 16, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1, font: "600 13px/1 var(--font-sans)", ...style }}>{children}</button>
   );
 }
 
@@ -92,7 +92,7 @@ export function BtnGhost({ children, onClick, style, tone = "neutral", disabled,
     <button
       type="button" onClick={onClick} disabled={disabled} title={title}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 14px", borderRadius: 12,
+        display: "inline-flex", alignItems: "center", gap: 8, height: 36, padding: "0 15px", borderRadius: 16,
         border: `1px solid ${t ? t.line : "var(--line)"}`,
         background: t ? t.tint : "rgba(255,255,255,.7)",
         color: t ? t.ink : "var(--ink)",

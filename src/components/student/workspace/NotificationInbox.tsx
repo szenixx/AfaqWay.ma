@@ -72,8 +72,14 @@ export function NotificationInbox({ userId, onOpen, onClose }: {
     <div ref={ref} className="sw-notifpop" role="dialog" aria-label="Notifications">
       <header className="sw-notifpop-head">
         <span>Notifications</span>
+        {/* AWAITED, then reloaded. Firing both together started the write and
+            the re-read in the same tick, so the reload raced the UPDATE, came
+            back with the rows still unread, and overwrote the optimistic patch
+            — the badge cleared for a frame and then returned, which is what
+            made "mark all read" look like it did nothing. The row handler
+            above already awaits its markRead; this one did not. */}
         {unread > 0 && (
-          <button type="button" onClick={() => { void markAllRead(userId); void reload(); }}>
+          <button type="button" onClick={() => { void (async () => { await markAllRead(userId); await reload(); })(); }}>
             <Check size={12} />Mark all read
           </button>
         )}

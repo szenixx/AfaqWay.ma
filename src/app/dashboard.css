@@ -68,90 +68,60 @@
    ~65% left, CTA ~35% right, both vertically centred. */
 .dx-welcome {
   position: relative; overflow: hidden;
-  /* Three lanes: greeting, student, CTA. The student stands between the words
-     and the action, facing back toward both. */
-  display: grid; grid-template-columns: minmax(0, 46%) minmax(0, 28%) minmax(0, 1fr);
-  align-items: center; gap: 18px;
-  /* Slimmer than it was, and the artwork is still fitted to the card rather
-     than the card to the artwork: the height comes from what the copy needs at
-     its current size, and the student's lane narrows to match. */
-  min-height: 156px; padding: 20px 28px; margin-bottom: 18px;
+  /* Two lanes: the copy takes the room it needs, the action sits at the end
+     of the row and centres against it. `auto` on the second column means the
+     button is only ever as wide as its own label. */
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center; gap: 20px;
+  /* No min-height. 156px was the floor that cleared the student; without him
+     it would only hold open the empty band he used to fill. */
+  padding: 15px 24px; margin-bottom: 18px;
   border-radius: 18px;
-  /* #2E3BC7 holds the identity; the tertiary only deepens the far corner. */
-  background: linear-gradient(104deg, var(--dx-primary) 0%, var(--dx-primary) 52%, var(--dx-tertiary) 100%);
+  /* The artwork, as `background-image` and NOT through the `background`
+     shorthand that used to sit here. That shorthand set background-image to a
+     gradient, so a url() declared anywhere above it was simply overwritten,
+     which is why the artwork showed on the phone (its own later rule) and
+     nowhere else. The brand colour stays underneath as the ground.
+     Same file the login page's left panel uses: /auth-panel.webp, referenced,
+     never copied. */
+  background-color: var(--dx-primary);
+  background-image: url("/auth-panel.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 0 16px 36px -24px rgba(46, 59, 199, .95);
 }
+/* ── Phone only: the sign-in artwork as the card's ground ──────────────
+   The same asset the login page's left panel uses, not a copy of it, so the
+   two surfaces cannot drift apart. Desktop and tablet keep the brand gradient
+   they already had: this rule lives inside the phone query at the foot of
+   this file and nowhere else.
+
+   A background-image rather than an <img>, because the card already has a
+   gradient here and this replaces it; `cover` and `center` let the artwork
+   crop to whatever the card is instead of the card resizing to the artwork. */
+
+/* Over the flat brand gradient this span added white light. Over the artwork
+   it has the opposite job: the copy is white and the artwork's right side is
+   pale lavender, so without a scrim the greeting would sit on a ground close
+   to its own colour. It darkens from the left, where the words are, and fades
+   out before the right edge so the artwork stays visible. */
 .dx-welcome-glow {
   position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(520px 240px at 84% -40%, rgba(255,255,255,.22), transparent 70%),
-    radial-gradient(380px 240px at 6% 140%, rgba(255,255,255,.12), transparent 70%);
-}
-/* The journey line art, washed across the whole card. Bottom of the stack, so
-   the glow, the beams, the student and every word sit over it. Low enough in
-   opacity to be texture: it must never compete with the greeting, and it
-   carries the brand mark, which is why no separate chevron watermark remains. */
-.dx-welcome-bg {
-  position: absolute; inset: 0; z-index: 0;
-  width: 100%; height: 100%;
-  object-fit: cover; object-position: center;
-  opacity: .08; pointer-events: none; user-select: none;
-}
-/* The journey props, scattered around the student rather than ranked in a row:
-   four different sizes, four different tilts, none of them level with
-   another. z-index 0 puts them above the line-art wash and below the copy, the
-   student and the CTA — all of which carry z-index 1 — so their placement can
-   never cost readability. Percentage offsets so the scatter holds its shape as
-   the card widens. */
-.dx-welcome-props {
-  position: absolute; inset: 0; z-index: 0;
-  pointer-events: none; user-select: none;
-}
-.dx-welcome-props img {
-  position: absolute; display: block; height: auto;
-  width: clamp(36px, 6.4%, 64px);
-  opacity: .92;
-  filter: drop-shadow(0 7px 14px rgba(10, 18, 70, .3));
-}
-/* Visa, high on the student's left. */
-.dx-welcome-props img:nth-child(1) { left: 45%; top: 8%; transform: rotate(-9deg); }
-/* Checklist, low and slightly further in, so the two never read as a column. */
-.dx-welcome-props img:nth-child(2) { left: 49.5%; bottom: 4%; transform: rotate(8deg); }
-/* University, the largest of the set, high on his right and clear of the
-   button's lane. */
-.dx-welcome-props img:nth-child(3) {
-  left: 66%; top: 6%; transform: rotate(4deg);
-  width: clamp(40px, 7.5%, 73px);
-}
-/* The roadmap, stacked under the university on the same side, tucked in a
-   little so the two read as a pair on his right rather than a stripe. Its own
-   tilt again, so no two objects in the scatter sit at the same angle. */
-.dx-welcome-props img:nth-child(4) {
-  left: 61%; bottom: 5%; transform: rotate(-6deg);
-  width: clamp(36px, 6.6%, 65px);
-}
-
-/* The student's lane. The frame stretches to the row and carries no layout
-   weight of its own; the artwork inside is absolute, so it sizes off the frame
-   and never feeds back into the card's height. The negative margins run the
-   frame through the card's own padding, top and bottom, so the artwork gets
-   the card's full height to fit into rather than just the padding box. The
-   card's own size is untouched. */
-.dx-welcome-figure {
-  grid-column: 2; position: relative; align-self: stretch; z-index: 1;
-  min-width: 0; margin: -10px 0 -20px; pointer-events: none;
-}
-/* Fitted inside the frame rather than bleeding out of it, so the whole upper
-   body reads: nothing is cropped at any card size. He rests on the card's
-   bottom edge, and the horizontal position sits him left of the lane so he
-   reads between the greeting and the button rather than against the CTA. */
-.dx-welcome-figure img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: contain; object-position: 26% bottom;
-  filter: drop-shadow(0 12px 22px rgba(10, 18, 70, .3));
+  background: linear-gradient(96deg, rgba(20,24,86,.80) 0%, rgba(20,24,86,.58) 44%, rgba(20,24,86,.14) 80%, rgba(20,24,86,0) 100%);
 }
 .dx-welcome-copy { position: relative; z-index: 1; min-width: 0; }
+/* Scoped to this card on purpose: the shared `.magic-btn` sets
+   `justify-self: end`, and an unscoped rule here would lose to it on source
+   order at equal specificity. */
+/* Longer than the shared button, which caps at 220px. Scoped here so the
+   other MagicButtons on the dashboard keep their own width, and stated as a
+   clamp so a narrow desktop window shortens it rather than letting it push
+   the greeting out of its lane. */
+.dx-welcome .magic-btn {
+  position: relative; z-index: 1; justify-self: end; margin-top: 0;
+  width: clamp(230px, 100%, 300px);
+}
 .dx-welcome-title {
   margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   font: 600 26px/1.2 var(--font-sans);
@@ -171,7 +141,7 @@
   5%, 15%         { transform: rotate(16deg); }
   10%, 20%        { transform: rotate(-9deg); }
 }
-.dx-welcome-sub { margin: 8px 0 0; font: 600 15px/22px var(--font-sans); color: rgba(255,255,255,.92); }
+.dx-welcome-sub { margin: 6px 0 0; font: 600 15px/22px var(--font-sans); color: rgba(255,255,255,.92); }
 .dx-welcome-text {
   margin: 6px 0 0; max-width: 56ch;
   font: 400 13px/20px var(--font-sans); color: rgba(255,255,255,.72);
@@ -450,11 +420,7 @@
   .dx-app { grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
   /* The illustration gives ground first: the copy and the button are what have
      to stay usable as the card narrows. */
-  .dx-welcome {
-    grid-template-columns: minmax(0, 44%) minmax(0, 26%) minmax(0, 1fr);
-    padding: 18px 20px; gap: 14px;
-  }
-  .dx-welcome-figure { margin: -8px 0 -16px; }
+  .dx-welcome { padding: 18px 20px; gap: 14px; }
   .dx-uni-art { width: 68%; opacity: .4; }
 }
 
@@ -488,20 +454,7 @@
     align-items: start; gap: 0; min-height: 0; padding: 20px 22px;
   }
   .dx-welcome-title { font-size: 23px; }
-  /* The three-lane grid is gone here and the student is a background wash, so
-     the scatter has nothing to sit around. It goes rather than piling up in a
-     corner of a stacked card. */
-  .dx-welcome-props { display: none; }
   .dx-welcome-text { max-width: none; }
-  .dx-welcome-figure {
-    position: absolute; z-index: 0;
-    top: 0; right: 0; bottom: 0; left: auto;
-    width: 46%; height: 100%; margin: 0; opacity: .22;
-  }
-  .dx-welcome-figure img {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: contain; object-position: right bottom; filter: none;
-  }
   .magic-btn { grid-column: 1; justify-self: start; width: clamp(180px, 62%, 240px); margin-top: 14px; }
 
   .dx-perf-col .dx-ring { max-width: 104px; }
@@ -823,31 +776,7 @@
   .dx-welcome-copy { text-align: center; width: 100%; }
   .dx-welcome-title { justify-content: center; }
   .dx-welcome-sub { margin-left: auto; margin-right: auto; }
-  /* The wash centres with the copy rather than hugging the right edge, so the
-     ground under the centred text is symmetric too. */
-  .dx-welcome-figure {
-    left: 50%; right: auto; transform: translateX(-50%);
-    width: 74%; opacity: .16;
-  }
-  .dx-welcome-figure img { object-position: center bottom; }
   .dx-welcome-sub { margin-top: 6px; font-size: 13.5px; line-height: 19px; }
-  /* Behind stacked copy the line art has to give way further still. */
-  .dx-welcome-bg { opacity: .06; }
-  /* No longer a column: taken out of the grid entirely and laid against the
-     right edge as a second background wash, under the copy and the button. The
-     drop shadow goes with it — a shadow on a layer this faint only muddies the
-     brand fill behind it. */
-  .dx-welcome-figure {
-    position: absolute; z-index: 0;
-    top: 0; right: 0; bottom: 0; left: auto;
-    width: 60%; height: 100%; margin: 0;
-    opacity: .2;
-  }
-  .dx-welcome-figure img {
-    width: 100%; height: 100%;
-    object-fit: contain; object-position: right bottom;
-    filter: none;
-  }
   /* A button inside the card, centred, with the card's own padding left intact
      on every side — it never reaches an edge. Slim, and still the full width
      the padding allows, so it stays an easy target. */
@@ -908,12 +837,6 @@
     width: clamp(168px, 52%, 208px); height: auto; aspect-ratio: 3 / 2; opacity: .6;
   }
   .dxs-cta { height: 46px; }
-
-  /* The welcome card's scatter is tuned to the three-lane desktop grid, and on
-     a phone that grid is gone and the student is a background wash. The rule
-     that hides it lives in the 768-1023 block, which is a RANGE and so never
-     reaches this width — it has to be repeated here. */
-  .dx-welcome-props { display: none; }
 
   /* The deck is the only shape this section is ever rendered in, so on a phone
      it is what carries the render. Against the right edge here rather than
@@ -1119,6 +1042,17 @@
 .cardswap__dot.on { width: 14px; background: var(--dx-primary); }
 
 @media (max-width: 767px) {
+  /* Phone only. See the note beside .dx-welcome-glow above. */
+  .dx-welcome {
+    background-image: url("/auth-panel.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  /* The glow was tuned to sit on the flat brand gradient; over the artwork it
+     only washes it out. */
+  .dx-welcome-glow { display: none; }
+
   .dx-lastrow { grid-template-columns: minmax(0, 1fr); }
   .dx-deck { min-height: 190px; }
 }

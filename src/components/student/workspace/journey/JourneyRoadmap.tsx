@@ -574,20 +574,7 @@ export function JourneyRoadmap({ profile, onNav, isAdmin }: { profile: WsProfile
     <div className="jr-root">
       {/* ── Header ── */}
       <header className="jr-head">
-        {/* The journey the whole module describes: the destination on the left,
-            then the path, its milestones, the flight and the university at the
-            end. One right-anchored row rather than two independently placed
-            images, so the pair can never drift apart as the header resizes.
-            Decorative, and a layer below every word here. */}
-        <span className="jr-headart-row" aria-hidden>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="jr-headart-globe" src="/assets/journey/roadmap-globe.webp" alt="" loading="lazy" decoding="async" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="jr-headart-compass" src="/assets/journey/roadmap-compass.webp" alt="" loading="lazy" decoding="async" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="jr-headart" src="/assets/journey/roadmap.webp" alt="" loading="lazy" decoding="async" />
-        </span>
-        <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0 }}>
           <h1 className="jr-title">Your roadmap</h1>
           <p className="jr-sub">
             {stages.length} stages from application to arrival. Work through the steps of your current

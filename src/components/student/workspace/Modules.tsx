@@ -217,7 +217,7 @@ export { Documents } from "./documents/DocumentsModule";
 
 /** Square icon-only button, used by the small inline actions below. */
 const iconBtnSt: React.CSSProperties = {
-  width: 34, height: 34, borderRadius: 11, border: "1px solid var(--line)",
+  width: 34, height: 34, borderRadius: 13, border: "1px solid var(--line)",
   background: "var(--card)", color: "var(--ink-soft)", cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center",
 };
@@ -241,9 +241,14 @@ export function Support({ onNav }: { onNav: (id: string) => void }) {
         {SUPPORT_CARDS.map((c) => {
           const inner = (
             <>
-              <span aria-hidden className="sup-bg" style={{ color: c.color }}>{c.icon}</span>
-              <span className="sup-ico" style={{ color: c.color, background: c.tint, borderColor: c.line }}>{c.icon}</span>
-              <span className="sup-title">{c.title}</span>
+              {/* The card's own 3D render, sitting behind everything: a background
+                  layer, never a replacement for the title, copy or CTA. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img aria-hidden className="sup-bg" src={c.art} alt="" loading="lazy" decoding="async" />
+              <span className="sup-head">
+                <span className="sup-ico" style={{ color: c.color }}>{c.icon}</span>
+                <span className="sup-title">{c.title}</span>
+              </span>
               <span className="sup-desc">{c.desc}</span>
               <span className="sup-cta" style={{ color: c.color }}>{c.cta}<ArrowRight size={15} /></span>
             </>
@@ -268,10 +273,10 @@ export function Support({ onNav }: { onNav: (id: string) => void }) {
 }
 
 // NOTE: WhatsApp number is the real support line.
-const SUPPORT_CARDS: { icon: React.ReactNode; title: string; desc: string; cta: string; color: string; tint: string; line: string; to?: string; href?: string }[] = [
-  { icon: <MessageCircle size={20} />, title: "Live chat", desc: "Chat with our team inside your workspace.", cta: "Open chat", color: "var(--indigo-600)", tint: "var(--indigo-tint)", line: "var(--indigo-line)", to: "messages" },
-  { icon: <Ticket size={20} />, title: "Open a ticket", desc: "Send us your issue directly on WhatsApp.", cta: "WhatsApp us", color: "var(--green)", tint: "var(--green-tint)", line: "var(--green-line)", href: "https://wa.me/212632501155" },
-  { icon: <Mail size={20} />, title: "Contact support", desc: "support@afaqway.com", cta: "Email us", color: "var(--amber)", tint: "var(--amber-tint)", line: "var(--amber-line)", href: "mailto:support@afaqway.com" },
+const SUPPORT_CARDS: { icon: React.ReactNode; art: string; title: string; desc: string; cta: string; color: string; tint: string; line: string; to?: string; href?: string }[] = [
+  { icon: <MessageCircle size={20} />, art: "/assets/support/live-chat.webp", title: "Live chat", desc: "Talk to your advisor without leaving your workspace. Best for a quick question, or for getting unstuck on a step you are in the middle of.", cta: "Open chat", color: "var(--indigo-600)", tint: "var(--indigo-tint)", line: "var(--indigo-line)", to: "messages" },
+  { icon: <Ticket size={20} />, art: "/assets/support/ticket.webp", title: "Open a ticket", desc: "Send us the details on WhatsApp and we pick it up from there. Best when something needs a document, a screenshot, or a longer explanation.", cta: "WhatsApp us", color: "var(--green)", tint: "var(--green-tint)", line: "var(--green-line)", href: "https://wa.me/212632501155" },
+  { icon: <Mail size={20} />, art: "/assets/support/contact.webp", title: "Contact support", desc: "Write to support@afaqway.com for anything that is not urgent. Useful for account questions, billing, or a record you want in writing.", cta: "Email us", color: "var(--amber)", tint: "var(--amber-tint)", line: "var(--amber-line)", href: "mailto:support@afaqway.com" },
 ];
 
 /* ── Subscription ─────────────────────────────────────────────────────────── */
@@ -280,7 +285,6 @@ export function Subscription({ profile }: { profile: WsProfile }) {
   const [invoiceBusy, setInvoiceBusy] = useState(false);
   const [invoiceErr, setInvoiceErr] = useState("");
   const p = planById(profile.plan);
-  const full = profile.plan === "full_service";
   const pay = profile.payment;
   const methodName = pay ? (PAY_METHODS.find((m) => m.id === pay.method)?.name ?? pay.method) : "—";
   const paidOn = pay ? new Date(pay.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -297,24 +301,36 @@ export function Subscription({ profile }: { profile: WsProfile }) {
         {/* Current plan, in the same language as the admin payment cards:
             gradient surface, oversized plan glyph behind, badges on top. */}
         <SpotlightCard className="plan-card">
-          <span aria-hidden className="plan-glyph"><Wallet size={190} /></span>
+          {/* The plan's own 3D render, hung off the corner so the card crops it.
+              Decorative and a layer below every word: the badges, the plan
+              name, the price and the meta grid all read first. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img aria-hidden className="plan-glyph" src="/assets/subscription/payment.webp" alt="" loading="lazy" decoding="async" />
           <div className="plan-body">
-            <div className="plan-badges">
-              <Pill tone={full ? "indigo" : "green"}>{full ? "Full Service" : "Self Service"}</Pill>
+            {/* Plan name and state on one line, the way a subscription header
+                reads in any billing product: what you are on, and whether it
+                is live. The old card opened with two pills stacked above the
+                name, which said the plan twice before naming it once. */}
+            <header className="plan-top">
+              <span className="plan-name">{p?.name ?? "—"}</span>
               <Pill tone={profile.verified ? "green" : "amber"}>
                 {profile.verified ? "Active" : "Pending"}
               </Pill>
-            </div>
+            </header>
 
-            <div className="plan-name">{p?.name ?? "—"}</div>
-            <div className="plan-price">{p ? `${p.price.toLocaleString("en-US")} ${p.currency}` : ""}</div>
+            <div className="plan-price">
+              {p ? p.price.toLocaleString("en-US") : "—"}
+              <small>{p?.currency}</small>
+            </div>
             <p className="plan-tagline">{p?.tagline}</p>
 
+            {/* Two facts, not four. Billing and Expires are stated in full by
+                the Service Information panel beside this card; repeating them
+                here was the same row printed twice on one screen. What is left
+                is what a student actually looks for on the plan itself. */}
             <dl className="plan-meta">
-              <div><dt>Billing</dt><dd>One-off payment</dd></div>
-              <div><dt>Paid on</dt><dd>{pay ? new Date(pay.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</dd></div>
-              <div><dt>Method</dt><dd>{pay ? (PAY_METHODS.find((m) => m.id === pay.method)?.name ?? pay.method) : "—"}</dd></div>
-              <div><dt>Expires</dt><dd>No expiry</dd></div>
+              <div><dt>Paid on</dt><dd>{paidOn}</dd></div>
+              <div><dt>Method</dt><dd>{methodName}</dd></div>
             </dl>
 
             <div className="plan-acts">
@@ -329,7 +345,9 @@ export function Subscription({ profile }: { profile: WsProfile }) {
 
         {/* Service information — the decorative logo sits behind the content. */}
         <Panel style={{ position: "relative", overflow: "hidden" }}>
-          <span aria-hidden style={{ position: "absolute", right: -26, bottom: -34, opacity: 0.06, pointerEvents: "none", lineHeight: 0 }}><LogoMark size={210} /></span>
+          {/* The invoice render, for the panel that IS the payment record. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img aria-hidden className="sub-art" src="/assets/subscription/invoice.webp" alt="" loading="lazy" decoding="async" />
           <div style={{ position: "relative" }}>
             <SectionTitle tone="indigo" sub="Your subscription and how you paid for it">Service Information</SectionTitle>
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -342,7 +360,9 @@ export function Subscription({ profile }: { profile: WsProfile }) {
                 ["Paid on", paidOn],
                 ["Next invoice", "None"],
               ].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "11px 0", borderBottom: "1px solid var(--line-soft)", font: "500 13px/18px var(--font-sans)", color: "var(--ink)" }}><span style={{ color: "var(--ink-soft)" }}>{k}</span><b>{v}</b></div>
+                /* Tighter rows and a hairline that the last one drops, so the
+                   list ends on its content rather than on a rule. */
+                <div key={k} className="sub-row"><span>{k}</span><b>{v}</b></div>
               ))}
             </div>
             {pay && (
@@ -649,9 +669,13 @@ export function Settings({ profile, onProgramRequest, onReload }: { profile: WsP
       <Panel>
         <SectionTitle tone="blue" sub="Set by our team, based on your profile and requests">Program</SectionTitle>
         {profile.program ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 22, background: "var(--indigo-tint)", border: "1px solid var(--indigo-line)" }}>
-            <span style={{ width: 38, height: 38, borderRadius: 999, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", border: "1px solid var(--indigo-line)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={19} /></span>
-            <div style={{ font: "600 13.5px/19px var(--font-sans)", color: "var(--ink)" }}>{profile.program}</div>
+          /* Icon and name, and nothing behind either of them. The panel is
+             already a surface; a tinted card inside it, holding a tinted chip
+             inside that, was three nested backgrounds saying the same thing.
+             The mark keeps its brand colour and carries itself. */
+          <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+            <span style={{ flex: "none", color: "var(--indigo-600)", display: "flex", alignItems: "center" }}><GraduationCap size={22} /></span>
+            <div style={{ font: "600 14.5px/20px var(--font-sans)", color: "var(--ink)" }}>{profile.program}</div>
           </div>
         ) : (
           <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)" }}>No program assigned yet. Once our team sets your program it appears here.</div>

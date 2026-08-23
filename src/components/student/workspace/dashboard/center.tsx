@@ -27,36 +27,8 @@ export function Welcome({ name, started, onAction }: {
 }) {
   return (
     <section className="dx-welcome">
-      {/* The study journey drawn as one continuous white line: faculty, papers,
-          advice, the flight, the luggage, the cap. It washes the whole card at
-          low opacity, so it reads as texture under the greeting rather than as
-          a picture competing with it. Deliberately a plain img, as elsewhere:
-          a decorative static that must not hold up the card. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        className="dx-welcome-bg"
-        src="/assets/dashboard/welcome-journey.webp"
-        alt="" aria-hidden loading="lazy" decoding="async"
-      />
-
       {/* Depth from the primary's own light, not from a second hue. */}
       <span className="dx-welcome-glow" aria-hidden />
-
-      {/* Four objects from the journey scattered around the student: the visa,
-          the checklist, the university and the roadmap. They sit a layer ABOVE the line-art
-          wash and BELOW every word, the student and the button, so wherever
-          they fall they can never cover something that has to be read.
-          Decorative statics, like the rest of this card's artwork. */}
-      <span className="dx-welcome-props" aria-hidden>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/dashboard/prop-visa.webp" alt="" loading="lazy" decoding="async" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/dashboard/prop-checklist.webp" alt="" loading="lazy" decoding="async" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/dashboard/prop-university.webp" alt="" loading="lazy" decoding="async" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/dashboard/prop-roadmap.webp" alt="" loading="lazy" decoding="async" />
-      </span>
 
       {/* Two beams, half a lap apart, chasing each other round the border.
           White on the brand fill, so they read as light rather than as a
@@ -81,20 +53,6 @@ export function Welcome({ name, started, onAction }: {
           Track your application, verify your documents, and reach your advisor, all in one place.
         </p>
       </div>
-
-      {/* The card's hero: the AfaqWay student cropped to the chest, the brand
-          mark standing in 3D behind his shoulder, and a flight arc climbing
-          away to the right. Cut out against the card's own fill, so it sits on
-          the gradient rather than on a plate. Decorative only, and the copy
-          beside it already says everything this says. Deliberately a plain
-          img, as elsewhere: a static that must not hold up the card. */}
-      <span className="dx-welcome-figure" aria-hidden>
-        {/* The frame is the grid item and carries the height; the artwork
-            inside is taken out of flow, so it can never push the card taller
-            than the column beside it. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/dashboard/welcome-hero.webp" alt="" loading="lazy" decoding="async" />
-      </span>
 
       {/* The label follows the student's real journey state, so the card always
           names the next thing they should actually do. */}

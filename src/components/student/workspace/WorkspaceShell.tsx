@@ -349,7 +349,10 @@ export default function WorkspaceShell({
                       <MenuRow icon={<SettingsIcon size={17} />} label="Settings" onClick={() => { navigate("settings"); setMenu(false); }} />
                       <div style={{ height: 1, background: "var(--line-soft)", margin: "5px 0" }} />
                       <MenuRow icon={<LifeBuoy size={17} />} label="Contact support" onClick={() => { navigate("support"); setMenu(false); }} />
-                      <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={onSignOut} />
+                      {/* Opens the confirmation rather than signing out on the spot: the
+                          sidebar's own Sign out already asks, and two entry points to
+                          the same destructive action should not behave differently. */}
+                      <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={() => { setMenu(false); setConfirmSignOut(true); }} />
                     </div>
                   </>
                 )}
@@ -426,7 +429,7 @@ export default function WorkspaceShell({
 
         <div style={{ height: 1, background: "var(--line-soft)", margin: "5px 0" }} />
 
-        <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={onSignOut} />
+        <MenuRow icon={<LogOut size={17} />} label="Sign out" danger onClick={() => setConfirmSignOut(true)} />
       </MobileNavigationHeader>
 
       {/* Sits directly under the mobile bar. Rendered unconditionally; the
