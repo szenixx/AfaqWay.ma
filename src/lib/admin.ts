@@ -11,3 +11,23 @@ export async function fetchAdminRole(email: string | undefined | null): Promise<
   const row = data as { role: string; granted_features: string[] | null; name: string | null };
   return { role: row.role as AdminRole, grantedFeatures: row.granted_features ?? [], name: row.name };
 }
+
+/* Every staff email, lowercased.
+
+   Statistics count STUDENTS, and an administrator who signs in gets a profile
+   row like anyone else — so without this the team shows up in "Users", in the
+   new-signups trend and in the plan splits, and a platform with no students at
+   all still reports one. Membership of `admins` is the only thing that makes an
+   account staff, so it is the only thing this checks.
+
+   Returns an empty set if the lookup fails, which counts staff as students
+   rather than hiding real students behind a failed query. */
+export async function fetchStaffEmails(): Promise<Set<string>> {
+  const { data, error } = await supabase.from("admins").select("email");
+  if (error || !data) return new Set();
+  return new Set((data as { email: string }[]).map((r) => (r.email ?? "").toLowerCase()).filter(Boolean));
+}
+
+/** True when this profile belongs to a member of the team, not a student. */
+export const isStaffProfile = (staff: Set<string>, email: string | null | undefined): boolean =>
+  !!email && staff.has(email.toLowerCase());

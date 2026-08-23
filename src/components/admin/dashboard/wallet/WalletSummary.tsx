@@ -8,9 +8,21 @@
    it: the accent lives in the icon tile and the chip, never in the surface. */
 
 import { Card, Chip, ProgressBar, Separator, Skeleton, Tooltip } from "@heroui/react";
-import { CalendarDays, CircleCheckBig, CircleX, Clock3, Users, Wallet } from "lucide-react";
-import type { ReactNode } from "react";
+import { CalendarDays, CircleCheckBig, CircleX, Clock3, Pencil, RotateCcw, Users, Wallet } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/lib/supabase/client";
 import { money } from "./parts";
+
+/* The three targets, and nothing else.
+
+   Revenue is NOT here on purpose: `current` on every goal below is summed from
+   approved payments at read time, so there is no stored figure anyone could
+   edit to make the platform report money it never took. A target is a
+   statement of intent and is editable; approved revenue is a fact and is not.
+   The database enforces the same split — revenue_goals is writable only by a
+   superadmin, and payments are not writable from this page at all. */
+type Targets = { monthly_target: number; quarterly_target: number; students_target: number };
+const ZERO: Targets = { monthly_target: 0, quarterly_target: 0, students_target: 0 };
 
 type Tone = "accent" | "success" | "warning" | "danger" | "purple";
 
@@ -122,22 +134,73 @@ function HeroFigure({ label, value, loading, chip }: {
    The targets are derived from real revenue rather than typed in, exactly as
    the card that used to hold them did, so they move as the platform does. */
 
-export function RevenueGoals({ monthRevenue, totalRevenue, payingUsers, successful, failed, loading }: {
+export function RevenueGoals({ monthRevenue, totalRevenue, payingUsers, successful, failed, loading, isSuper }: {
   monthRevenue: number; totalRevenue: number; payingUsers: number;
-  successful: number; failed: number; loading: boolean;
+  successful: number; failed: number; loading: boolean; isSuper?: boolean;
 }) {
+  const [targets, setTargets] = useState<Targets>(ZERO);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Targets>(ZERO);
+  const [saving, setSaving] = useState(false);
+
+  const loadTargets = useCallback(async () => {
+    const { data } = await supabase
+      .from("revenue_goals")
+      .select("monthly_target, quarterly_target, students_target")
+      .maybeSingle();
+    if (data) setTargets({
+      monthly_target: Number((data as Targets).monthly_target) || 0,
+      quarterly_target: Number((data as Targets).quarterly_target) || 0,
+      students_target: Number((data as Targets).students_target) || 0,
+    });
+  }, []);
+  /* Fetching from Supabase is the "subscribe to an external system" case; the
+     state set here is the query result, not derived render state. Same
+     reasoning and same directive as useReviewAlerts in lib/reviewAlerts.ts. */
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadTargets(); }, [loadTargets]);
+
+  /* Writes are attempted only for a superadmin, and the row's own policy
+     refuses anyone else even if this guard were bypassed. */
+  const save = async (next: Targets) => {
+    setSaving(true);
+    const { error } = await supabase.from("revenue_goals").update({
+      monthly_target: next.monthly_target,
+      quarterly_target: next.quarterly_target,
+      students_target: next.students_target,
+      updated_at: new Date().toISOString(),
+    }).eq("id", true);
+    if (!error) setTargets(next);
+    setSaving(false);
+    setEditing(false);
+  };
+
   const goals = [
-    { label: "Monthly target", current: monthRevenue, target: Math.max(20000, monthRevenue * 1.4), money: true },
-    { label: "Quarterly target", current: totalRevenue, target: Math.max(60000, totalRevenue * 1.3), money: true },
-    { label: "Paying students", current: payingUsers, target: Math.max(50, payingUsers * 2), money: false },
+    { key: "monthly_target"  as const, label: "Monthly target",  current: monthRevenue, target: targets.monthly_target,   money: true },
+    { key: "quarterly_target" as const, label: "Quarterly target", current: totalRevenue, target: targets.quarterly_target, money: true },
+    { key: "students_target" as const, label: "Paying students", current: payingUsers,  target: targets.students_target,  money: false },
   ];
   const decided = successful + failed;
 
   return (
     <Card className="wa-goals-card" variant="default">
       <div className="wa-goals-head">
-        <span className="wa-goals-title">Revenue Goals</span>
-        <span className="wa-goals-sub">Progress and key figures</span>
+        <div>
+          <span className="wa-goals-title">Revenue Goals</span>
+          <span className="wa-goals-sub">Progress and key figures</span>
+        </div>
+        {/* Superadmin only. An ordinary admin sees the targets and the bars,
+            and no way to change them. */}
+        {isSuper && !editing && (
+          <div className="wa-goals-acts">
+            <button type="button" onClick={() => { setDraft(targets); setEditing(true); }} title="Edit targets">
+              <Pencil size={14} />Edit
+            </button>
+            <button type="button" onClick={() => { void save(ZERO); }} disabled={saving} title="Reset every target to zero">
+              <RotateCcw size={14} />Reset
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -148,15 +211,26 @@ export function RevenueGoals({ monthRevenue, totalRevenue, payingUsers, successf
         <>
           <ul className="wa-goals">
             {goals.map((g) => {
-              const pct = Math.min(100, Math.round((g.current / g.target) * 100));
+              /* A target of zero is "not set", not "already achieved": with no
+                 target there is no progress to report, so the bar stays empty
+                 rather than filling to 100% on a division by zero. */
+              const pct = g.target > 0 ? Math.min(100, Math.round((g.current / g.target) * 100)) : 0;
               return (
                 <li key={g.label}>
                   <div className="wa-goal-top">
                     <span className="wa-goal-name">{g.label}</span>
-                    <span className="wa-goal-val">
-                      {g.money ? money(g.current) : g.current}
-                      <i> / {g.money ? money(g.target) : Math.round(g.target)}</i>
-                    </span>
+                    {editing ? (
+                      <input
+                        className="wa-goal-input" type="number" min={0} inputMode="numeric"
+                        value={draft[g.key]} aria-label={`${g.label} target`}
+                        onChange={(e) => setDraft({ ...draft, [g.key]: Math.max(0, Number(e.target.value) || 0) })}
+                      />
+                    ) : (
+                      <span className="wa-goal-val">
+                        {g.money ? money(g.current) : g.current}
+                        <i> / {g.target > 0 ? (g.money ? money(g.target) : Math.round(g.target)) : "not set"}</i>
+                      </span>
+                    )}
                   </div>
                   <ProgressBar aria-label={g.label} className="wa-bar" value={pct}>
                     <ProgressBar.Track><ProgressBar.Fill /></ProgressBar.Track>
@@ -165,6 +239,19 @@ export function RevenueGoals({ monthRevenue, totalRevenue, payingUsers, successf
               );
             })}
           </ul>
+
+          {editing && (
+            <div className="wa-goals-edit">
+              {/* Said plainly, because it is the whole rule of this card. */}
+              <span>Targets only. Approved revenue cannot be edited.</span>
+              <div>
+                <button type="button" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
+                <button type="button" data-primary onClick={() => { void save(draft); }} disabled={saving}>
+                  {saving ? "Saving…" : "Save targets"}
+                </button>
+              </div>
+            </div>
+          )}
 
           <Separator className="wa-sep" />
 

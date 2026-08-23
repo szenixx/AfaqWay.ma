@@ -25,7 +25,7 @@ import { TransactionSection } from "./TransactionSection";
 import { NeedsAttention, PaymentMethods } from "./WalletSidebar";
 import { TransactionDetails } from "./TransactionDetails";
 
-export default function AdminWallet({ onNav }: { onNav?: (target: string, id?: string) => void }) {
+export default function AdminWallet({ onNav, isSuper }: { onNav?: (target: string, id?: string) => void; isSuper?: boolean }) {
   const d = useWalletData();
   const [open, setOpen] = useState<Payment | null>(null);
   const go = (target: string, id?: string) => onNav?.(target, id);
@@ -59,6 +59,7 @@ export default function AdminWallet({ onNav }: { onNav?: (target: string, id?: s
           fullCount: d.subDist[1]?.value ?? 0,
         }} />
         <RevenueGoals
+          isSuper={isSuper}
           failed={d.failed}
           loading={d.loading}
           monthRevenue={d.monthRevenue}

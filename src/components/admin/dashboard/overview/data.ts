@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
+import { fetchStaffEmails, isStaffProfile } from "@/lib/admin";
 
 export type Student = {
   id: string;
@@ -56,7 +57,7 @@ export function useOverviewData() {
   const [asOf, setAsOf] = useState(() => Date.now());
 
   const load = useCallback(async () => {
-    const [p, a, d, m, pay] = await Promise.all([
+    const [p, a, d, m, pay, staff] = await Promise.all([
       supabase.from("profiles")
         .select("id, full_name, email, destination_country, plan, plan_status, created_at, onboarding_completed_at")
         .order("created_at", { ascending: false }).limit(1000),
@@ -72,8 +73,15 @@ export function useOverviewData() {
       supabase.from("payments")
         .select("id, user_id, plan, amount, currency, method, status, created_at")
         .order("created_at", { ascending: false }).limit(300),
+      /* Who on this list is staff rather than a student. */
+      fetchStaffEmails(),
     ]);
-    setStudents((p.data ?? []) as Student[]);
+    /* Administrators get a profile row like anyone else, so counting profiles
+       counted the team as customers: with no students at all the dashboard
+       still reported a user. Filtered at the source, so every figure derived
+       from `students` below — the totals, the trends, the plan splits — drops
+       them together rather than each card remembering to. */
+    setStudents(((p.data ?? []) as Student[]).filter((s) => !isStaffProfile(staff, s.email)));
     setApprovals((a.data ?? []) as Approval[]);
     setDocs((d.data ?? []) as Doc[]);
     setMsgs((m.data ?? []) as Msg[]);

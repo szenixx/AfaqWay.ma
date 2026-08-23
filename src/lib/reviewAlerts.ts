@@ -30,7 +30,7 @@ async function countPending(plan: Plan): Promise<number> {
   const ids = ((people ?? []) as { id: string }[]).map((p) => p.id);
   if (!ids.length) return 0;
 
-  const [steps, docs] = await Promise.all([
+  const [steps, docs, stages] = await Promise.all([
     supabase.from("journey_progress")
       .select("id", { count: "exact", head: true })
       .eq("state", "in_progress")
@@ -41,8 +41,17 @@ async function countPending(plan: Plan): Promise<number> {
       .select("id", { count: "exact", head: true })
       .in("status", ["uploaded", "under_review"])
       .in("user_id", ids),
+    /* A SUBMITTED STAGE was missing from this count entirely. Sending a stage
+       to an advisor writes `waiting` to journey_stage_approvals, which nothing
+       here looked at, so the one request that most needs an admin never lit a
+       badge. The two counts above cover a submitted step and an uploaded
+       document; this is the third thing a student can be waiting on. */
+    supabase.from("journey_stage_approvals")
+      .select("stage_id", { count: "exact", head: true })
+      .eq("state", "waiting")
+      .in("user_id", ids),
   ]);
-  return (steps.count ?? 0) + (docs.count ?? 0);
+  return (steps.count ?? 0) + (docs.count ?? 0) + (stages.count ?? 0);
 }
 
 /**
@@ -116,7 +125,9 @@ export function useReviewAlerts(enabled: boolean) {
       .channel("admin-review-alerts")
       .on("postgres_changes", { event: "*", schema: "public", table: "journey_progress" }, () => { void load(); })
       /* An upload has to ring the same bell a submitted step does. */
-      .on("postgres_changes", { event: "*", schema: "public", table: "journey_documents" }, () => { void load(); });
+      .on("postgres_changes", { event: "*", schema: "public", table: "journey_documents" }, () => { void load(); })
+      /* And a submitted stage, now that it is counted. */
+      .on("postgres_changes", { event: "*", schema: "public", table: "journey_stage_approvals" }, () => { void load(); });
     channel.subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [enabled, load]);

@@ -9,6 +9,7 @@ import { plansForCountry, PLAN_LABEL } from "@/config/pricing";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
 import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar, DataTable, Pill, Status, Portal, type Column } from "@/components/ds";
+import { fetchStaffEmails, isStaffProfile } from "@/lib/admin";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
@@ -47,12 +48,16 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
 
   const load = useCallback(async () => {
     setLoading(true);
+    /* Staff are excluded from both the table and the statistics. An
+       administrator signing in creates a profile row exactly like a student's,
+       and counting those made the team part of the customer numbers. */
+    const staff = await fetchStaffEmails();
     const { data } = await supabase.from("profiles").select("id, user_number, full_name, email, city, plan, banned, whatsapp_country_code, whatsapp_number, destination_country").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
-    setRows((data ?? []) as U[]);
+    setRows(((data ?? []) as U[]).filter((u) => !isStaffProfile(staff, u.email)));
     // Statistics cover every registered profile, not only the paid users listed
     // in the table, so they are fetched alongside it.
-    const { data: everyone } = await supabase.from("profiles").select("id, banned, created_at, plan_status, plan_activated_at");
-    setAllProfiles((everyone ?? []) as PRow[]);
+    const { data: everyone } = await supabase.from("profiles").select("id, email, banned, created_at, plan_status, plan_activated_at");
+    setAllProfiles(((everyone ?? []) as (PRow & { email: string | null })[]).filter((p) => !isStaffProfile(staff, p.email)) as PRow[]);
     setLoading(false);
   }, []);
   useEffect(() => { void load(); }, [load]);

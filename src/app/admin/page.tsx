@@ -518,6 +518,7 @@ export default function AdminPage() {
           )
             : page === "dash-wallet" ? (
               <AdminWallet
+                isSuper={isSuper}
                 onNav={(target, id) => {
                   /* The same destinations the Overview uses, so a receipt row
                      behaves identically on both pages. */

@@ -55,6 +55,23 @@ export default function PaymentReviews({ highlightId, onHighlightDone }: { highl
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  /* Live, not on reload. The list used to load once on mount and then only
+     ever refresh from the Refresh menu item, so a receipt submitted while an
+     admin had this page open stayed invisible until they navigated away and
+     back. `payments` is in the supabase_realtime publication, so every insert
+     and every status change reaches us here.
+
+     The whole row set is reloaded rather than the payload being patched in:
+     each row is joined to its profile for the student's name, which the
+     payload does not carry. */
+  useEffect(() => {
+    const ch = supabase
+      .channel("admin-payment-reviews")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => { void load(); });
+    ch.subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [load]);
+
   // A7: a report's "Check" jumps here and flashes the matching payment row.
   useEffect(() => {
     if (!highlightId || !loadedOnce.current) return;

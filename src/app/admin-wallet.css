@@ -146,6 +146,44 @@
   box-shadow: 0 1px 2px rgba(46, 59, 199, .05), 0 12px 28px -22px rgba(46, 59, 199, .55);
 }
 .wa-goals-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+
+/* The superadmin's controls, and the edit row they open. Quiet by default:
+   this is a settings affordance on a reporting card, not an action. */
+.wa-goals-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.wa-goals-acts { display: flex; gap: 6px; flex: none; }
+.wa-goals-acts button {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 28px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
+  font: 600 11.5px/1 var(--font-sans); cursor: pointer;
+  transition: color 160ms var(--ease), border-color 160ms var(--ease);
+}
+.wa-goals-acts button:hover { color: var(--indigo-600); border-color: var(--indigo-line); }
+.wa-goals-acts button:disabled { opacity: .5; cursor: not-allowed; }
+
+.wa-goal-input {
+  width: 116px; height: 30px; padding: 0 10px; text-align: right;
+  border: 1px solid var(--indigo-line); border-radius: 9px;
+  background: var(--card); color: var(--ink);
+  font: 600 12.5px/1 var(--font-sans);
+}
+.wa-goal-input:focus { outline: none; border-color: var(--indigo-600); box-shadow: 0 0 0 3px var(--indigo-100); }
+
+.wa-goals-edit {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+  background: var(--subtle);
+  font: 500 11.5px/16px var(--font-sans); color: var(--ink-soft);
+}
+.wa-goals-edit > div { display: flex; gap: 8px; flex: none; }
+.wa-goals-edit button {
+  height: 30px; padding: 0 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-soft);
+  font: 600 12px/1 var(--font-sans);
+}
+.wa-goals-edit button[data-primary] { background: var(--indigo-600); border-color: var(--indigo-600); color: #fff; }
+.wa-goals-edit button:disabled { opacity: .5; cursor: not-allowed; }
 .wa-goals-title { font: 600 13.5px/18px var(--font-sans); color: #17233A; }
 .wa-goals-sub { font: 400 11px/15px var(--font-sans); color: #8695AB; }
 .wa-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
