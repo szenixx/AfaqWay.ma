@@ -245,13 +245,253 @@ a {
 }
 
 /* Auth page split layout */
-.af-auth-main { display: flex; gap: 16px; padding: 16px; flex: 1; min-height: 0; height: 100vh; }
-.af-auth-left { flex: 0 0 55%; }
-.af-auth-right { flex: 1; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 24px; }
+/* ── Auth page split ───────────────────────────────────────────────────
+   Proportions measured off the reference and expressed as ratios, so the two
+   sides hold the same relationship at 1280, 1440, 1920 and beyond rather than
+   the same pixel widths at one of them.
+
+   The inset is a percentage of the page, which is what makes the left panel
+   read as ~97% of the height with a small even margin at any size. Percentage
+   padding resolves against the container's WIDTH on all four sides, so the
+   vertical inset is stated separately to keep it from growing with width. */
+.af-auth-main {
+  display: flex; flex: 1; min-height: 0; height: 100vh;
+  gap: clamp(14px, 1.4%, 28px);
+  /* The inset is what turns the left panel from a full-bleed block into a
+     card sitting ON the page. It was too tight to read as one: at 1080 the
+     old 16px left the frame all but touching the top and bottom edges.
+     Measured, this lands the panel at 94-95% of the frame height, inside the
+     94-97% the composition wants, with the same visible margin at every size. */
+  padding: clamp(16px, 2.4vh, 30px) clamp(16px, 1.6%, 34px);
+}
+/* 46/54, not 50/50: the visual is deliberately the narrower of the two.
+
+   The basis is 47.6% rather than 46% because a flex basis is a share of the
+   row AFTER the container's padding and the gap are taken out, and the 46% is
+   a share of the whole page. Measured across 1280 to 2560 this lands the panel
+   at 45.9-46.1% of the page, which is the ratio the reference actually has. */
+.af-auth-left {
+  flex: 0 0 47.6%; min-width: 0;
+  /* A ceiling for very large monitors: past this the panel stops being a card
+     and becomes a wall. The ratio holds everywhere below it. */
+  max-width: 880px;
+  /* The corner is a proportion of the panel's height rather than a fixed 16px,
+     so it stays as round-looking on a 1080 screen as on a 720 one. Bounded at
+     both ends: never a hard square, never a capsule. It lives here and not
+     inline on the element, because an inline radius cannot scale. */
+  border-radius: clamp(18px, 4.2vh, 44px);
+}
+
+/* The other half of the split, and the reason the form sits where it does:
+   `flex: 1` takes the width the left panel did not, and the centring is what
+   holds the column in the middle of it both ways. Without this rule the right
+   side is a plain block, the form is not centred, and every percentage inside
+   it resolves against a box that was never sized. */
+.af-auth-right {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow-y: auto;
+  padding: 24px 12px;
+}
+
+/* The panel's whole content: one abstract image, nothing layered over it.
+
+   `cover` on a box that fills the frame is what keeps the panel in charge of
+   the size — the artwork crops itself to whatever the 47.6% basis and the
+   near-full height work out to, at any viewport, and never stretches. The
+   frame's own `overflow: hidden` rounds its corners, so the radius is still
+   stated once, on the panel. */
+.af-auth-visual {
+  position: absolute; inset: 0;
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+}
+
+/* ── What sits on the gradient ─────────────────────────────────────────
+   Offsets are percentages of the PANEL, not the page, so both blocks keep the
+   same inset from the frame's own edges as it resizes, and neither can escape
+   the rounded corners the panel clips to. */
+.af-auth-mark {
+  position: absolute; top: 5.5%; left: 8%; z-index: 2;
+  display: inline-flex; align-items: center; gap: clamp(11px, 1.2vh, 15px);
+  color: #FFFFFF;
+}
+/* Roughly 1.5x its previous size, the whole lockup scaled together so the
+   glyph and the wordmark keep their relationship. Still bounded top and
+   bottom, so it grows with the panel without becoming the panel. */
+.af-auth-mark svg { width: clamp(39px, 4.35vh, 51px); height: auto; display: block; }
+.af-auth-mark span {
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: clamp(25px, 2.85vh, 33px); line-height: 1;
+  letter-spacing: -.015em;
+}
+
+.af-auth-caption {
+  position: absolute; bottom: 7.5%; left: 8%; right: 8%; z-index: 2;
+  color: #FFFFFF;
+}
+/* The small line leads, the heading answers it. */
+/* The supporting line rises with the headline but stays clearly subordinate
+   to it: larger and readable, never competing. */
+.af-auth-caption p {
+  margin: 0 0 clamp(10px, 1.3vh, 16px);
+  font-family: var(--font-sans); font-weight: 500;
+  font-size: clamp(15px, 1.75vh, 20px); line-height: 1.45;
+  opacity: .85;
+}
+/* Roughly 2x, and the panel's actual voice. The measure is what makes it land
+   on the two or three lines the composition wants: a `ch` cap scales with the
+   type, so the line count holds as the size changes rather than collapsing to
+   one long line on a wide panel. */
+.af-auth-caption h2 {
+  margin: 0;
+  font-family: var(--font-sans); font-weight: 600;
+  font-size: clamp(34px, 4.9vh, 58px); line-height: 1.16;
+  letter-spacing: -.02em;
+  max-width: 15ch;
+}
+
+/* ── The authentication column ─────────────────────────────────────────
+   One left rail. The mark, the heading, its line, both labels, both fields and
+   the button all begin at the same x, which is what makes a form of this
+   length read as a single column instead of a stack of centred blocks. Only
+   the divider and the account switch centre themselves, because they belong to
+   the panel rather than to the form.
+
+   The vertical rhythm comes from one unit, `--sp`, declared below: every gap
+   in the column is a multiple of it. */
+.af-auth-form {
+  /* ~59% of the right side, which is ~30% of the page: the ratio measured off
+     the reference. Percentage of a bounded parent rather than a viewport unit,
+     so it holds the same relationship at every desktop width. Stated as 61.5%
+     because the percentage resolves against the content box, inside this
+     column's own padding; measured, that lands at 59.0-59.5% of the right side
+     from 1280 through 1920.
+
+     The floor keeps it usable on a narrow desktop window; the ceiling is the
+     "sensible maximum" a very wide monitor needs, because a login form that
+     kept growing past ~520px stops being a form and becomes a banner. */
+  width: 61.5%;
+  min-width: min(100%, 300px);
+  max-width: 560px;
+
+  /* ── One spacing unit, and every gap in the panel is a multiple of it ──
+     The rhythm is not a set of unrelated numbers: `--sp` is the single value
+     that responds to the screen, and the section gap, the field gap, the
+     label offset and the mark's clearance are all ratios of it. Change the
+     one line and the whole column re-proportions together, which is what
+     keeps it looking like the same design at 1280 and at 1920 instead of a
+     collection of gaps that each drift on their own. */
+  --sp: clamp(13px, 1.7vh, 19px);
+
+  display: flex; flex-direction: column; gap: calc(var(--sp) * 1.55);
+}
+
+.af-auth-head { display: flex; flex-direction: column; }
+/* The icon carries its own rounded tile and shadow, so it gets none here. */
+.af-auth-headmark { display: block; width: clamp(32px, 3.4vh, 42px); height: auto; margin-bottom: calc(var(--sp) * 1.1); }
+/* Longhand, NOT the `font` shorthand. A math function in the shorthand's size
+   slot is not reliably parsed, and a shorthand that fails to parse is dropped
+   whole — which takes the family and the weight down with it and leaves the
+   heading as a browser-default serif. Longhand properties fail independently,
+   so a clamp that any engine dislikes costs at most the size. */
+.af-auth-head h1 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: clamp(22px, 2.6vh, 30px);
+  line-height: 1.26;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+.af-auth-head p {
+  margin: calc(var(--sp) * .42) 0 0;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: clamp(12.5px, 1.4vh, 15px);
+  line-height: 1.45;
+  color: var(--ink-faint);
+  /* Held to a readable measure so it never runs the full width of a wide
+     form column as one long line. */
+  max-width: 36ch;
+}
+
+.af-auth-fields { display: flex; flex-direction: column; gap: var(--sp); }
+/* The label sits close to the field it names, and that closeness is part of
+   the same scale rather than a separate 6px decision. */
+.af-auth-form .af-label { margin-bottom: calc(var(--sp) * .38); }
+
+/* ── Controls, scoped to this panel ────────────────────────────────────
+   The reference's fields are more compact than the platform's 44px default
+   and scale with the screen. This is a deliberate, tightly scoped exception
+   to the one-control rule in ds.css: it changes only the height and the
+   corner on this page, never the border, background, focus ring or hover, so
+   a field here still looks and behaves like a field everywhere else. If the
+   platform ever adopts a responsive control height, this block should be the
+   first thing deleted. */
+.af-auth-form :is(input.af, .af-field > .af) {
+  min-height: clamp(42px, 5.4vh, 52px);
+  border-radius: clamp(12px, 1.6vh, 18px);
+}
+.af-auth-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* Every inline link and text button in the panel, one treatment. */
+.af-auth-link, .af-auth-switch button, .af-auth-legal a {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--indigo-600); font: 600 13px/18px var(--font-sans);
+}
+.af-auth-link { font-weight: 500; }
+.af-auth-link:hover, .af-auth-switch button:hover, .af-auth-legal a:hover { text-decoration: underline; }
+
+.af-auth-legal {
+  margin: 0; text-align: center;
+  font: 400 12px/17px var(--font-sans); color: var(--ink-faint);
+}
+.af-auth-legal a { font: inherit; font-weight: 500; }
+
+.af-auth-switch {
+  text-align: center;
+  font: 400 13px/18px var(--font-sans); color: var(--ink-soft);
+}
+
+.af-auth-alert {
+  border-radius: var(--radius-xl);
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  font: 500 13px/18px var(--font-sans);
+}
+.af-auth-alert[data-tone="error"] { background: var(--red-tint); border-color: var(--red-line); color: var(--red); }
+.af-auth-alert[data-tone="ok"]    { background: var(--green-tint); border-color: var(--green-line); color: var(--green); }
 @media (max-width: 900px) {
   .af-auth-left { display: none; }
   .af-auth-main { padding: 12px; }
   .af-auth-right { padding: 16px; }
+
+  /* ── The phone composition ───────────────────────────────────────────
+     61.5% is a share of the RIGHT HALF of a desktop. With the left panel
+     hidden that half becomes the whole screen, and the same 61.5% left the
+     form as a narrow strip down the middle of a phone with empty gutters
+     either side. On a phone the form IS the page, so it takes the width. */
+  .af-auth-form {
+    width: 100%;
+    max-width: 460px;
+    --sp: clamp(15px, 4vw, 20px);
+  }
+
+  /* Fluid type, which the responsive contract allows on mobile precisely
+     because a phone's width genuinely varies from 320 to 430. Everything
+     steps up so the page reads at arm's length rather than looking like a
+     shrunken desktop. */
+  .af-auth-headmark { width: clamp(40px, 11vw, 50px); }
+  .af-auth-head h1 { font-size: clamp(26px, 7.4vw, 34px); }
+  .af-auth-head p { font-size: clamp(14px, 3.8vw, 16.5px); max-width: none; }
+  .af-auth-form :is(input.af, .af-field > .af) {
+    min-height: clamp(50px, 13vw, 56px);
+    border-radius: clamp(14px, 3.6vw, 18px);
+    font-size: clamp(15px, 4vw, 16.5px);
+  }
+  .af-auth-form .af-label { font-size: clamp(12.5px, 3.4vw, 14px); }
+  .af-auth-switch, .af-auth-link { font-size: clamp(13.5px, 3.6vw, 15px); }
 }
 
 /* Onboarding wizard layout helpers */
