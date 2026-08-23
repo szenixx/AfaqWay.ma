@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Globe, Info, LogOut } from "lucide-react";
+import { ArrowLeft, Info, LogOut } from "lucide-react";
 import { Button, ProgressBar } from "@heroui/react";
 import { LogoMark } from "@/components/ds/LogoMark";
 import { Emoji } from "./Emoji";
@@ -48,9 +48,13 @@ export function BrandMark() {
    Flags here are emoji artwork, not the design system's Flag: that component
    draws a flag from horizontal stripes, which a Union Jack is not, and neither
    the UK nor Morocco is a destination with stripe data behind it. */
-const LANGUAGES: { code: OnbLang; label: string; flag: EmojiName }[] = [
-  { code: "en", label: "English", flag: "flag-gb" },
-  { code: "ar", label: "دارجة / العربية", flag: "flag-ma" },
+const LANGUAGES: { code: OnbLang; label: string; short: string; flag: EmojiName }[] = [
+  { code: "en", label: "English", short: "English", flag: "flag-gb" },
+  /* Two labels, because the two places have different jobs. The MENU names the
+     language in full, so someone opening it knows exactly what they are
+     picking. The BADGE is a 90px chip in a crowded corner and only has to say
+     which one is on, so it carries the short form. */
+  { code: "ar", label: "دارجة / العربية", short: "العربية", flag: "flag-ma" },
 ];
 
 function useDismiss(open: boolean, close: () => void) {
@@ -105,9 +109,15 @@ export function TopUtilities() {
       )}
 
       <div className="onb-pop-anchor">
-        <button type="button" className="onb-pill" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          <Globe size={14} strokeWidth={2} />
-          {current.label}
+        <button type="button" className="onb-pill" aria-haspopup="menu" aria-expanded={open}
+          aria-label={`${t("Language")}: ${current.short}`}
+          onClick={() => setOpen((v) => !v)}>
+          {/* The active language's own flag, not a generic globe: the flag is
+              the fastest read of which language is on, and it swaps the moment
+              the choice does. Only ever one language here — the other lives in
+              the menu, never beside it. */}
+          <Emoji name={current.flag} size={16} />
+          {current.short}
         </button>
         {open && (
           <div className="onb-pop" role="menu">

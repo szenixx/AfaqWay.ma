@@ -132,7 +132,13 @@
 .onb-pop-anchor { position: relative; }
 .onb-pill {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  width: 90px; height: 32px; padding: 0; border: none; border-radius: 999px;
+  /* 90px was enough for a globe and the word "English". The badge now carries
+     a flag and whichever language is on, and "العربية" does not fit a fixed
+     chip, so the width is a floor rather than a cap: English still renders at
+     the size it always did, and Arabic grows by a few pixels instead of
+     clipping. `.onb-pill-round` still pins the log-out button to 32px. */
+  min-width: 90px; height: 32px; padding: 0 11px; white-space: nowrap;
+  border: none; border-radius: 999px;
   background: #FFFFFF; color: var(--onb-brand); cursor: pointer;
   font: 500 14px/1 var(--font-sans);
   transition: background var(--onb-fast) var(--onb-ease), transform var(--onb-fast) var(--onb-ease);
@@ -140,7 +146,7 @@
 .onb-pill:hover { background: #F2F3FF; }
 .onb-pill:active { transform: scale(.97); }
 .onb-pill:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 3px; }
-.onb-pill-round { width: 32px; }
+.onb-pill-round { width: 32px; min-width: 32px; padding: 0; }
 /* Signing out is the one destructive thing in here, so it wears the platform's
    destructive colour rather than hiding behind a neutral profile glyph. */
 .onb-pill-danger { color: var(--red); }
@@ -1362,3 +1368,11 @@
    digits and placeholder spacing are identical in both languages, so it is
    pinned rather than left to resolve per paragraph. */
 .onb-root[lang="ary"] .onb-phone :is(input, .onb-phone-input) { unicode-bidi: normal; direction: ltr; }
+
+/* The top-right corner keeps its English arrangement in every language: the
+   flag sits at the badge's leading edge and the log-out control stays where
+   the hand already expects it. A flag is an identity, not a word, so it does
+   not follow the text's direction. */
+.onb-root[lang="ary"] .onb-topright,
+.onb-root[lang="ary"] .onb-pill { flex-direction: row; direction: ltr; }
+.onb-root[lang="ary"] .onb-pill span:not(.onb-sr) { unicode-bidi: plaintext; }
