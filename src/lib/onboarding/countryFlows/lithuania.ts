@@ -83,7 +83,7 @@ export const lithuaniaFlow: CountryFlow = {
           sectionTitle: "Your program preferences",
           fields: [
             { kind: "multiselect", key: "field_of_interest", label: "Field of interest", question: "Which fields interest you?", subtitle: "Pick up to 2. We rank real programmes against them.", emoji: "compass", hint: "pick up to 2", required: true, maxSelect: 2, options: FIELD_OPTIONS },
-            { kind: "text", key: "max_budget", label: "Max tuition budget", question: "What is your yearly tuition budget?", subtitle: "In euros per year. Most programmes start around 4,500 €.", footnote: "The lowest tuition we can match you to is 2,800 € per year.", emoji: "euro", hint: "€ per year, min 2800", required: true, sanitize: "digits", inputMode: "numeric", numeric: true, min: 2800, maxLength: 6, placeholder: "recommended 4500+ €" },
+            { kind: "text", key: "max_budget", label: "Max tuition budget", question: "What is your yearly tuition budget?", subtitle: "In euros per year. Programmes start from around 2,800 €, with an average of around 4,500 €.", footnote: "The lowest tuition we can match you to is 2,800 € per year.", emoji: "euro", hint: "€ per year, min 2800", required: true, sanitize: "digits", inputMode: "numeric", numeric: true, min: 2800, maxLength: 6, placeholder: "recommended 4500+ €" },
             /* Desktop: `row: 1` puts these two side by side (.af-row-2 is a
                2-column grid — see groupFields() in page.tsx, which only pairs
                fields that are *adjacent* in this array, so english_level had

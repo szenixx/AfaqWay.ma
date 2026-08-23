@@ -18,6 +18,12 @@
 export type OnbLang = "en" | "ar";
 
 const DARIJA: Record<string, string> = {
+  /* Supplied by the product owner. 2,800 € is the floor and 4,500 € the
+     average — the previous line read as though 4,500 € were the starting
+     price, which is the thing being corrected. Both figures keep Western
+     numerals and the € sign. */
+  "In euros per year. Programmes start from around 2,800 €, with an average of around 4,500 €.":
+    "باليورو فالسنة. البرامج كيبداو تقريباً من 2,800 €، والمتوسط تقريباً هو 4,500 €.",
   /* Supplied directly and approved by the product owner, so these sit with the
      reviewed text rather than in the pending block. */
   "How do you identify?": "شنو هو جنس ديالك ؟",
@@ -82,7 +88,6 @@ const DARIJA: Record<string, string> = {
   "I have read the Refund Policy.": "قريت سياسة استرجاع المبلغ.",
   "I'll choose myself": "غادي نختار بوحدي",
   "Important": "مهم:",
-  "In euros per year. Most programmes start around 4,500 €.": "باليورو فالسنة. أغلب البرامج كيبداو تقريباً من 4,500 €.",
   "Included, end to end": "مشمولة من البداية حتى النهاية",
   "Interview preparation coaching": "مساعدة وتحضير لمقابلاتك",
   "It decides which consulate and appointment centre your file goes through.": "هادشي كيحدد القنصلية ومركز المواعيد اللي غادي يدوز منّو الملف ديالك.",

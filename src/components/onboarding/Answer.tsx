@@ -7,7 +7,7 @@ import {
 import { Flag } from "@/components/ds";
 import { Emoji } from "./Emoji";
 import type { EmojiName } from "@/lib/onboarding/emoji";
-import { sanitize } from "@/lib/onboarding/profileState";
+import { latinOnly, sanitize } from "@/lib/onboarding/profileState";
 import { titleCase } from "@/lib/text";
 import { useIsPhone } from "@/lib/useIsPhone";
 import type { Choice, Control } from "@/lib/onboarding/journey";
@@ -213,7 +213,7 @@ export function Answer({
         <div className="onb-inputbox" data-invalid={(invalid && !first) || undefined}>
           <Emoji name="id" size={22} className="onb-input-emoji" />
           <TextField className="onb-field" aria-label={t("First name")} value={first}
-            onChange={(v) => onChange(compose(titleCase(v), last))}>
+            onChange={(v) => onChange(compose(titleCase(latinOnly(v)), last))}>
             <Input className="onb-input" placeholder={t("First name")} onBlur={onCommit} onKeyDown={enterKey}
               autoFocus={autoFocus} {...softProps} />
           </TextField>
@@ -223,7 +223,7 @@ export function Answer({
               control that happens to have wrapped. */}
           <Emoji name="scroll" size={22} className="onb-input-emoji" />
           <TextField className="onb-field" aria-label={t("Last name")} value={last}
-            onChange={(v) => onChange(compose(first, titleCase(v)))}>
+            onChange={(v) => onChange(compose(first, titleCase(latinOnly(v))))}>
             <Input className="onb-input" placeholder={t("Last name")} onBlur={onCommit} onKeyDown={enterKey} />
           </TextField>
         </div>

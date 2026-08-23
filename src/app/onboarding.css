@@ -1064,6 +1064,22 @@
   .onb-plan { border-radius: 22px; }
   .onb-plan > .af-spotlight-content { padding: 0; }
   .onb-plan[data-on] { box-shadow: inset 0 0 0 1px var(--onb-brand); }
+
+  /* The picked card eases back to 92% so it sits inside its own margin rather
+     than filling the phone edge to edge, which is what makes a selected card
+     feel cramped on a small screen.
+
+     A transform, deliberately, and not a width or a font change: it takes the
+     card's PAINT down without touching the box the layout reserved for it, so
+     nothing reflows, the column keeps its rhythm, the unpicked card is
+     untouched, and the page itself is still at 100%. The origin is the centre,
+     so the shrink pulls in evenly from both sides and the card stays centred
+     with no chance of overflowing sideways. */
+  .onb-plan[data-on] {
+    transform: scale(.92);
+    transform-origin: center center;
+    transition: transform var(--onb-fast) var(--onb-ease);
+  }
   .onb-plan-pick {
     display: flex; flex-direction: column; width: 100%;
     padding: 16px 16px 15px; border: none; border-radius: 22px; background: none;
@@ -1335,12 +1351,32 @@
    left rail. The grid, the columns, the order and the row heights are all
    untouched. */
 .onb-root[lang="ary"] .onb-opts .onb-opt-text,
-.onb-root[lang="ary"] .onb-modes .onb-opt-text,
-.onb-root[lang="ary"] .onb-select-trigger,
-.onb-root[lang="ary"] .onb-field {
+.onb-root[lang="ary"] .onb-modes .onb-opt-text {
   direction: rtl;
   unicode-bidi: isolate;
 }
+
+/* Anything a student TYPES runs left to right, in both languages, because the
+   only alphabet these fields accept is Latin. The caret starts at the left,
+   moves left to right, and the text sits against the left edge — the same
+   field a French form would give them. Nothing around it moves: the question,
+   the description, the emoji and the box itself keep their places. */
+.onb-root[lang="ary"] :is(.onb-input, .onb-phone-input),
+.onb-root[lang="ary"] .onb-field input {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: normal;
+}
+.onb-root[lang="ary"] :is(.onb-input, .onb-phone-input)::placeholder { text-align: left; }
+
+/* The dropdown trigger keeps the English box order so its emoji stays on the
+   left, the same as every other input. Its VALUE is still allowed to be
+   Arabic — "اختار الامتحان" — so the text inside resolves per paragraph
+   rather than being forced either way. */
+.onb-root[lang="ary"] .onb-select-trigger { direction: ltr; }
+.onb-root[lang="ary"] .onb-select-trigger .onb-input-emoji { order: -1; }
+.onb-root[lang="ary"] .onb-select-trigger [class*="select__value"],
+.onb-root[lang="ary"] .onb-select-trigger span { unicode-bidi: plaintext; }
 .onb-root[lang="ary"] .onb-opts .onb-opt-text,
 .onb-root[lang="ary"] .onb-modes .onb-opt-text {
   align-items: flex-end;
@@ -1351,13 +1387,6 @@
 .onb-root[lang="ary"] :is(.onb-opts, .onb-modes) .onb-opt-in { flex-direction: row; }
 .onb-root[lang="ary"] .onb-opt-emoji,
 .onb-root[lang="ary"] .onb-input-emoji { order: -1; }
-
-/* A numeric field is a value, not a sentence: it stays exactly as English
-   leaves it, caret and all. */
-.onb-root[lang="ary"] .onb-field:has(input[inputmode="numeric"]),
-.onb-root[lang="ary"] .onb-field:has(input[inputmode="decimal"]),
-.onb-root[lang="ary"] .onb-field:has(input[inputmode="tel"]),
-.onb-root[lang="ary"] .onb-field:has(input[type="date"]) { direction: ltr; }
 
 /* The programme rows carry an absolutely-positioned score on the right, so
    they keep the English arrangement rather than colliding with it. */

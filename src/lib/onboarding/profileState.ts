@@ -159,10 +159,25 @@ export function fieldVisible(f: FieldDef, vals: Record<string, string>): boolean
   });
 }
 
+/* Everything a student TYPES stays in the Latin alphabet, in both languages.
+
+   These values leave the product: they go onto a passport-matched application,
+   a university form and a visa file, all of which are filled in Latin script.
+   A name or a city typed in Arabic would have to be transliterated by hand
+   later, by someone guessing at the spelling the student actually uses.
+
+   French accents are kept, because Moroccan documents carry them — Benaïssa,
+   Fès, Économie. The ranges are Latin-1 Supplement and Latin Extended-A, which
+   is where those live; Arabic script falls outside both and is dropped as it
+   is typed, including Arabic-Indic digits. */
+export const latinOnly = (v: string) => v.replace(/[^A-Za-z\u00C0-\u017F0-9 .,'\u2019\-]/g, "");
+
 export function sanitize(f: Pick<FieldDef, "sanitize" | "maxLength">, raw: string): string {
   let v = raw;
   if (f.sanitize === "digits") v = v.replace(/[^\d]/g, "");
-  else if (f.sanitize === "titlecase") v = titleCase(v);
+  else if (f.sanitize === "titlecase") v = titleCase(latinOnly(v));
+  /* A field with no declared sanitiser is still free text a person types. */
+  else if (f.sanitize === undefined) v = latinOnly(v);
   else if (f.sanitize === "decimal") {
     v = v.replace(/,/g, ".").replace(/[^\d.]/g, ""); // phone keyboards often type "," for the decimal point
     const i = v.indexOf(".");
