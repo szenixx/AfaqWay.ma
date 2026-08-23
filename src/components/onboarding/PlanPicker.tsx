@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check, ChevronRight, FileText } from "lucide-react";
 import { MagicButton } from "@/components/godui/magic-button";
 import { SpotlightCard } from "@/components/ds/SpotlightCard";
@@ -8,8 +8,10 @@ import FeaturesModal from "./FeaturesModal";
 import { Emoji } from "./Emoji";
 import type { EmojiName } from "@/lib/onboarding/emoji";
 import { PLANS, genRef, type Plan } from "@/lib/plans";
+import { useIsPhone } from "@/lib/useIsPhone";
 import { whatsappLink } from "@/lib/socialLinks";
 import { WhatsAppIcon } from "@/components/ds/WhatsAppIcon";
+import { useT, withLinks } from "@/lib/onboarding/lang";
 
 const PLAN_EMOJI: Record<string, EmojiName> = { self_service: "compass", full_service: "handshake" };
 
@@ -17,30 +19,13 @@ const PLAN_EMOJI: Record<string, EmojiName> = { self_service: "compass", full_se
    spotlight is the soft fill only. */
 const SPOT = "rgba(46, 59, 199, .13)";
 
-/* 767px is the platform's one mobile boundary. The phone build is a different
-   STRUCTURE, not a narrower copy: picking a plan and committing to it become
-   two separate acts, so the screen carries one primary button at the bottom
-   instead of one button per card competing for the same thumb. */
-function useIsPhone() {
-  /* Read on the first render, not in an effect: the whole journey renders only
-     after the profile has loaded on the client, so there is no server pass to
-     mismatch — and no frame where a phone briefly gets the desktop pair. */
-  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const sync = () => setPhone(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return phone;
-}
 
 function Highlights({ items }: { items: string[] }) {
+  const t = useT();
   return (
     <ul className="onb-plan-list">
       {items.map((f, i) => (
-        <li key={i}><span className="onb-feat-tick"><Check size={11} strokeWidth={3} /></span>{f}</li>
+        <li key={i}><span className="onb-feat-tick"><Check size={11} strokeWidth={3} /></span>{t(f)}</li>
       ))}
     </ul>
   );
@@ -63,6 +48,7 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
   onSeeAll: () => void;
 }) {
   const phone = useIsPhone();
+  const t = useT();
   /* Phone only: what the student has tapped but not yet confirmed. Desktop
      commits on the card's own button, so it never reads this.
 
@@ -83,7 +69,7 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
         <div className="onb-plan-help">
           <a className="onb-quickbtn onb-quickbtn-wa" href={HELP_URL} target="_blank" rel="noopener noreferrer">
             <span className="onb-quickico"><WhatsAppIcon size={19} /></span>
-            Free consultation about the plans
+            {t("Free consultation about the plans")}
           </a>
         </div>
       )}
@@ -91,8 +77,10 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
       {phone ? (
         <>
           <p className="onb-readfirst">
-            <strong>Important:</strong> Read what each plan includes before you choose, and
-            our <a href="/refund" target="_blank" rel="noopener">Refund Policy</a> before you pay.
+            <strong>{t("Important:")}</strong>{" "}
+            {withLinks(t("Read what each plan includes before you choose, and our Refund Policy before you pay."), [
+              { phrase: t("Refund Policy"), render: (x) => <a href="/refund" target="_blank" rel="noopener">{x}</a> },
+            ])}
           </p>
           {/* The two things a student reaches for before choosing: read the
               detail, or ask someone. One row, one pill each, same size. */}
@@ -111,8 +99,14 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
         </>
       ) : (
         <p className="onb-readfirst">
-          <strong>Important:</strong> Please read <button type="button" onClick={onSeeAll}>what each plan includes</button> before
-          you choose, and our <a href="/refund" target="_blank" rel="noopener">Refund Policy</a> before you pay.
+          <strong>{t("Important:")}</strong>{" "}
+          {/* Darija puts these clauses in its own order, so the sentence is
+              translated whole and the two live phrases are split back out of
+              it rather than concatenated around them. */}
+          {withLinks(t("Please read what each plan includes before you choose, and our Refund Policy before you pay."), [
+            { phrase: t("what each plan includes"), render: (x) => <button type="button" onClick={onSeeAll}>{x}</button> },
+            { phrase: t("Refund Policy"), render: (x) => <a href="/refund" target="_blank" rel="noopener">{x}</a> },
+          ])}
         </p>
       )}
 
@@ -129,9 +123,9 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
                 </span>
                 <Emoji name={PLAN_EMOJI[p.id] ?? "card"} size={26} />
                 <h3>{p.name}</h3>
-                {p.popular && <span className="onb-plan-tab">Most popular</span>}
+                {p.popular && <span className="onb-plan-tab">{t("Most popular")}</span>}
               </header>
-              <p className="onb-plan-tagline">{p.tagline}</p>
+              <p className="onb-plan-tagline">{t(p.tagline)}</p>
               <p className="onb-plan-price">
                 <strong>{p.price.toLocaleString("en-US")}</strong>
                 <span>{p.currency}</span>
@@ -144,7 +138,7 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
               {phone ? (
                 <button
                   type="button" className="onb-plan-pick" aria-pressed={on}
-                  aria-label={`${p.name}, ${p.price.toLocaleString("en-US")} ${p.currency}. ${p.tagline}`}
+                  aria-label={`${p.name}, ${p.price.toLocaleString("en-US")} ${p.currency}. ${t(p.tagline)}`}
                   onClick={() => setPicked(p.id)}
                 >
                   {head}
@@ -160,7 +154,7 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
                 <div className="onb-plan-more">
                   <Highlights items={p.highlights.slice(0, PEEK)} />
                   <button type="button" className="onb-plan-readmore" onClick={onSeeAll}>
-                    Read all {p.features.length} features
+                    {t("Read all {n} features").replace("{n}", String(p.features.length))}
                     <ChevronRight size={15} strokeWidth={2} />
                   </button>
                 </div>
@@ -168,7 +162,9 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
 
               {!phone && (
                 <MagicButton className="onb-plan-cta" onClick={() => onChoose(p)}>
-                  Choose {p.name}
+                  {/* The plan NAME is protected in both languages, so it is
+                      substituted into the sentence, not translated with it. */}
+                  {t("Choose {planName}").replace("{planName}", p.name)}
                 </MagicButton>
               )}
             </SpotlightCard>
@@ -183,7 +179,9 @@ export default function PlanPicker({ current, onChoose, onSeeAll }: {
             className="onb-plan-cta" disabled={!pickedPlan}
             onClick={() => pickedPlan && onChoose(pickedPlan)}
           >
-            {pickedPlan ? `Continue with ${pickedPlan.name}` : "Pick a plan to continue"}
+            {pickedPlan
+              ? t("Continue with {planName}").replace("{planName}", pickedPlan.name)
+              : t("Pick a plan to continue")}
           </MagicButton>
         </div>
       )}

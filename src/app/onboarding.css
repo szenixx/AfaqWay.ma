@@ -26,7 +26,7 @@
    mapped onto AfaqWay's below, the same way .afq-hui does for the admin
    dashboard, so the library never inherits the app's globals.               */
 
-.onb-root {
+.onb-root, .onb-portal {
   /* ── Measured off the reference at 1850 x 941 ──────────────────────────
      Card 700 x 827 at y=56, horizontally centred and NOT vertically centred.
      Content column 650 (700 - 2 x 24 padding), which every row inside the card
@@ -72,7 +72,14 @@
   --radius: 0.875rem;
   --surface-shadow: none;
   --overlay-shadow: 0 18px 44px rgba(23, 35, 58, .22);
+}
 
+/* Everything above is TOKENS and everything below is LAYOUT, split so the two
+   can have different selectors. The programme sheet is portalled to <body> to
+   escape the animated stage, which means it leaves .onb-root and would lose
+   every token it paints with; sharing the block is what keeps one definition
+   instead of a second copy drifting beside it. */
+.onb-root {
   position: relative;
   width: 100vw;
   min-height: 100vh;
@@ -300,6 +307,14 @@
 }
 .onb-root .onb-prorow .onb-opt-in > *:not(.onb-prowatermark) { position: relative; z-index: 1; }
 .onb-root .onb-prorow .onb-opt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The tuition, beside the name it belongs to. Lighter, smaller and a step back
+   in colour, so the programme title stays the thing being read and the price
+   is what you find next to it rather than something competing with it. */
+.onb-profee {
+  margin-left: 8px; white-space: nowrap;
+  font: 400 11.5px/16px var(--font-sans); color: var(--onb-ink-3);
+  letter-spacing: 0;
+}
 .onb-root .onb-prorow .onb-opt-in:hover .onb-prowatermark { opacity: .15; }
 .onb-root .onb-prorow .onb-opt-in[data-on] .onb-prowatermark { opacity: .18; filter: none; }
 .onb-proinfo {
@@ -746,6 +761,11 @@
 .onb-legal .onb-save { position: static; margin: 0 0 2px; }
 .onb-legal-read { background: none; border: none; padding: 0; cursor: pointer; font: 500 13px/19px var(--font-sans); color: var(--onb-brand); text-decoration: underline; }
 .onb-legal[data-bad] .checkbox__control { border-color: var(--red); }
+/* A checkbox, not a radio. The library rounds its control by `--radius * .8`,
+   and --radius is 14px on this surface, which on a 16px box is very nearly a
+   circle. Squared off to the proportion the design system's own control uses
+   (.af-check: 7px on 20px). Border, fill and tick are left to the library. */
+.onb-legal .checkbox__control { border-radius: 6px; }
 
 /* ── Payment ───────────────────────────────────────────────────────────
    Same rows, same fields, same footer geometry as every other step. The logic
@@ -859,37 +879,38 @@
 /* ── Done ──────────────────────────────────────────────────────────────
    The check draws itself while the profile is actually being finalised, so the
    animation is the wait rather than decoration on top of it. */
-.onb-done {
-  position: absolute; inset: 0; z-index: 20;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; background: #fff; animation: onbFade 220ms var(--onb-ease);
-}
-.onb-done-mark { width: 92px; height: 92px; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.onb-done-mark circle {
-  stroke: var(--onb-brand); stroke-width: 2.2;
-  stroke-dasharray: 145; stroke-dashoffset: 145;
-  animation: onbDraw 620ms var(--onb-ease) forwards;
-}
-.onb-done-mark path {
-  stroke: var(--onb-brand); stroke-width: 3.4;
-  stroke-dasharray: 44; stroke-dashoffset: 44;
-  animation: onbDraw 420ms var(--onb-ease) 380ms forwards;
-}
 @keyframes onbDraw { to { stroke-dashoffset: 0; } }
-.onb-done-title {
-  margin: 18px 0 0; font: 600 22px/29px var(--font-sans); color: var(--onb-ink); letter-spacing: -.01em;
-  animation: onbRise 420ms var(--onb-ease) 620ms both;
-}
-.onb-done-sub {
-  margin: 6px 0 0; font: 400 14px/21px var(--font-sans); color: var(--onb-ink-3);
-  animation: onbRise 420ms var(--onb-ease) 720ms both;
-}
 @media (prefers-reduced-motion: reduce) {
-  .onb-done-mark circle, .onb-done-mark path { animation: none; stroke-dashoffset: 0; }
-  .onb-done-title, .onb-done-sub { animation: none; }
-}
+    }
 
 /* ── Destination-switch confirmation ───────────────────────────────── */
+/* ── Handoff to the dashboard ──────────────────────────────────────────
+   The whole surface goes soft behind one spinner. `backdrop-filter` rather
+   than a filter on the page, so the blur is applied to whatever is behind the
+   overlay and the spinner drawn on top of it stays perfectly sharp. Fixed and
+   full-viewport, so the step frame is not the boundary of the effect. */
+.onb-handoff {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(18, 22, 84, .28);
+  backdrop-filter: blur(14px) saturate(.9);
+  -webkit-backdrop-filter: blur(14px) saturate(.9);
+  animation: onbFade 220ms var(--onb-ease) both;
+}
+.onb-handoff-spin {
+  width: 54px; height: 54px; border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, .34);
+  border-top-color: #FFFFFF;
+  animation: onbSpin 820ms linear infinite;
+}
+@keyframes onbSpin { to { transform: rotate(360deg); } }
+/* Reduced motion still needs to show that something is happening, so the ring
+   pulses in place instead of turning. */
+@media (prefers-reduced-motion: reduce) {
+  .onb-handoff-spin { animation: onbPulse 1.4s var(--onb-ease) infinite; }
+}
+@keyframes onbPulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+
 .onb-modal {
   position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
   padding: 24px; background: rgba(18, 22, 84, .5); animation: onbFade 160ms var(--onb-ease);
@@ -956,6 +977,36 @@
      width, and stacking them wastes a third of the screen. */
   .onb-root .onb-opts[data-compact] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .onb-root .onb-opts[data-compact] .onb-opt-in { justify-content: center; gap: 10px; }
+
+  /* A list that asked to stay two-across on a phone — the six English tests.
+     Six full-width rows is a whole screen of scrolling to answer one question;
+     two columns puts the entire set in view at once. `minmax(0, 1fr)` is what
+     keeps a long name like "Duolingo English Test" inside its own column
+     instead of widening the grid and scrolling the page sideways. */
+  .onb-root .onb-opts[data-cols="2"][data-phone-cols="2"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .onb-root .onb-opts[data-phone-cols="2"] .onb-opt-in {
+    min-height: 54px; padding: 8px 10px; gap: 8px; border-radius: 13px;
+  }
+  .onb-root .onb-opts[data-phone-cols="2"] .onb-opt-label { font-size: 13px; line-height: 17px; }
+  .onb-root .onb-opts[data-phone-cols="2"] .onb-opt-emoji { width: 20px; height: 20px; }
+
+  /* The two ways to pick a programme sit side by side rather than stacked:
+     they are one either/or choice, and a phone reads that faster across than
+     down. The sub-line is the first thing to go when the room runs out. */
+  .onb-root .onb-modes[data-cols="2"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .onb-root .onb-modes .onb-opt-in {
+    min-height: 62px; flex-direction: column; justify-content: center;
+    text-align: center; gap: 5px; padding: 10px 8px;
+  }
+  .onb-root .onb-modes .onb-opt-text { align-items: center; text-align: center; }
+  .onb-root .onb-modes .onb-opt-label { font-size: 13px; line-height: 17px; }
+  .onb-root .onb-modes .onb-opt-sub { font-size: 11px; line-height: 14px; }
 
   /* Programme rows stay one line on a phone; the badge and the gutters shrink
      so the name keeps the room instead of pushing the row past the card. */
@@ -1111,6 +1162,40 @@
   .onb-prosheet { padding: 22px 18px 18px; }
   .onb-prosheet-facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .onb-prosheet-head h2 { font-size: 19px; line-height: 26px; }
+  /* ── The plan step, made to fit a phone in one screen ──────────────
+     The paragraph under the question goes entirely, not just visually: it is
+     the single biggest block of height on this step and the plan cards are
+     what the student is here to read. `display: none` rather than hiding it,
+     so it reserves nothing. */
+  .onb-root[data-step="plans"] .onb-sub { display: none; }
+  .onb-root[data-step="plans"] .onb-head { padding-bottom: 0; }
+  .onb-root[data-step="plans"] .onb-answer { margin-top: 12px; }
+  /* With the paragraph gone the rest only needs trimming, not shrinking: the
+     type sizes are untouched and the space between things is what gives way. */
+  .onb-root[data-step="plans"] .onb-readfirst { margin-bottom: 10px; line-height: 18px; }
+  .onb-root[data-step="plans"] .onb-plan-quick { margin-bottom: 10px; }
+  .onb-root[data-step="plans"] .onb-plans { gap: 12px; padding-top: 10px; }
+  .onb-root[data-step="plans"] .onb-plan-pick { padding: 13px 14px 12px; }
+  .onb-root[data-step="plans"] .onb-plan-list { padding: 11px 14px 0; gap: 8px; }
+  .onb-root[data-step="plans"] .onb-plan-readmore { padding: 9px 14px 12px; }
+  .onb-root[data-step="plans"] .onb-plan-bar { padding-top: 10px; }
+
+  /* ── The payment step, likewise ────────────────────────────────────
+     Slimmer type and tighter rows so the receipt drop stays reachable without
+     hunting for it. The FileDrop badge itself is deliberately untouched. */
+  .onb-root[data-step="pay"] .onb-sub { display: none; }
+  .onb-root[data-step="pay"] .onb-head { padding-bottom: 0; }
+  .onb-paysum { padding: 11px 12px; gap: 10px; }
+  .onb-paysum-amount { font-size: 16px; line-height: 22px; }
+  .onb-payref { margin-bottom: 10px; font-size: 12px; line-height: 17px; }
+  .onb-payhead { margin: 15px 2px 8px; font-size: 13.5px; line-height: 19px; }
+  .onb-payrow { padding: 9px 2px; }
+  .onb-payrow-label { font-size: 11.5px; line-height: 16px; }
+  .onb-payrow-value { font-size: 13px; line-height: 18px; }
+  .onb-paynote { font-size: 12.5px; line-height: 19px; }
+  .onb-payrules { margin-top: 10px; gap: 3px; }
+  .onb-payrules li { font-size: 11.5px; line-height: 16px; }
+
   .onb-root .onb-opt-in { min-height: 62px; border-radius: 15px; padding: 8px 14px; gap: 12px; }
   .onb-followup { margin-top: 18px; }
   .onb-root .onb-opt-label { font-size: 14.5px; }
@@ -1143,3 +1228,137 @@
   .onb-feat, .onb-plan-more { animation: none; }
   .onb-progress-fill, .onb-opt-in, .onb-card { transition-duration: 1ms; }
 }
+
+/* ── Darija ───────────────────────────────────────────────────────────
+   The SCRIPT runs right to left. The LAYOUT does not.
+
+   Two levels, and the split is deliberate.
+
+   1. THE QUESTION AND ITS DESCRIPTION are set as Arabic properly: right to
+      left, aligned to the right edge, the way the language is actually read.
+      They are the text on the screen, and the only thing on it that is being
+      read as prose rather than scanned as a control.
+
+   2. EVERYTHING ELSE KEEPS ITS ENGLISH POSITION. The back arrow stays on the
+      left, the info button on the right, the buttons, options, plan cards and
+      the footer action all sit exactly where the English put them. Nothing
+      here sets `direction` on a flex container, so no row ever reverses.
+
+   `unicode-bidi: plaintext` does the rest: each remaining text element takes
+   its base direction from its own first strong character, so an Arabic option
+   label orders and punctuates correctly while `AfaqWay`, `Self Service`,
+   `IELTS`, a price, `AWU-014` and a phone number keep reading left to right in
+   the same card.
+
+   The explicit `text-align: left` on the root is what holds those positions:
+   an element that never declared an alignment would otherwise inherit the
+   initial `start` and resolve it against its own now-RTL text, drifting to the
+   right edge. An explicit value inherits as that value, so anything the design
+   centres or right-aligns keeps its own rule. */
+.onb-root[lang="ary"],
+.onb-portal[lang="ary"] { text-align: left; }
+
+/* The comparison sheet keeps its own EN/ع toggle, so it can be Arabic while
+   the flow behind it is English. It carries the rule itself. */
+.onb-modal[lang="ary"] :is(h2, h3, p, li, button) { unicode-bidi: plaintext; }
+
+.onb-root[lang="ary"] :is(h1, h2, h3, p, li, a, button, label, strong, span, input, textarea),
+.onb-portal[lang="ary"] :is(h1, h2, h3, p, li, a, button, label, strong, span, input, textarea) {
+  unicode-bidi: plaintext;
+}
+
+/* The question and its description, as Arabic. Scoped to the step header so
+   the flex row around them is untouched: only the text inside the middle
+   column flips, and the two icon buttons either side of it do not move. */
+.onb-root[lang="ary"] .onb-head .onb-q,
+.onb-root[lang="ary"] .onb-head .onb-sub {
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: right;
+}
+
+/* The final recap is centred by design, so it takes the direction without the
+   alignment. */
+.onb-root[lang="ary"] .onb-summary-body :is(.onb-q, .onb-sub) {
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: center;
+}
+
+/* ── The between-stage transitions are exempt ──────────────────────────
+   The breather screens between groups stay English and stay left to right in
+   every language: their copy is not in the Darija map, so `t()` hands the
+   English straight back, and this pins their direction so the surrounding
+   Arabic cannot pull the emoji, the heading or the paragraph out of place.
+   Nothing in here is mirrored. */
+.onb-root[lang="ary"] .onb-note,
+.onb-root[lang="ary"] .onb-note * {
+  direction: ltr;
+  unicode-bidi: normal;
+}
+.onb-root[lang="ary"] .onb-note-body :is(.onb-q, .onb-sub) { text-align: center; }
+
+/* ── Feature lists read from the right ─────────────────────────────────
+   The tick and the feature text both start at the right edge and run inward,
+   which is where an Arabic reader's eye lands first. Only the ROW reverses:
+   the card keeps its own width, padding, gap and vertical rhythm, so the two
+   plans stay balanced against each other. */
+.onb-root[lang="ary"] .onb-plan-list li {
+  flex-direction: row-reverse;
+  text-align: right;
+  direction: rtl;
+}
+.onb-root[lang="ary"] :is(.onb-plan-tagline, .onb-plan-readmore, .onb-readfirst) {
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+/* The plan card header holds the plan emoji and the "Most popular" tab.
+   Same rule as every other choice: the mark stays where English puts it. */
+.onb-root[lang="ary"] .onb-plan-head { flex-direction: row; }
+.onb-root[lang="ary"] .onb-plan-price { direction: ltr; }
+
+/* ── Choices: RTL text, icons stay LEFT ────────────────────────────────
+   The emoji, flag, logo or brand mark keeps the position English gives it —
+   left, same size, same gap, never mirrored. A flag or a bank's logo is an
+   identity, not a word, and a row of them is scanned down the left edge in
+   either language; moving them would cost more than the text alignment gains.
+
+   Only the TEXT beside them turns: the label and its sub-line run right to
+   left and align to their own right edge, so the row reads
+   `[icon]        النص` in Darija and `[icon]  Text` in English, off the same
+   left rail. The grid, the columns, the order and the row heights are all
+   untouched. */
+.onb-root[lang="ary"] .onb-opts .onb-opt-text,
+.onb-root[lang="ary"] .onb-modes .onb-opt-text,
+.onb-root[lang="ary"] .onb-select-trigger,
+.onb-root[lang="ary"] .onb-field {
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+.onb-root[lang="ary"] .onb-opts .onb-opt-text,
+.onb-root[lang="ary"] .onb-modes .onb-opt-text {
+  align-items: flex-end;
+  text-align: right;
+}
+/* The emoji and the flag are laid out by the row, so they are pinned back to
+   the start rather than left to follow the text's direction. */
+.onb-root[lang="ary"] :is(.onb-opts, .onb-modes) .onb-opt-in { flex-direction: row; }
+.onb-root[lang="ary"] .onb-opt-emoji,
+.onb-root[lang="ary"] .onb-input-emoji { order: -1; }
+
+/* A numeric field is a value, not a sentence: it stays exactly as English
+   leaves it, caret and all. */
+.onb-root[lang="ary"] .onb-field:has(input[inputmode="numeric"]),
+.onb-root[lang="ary"] .onb-field:has(input[inputmode="decimal"]),
+.onb-root[lang="ary"] .onb-field:has(input[inputmode="tel"]),
+.onb-root[lang="ary"] .onb-field:has(input[type="date"]) { direction: ltr; }
+
+/* The programme rows carry an absolutely-positioned score on the right, so
+   they keep the English arrangement rather than colliding with it. */
+.onb-root[lang="ary"] .onb-prorow .onb-opt-in { flex-direction: row; text-align: left; }
+.onb-root[lang="ary"] .onb-prorow .onb-opt-text { direction: ltr; align-items: stretch; }
+
+/* The phone control is marked unchanged by the translation review: dial code,
+   digits and placeholder spacing are identical in both languages, so it is
+   pinned rather than left to resolve per paragraph. */
+.onb-root[lang="ary"] .onb-phone :is(input, .onb-phone-input) { unicode-bidi: normal; direction: ltr; }

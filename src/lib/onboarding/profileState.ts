@@ -81,6 +81,53 @@ export const hasCfaData = (cfa: Cfa) => Object.values(cfa).some((s) => Object.va
 
 export const validWhatsapp = (n: string) => /^\d{6,15}$/.test(n.replace(/\s/g, ""));
 
+/** The dialling code the Moroccan rules below apply to. */
+export const MOROCCO_DIAL = "+212";
+
+/* A Moroccan mobile, written either way a student actually writes it:
+   national with the trunk zero (0612345678, ten digits) or international
+   without it (612345678, nine digits). Mobile prefixes are 6 and 7; landlines
+   (5) are rejected, because this number has to receive WhatsApp. */
+export function validMoroccanMobile(n: string): boolean {
+  const d = n.replace(/\D/g, "");
+  if (d.startsWith("0")) return /^0[67]\d{8}$/.test(d);
+  return /^[67]\d{8}$/.test(d);
+}
+
+/* The code is deliberately free text so a student living outside Morocco can
+   still be reached (see PhoneAnswer), so the strict rules apply only when the
+   number IS Moroccan. Any other code keeps the generic length check rather
+   than rejecting a perfectly good foreign number. */
+export function validWhatsappFor(code: string, n: string): boolean {
+  const c = code.replace(/\s/g, "");
+  return c === MOROCCO_DIAL || c === "212" ? validMoroccanMobile(n) : validWhatsapp(n);
+}
+
+/* Whole years elapsed, counted off the actual calendar rather than a division:
+   subtracting the years and then stepping back one if this year's birthday has
+   not happened yet is what makes 29 February and end-of-month dates come out
+   right. Computed against today every time, never a hardcoded cut-off year. */
+export function ageFrom(dob: string, today: Date = new Date()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob.trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const born = new Date(y, mo - 1, d);
+  if (born.getFullYear() !== y || born.getMonth() !== mo - 1 || born.getDate() !== d) return null;
+  if (born > today) return null;
+  let age = today.getFullYear() - y;
+  const beforeBirthday =
+    today.getMonth() < mo - 1 || (today.getMonth() === mo - 1 && today.getDate() < d);
+  if (beforeBirthday) age -= 1;
+  return age;
+}
+
+/** The floor the journey enforces: older than 16, so 17 and up. */
+export const MIN_AGE = 17;
+export const isOldEnough = (dob: string) => {
+  const a = ageFrom(dob);
+  return a !== null && a >= MIN_AGE;
+};
+
 export function validatePersonal(p: Personal): boolean {
   if (!p.full_name.trim() || !p.gender || !p.date_of_birth || !p.city.trim()) return false;
   if (!validWhatsapp(p.whatsapp_number)) return false;

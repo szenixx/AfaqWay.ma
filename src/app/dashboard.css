@@ -525,11 +525,16 @@
   .sw-content:has(.dx-app) { overflow-y: auto; padding: 0 0 20px; }
 
   /* The device advice is an absolute notification everywhere else (globals.css)
-     — it scrolls away with the page. The dashboard is the one screen where it
-     stays pinned under the bar, directly above the welcome card, because this
-     is the screen a student lands on and the recommendation is about the whole
-     workspace rather than anything on this page. */
-  .sw-root:has(.dx-app) .dvc-advice { position: fixed; }
+     — it scrolls away with the page, which is what it does everywhere it still
+     appears.
+
+     The dashboard used to be the exception, pinning it under the bar. It is now
+     the one screen that does not show it at all: this is the screen a student
+     lands on every single time, so an advisory pinned across the top of it is
+     the thing they meet first on every visit. The recommendation still reaches
+     them on the modules where the wider screen actually matters — the journey,
+     documents, the chat — and there it scrolls away like any other notice. */
+  .sw-root:has(.dx-app) .dvc-advice { display: none; }
   .dx-center, .dx-panel { overflow: visible; height: auto; }
   .jr-preview { flex: none; min-height: 52px; max-height: none; }
   .dx-nextlist { overflow: visible; }
@@ -806,6 +811,25 @@
     font-size: clamp(16px, 5.3vw, 26px); gap: 8px;
   }
   .dx-welcome-anim { white-space: nowrap; }
+
+  /* ── The phone's own welcome composition ───────────────────────────
+     Not the desktop card stacked. The desktop reads left to right across
+     three lanes, so its copy is left-aligned against the student beside it.
+     With those lanes gone there is nothing on the right to align against,
+     and left-aligned copy over a right-hand wash reads lopsided. Everything
+     balances around the centre instead: greeting, supporting line, then the
+     action directly beneath them. */
+  .dx-welcome { justify-items: center; text-align: center; }
+  .dx-welcome-copy { text-align: center; width: 100%; }
+  .dx-welcome-title { justify-content: center; }
+  .dx-welcome-sub { margin-left: auto; margin-right: auto; }
+  /* The wash centres with the copy rather than hugging the right edge, so the
+     ground under the centred text is symmetric too. */
+  .dx-welcome-figure {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: 74%; opacity: .16;
+  }
+  .dx-welcome-figure img { object-position: center bottom; }
   .dx-welcome-sub { margin-top: 6px; font-size: 13.5px; line-height: 19px; }
   /* Behind stacked copy the line art has to give way further still. */
   .dx-welcome-bg { opacity: .06; }
@@ -827,20 +851,28 @@
   /* A button inside the card, centred, with the card's own padding left intact
      on every side — it never reaches an edge. Slim, and still the full width
      the padding allows, so it stays an easy target. */
-  .magic-btn {
+  /* Part of the centred stack, not a desktop button that happens to sit under
+     it. */
+  /* Scoped to the welcome card ON PURPOSE. The shared `.magic-btn` rule sets
+     `justify-self: end` and is declared LATER in this file, so a bare
+     `.magic-btn` here loses to it on source order at equal specificity and the
+     button stayed pinned right. One extra class outranks it wherever it sits. */
+  .dx-welcome .magic-btn {
     grid-column: 1; justify-self: center;
     width: 100%; height: 44px; margin-top: 13px;
   }
 
-  /* ── 02 · Progress, 03 · University, 04 · Support ──
-     The desktop row becomes a column. `order` puts the university card ahead
-     of support without moving either in the markup, so the desktop row keeps
-     the arrangement it was built with. */
+  /* ── 02 · University, 03 · Progress, 04 · Support ──
+     The desktop row becomes a column, and `order` arranges it without touching
+     the markup, so the desktop row keeps the arrangement it was built with.
+     University leads on a phone: it is the card that names where the student
+     is going, and progress reads better once that is established. */
   .dx-metrics {
     display: flex; flex-direction: column; gap: 14px;
     margin: 0; padding: 0; overflow: visible;
   }
-  .dx-uni { order: 2; }
+  .dx-uni { order: 1; }
+  .dx-perf { order: 2; }
   .dx-support { order: 3; }
 
   /* Progress stays the compact frame of the four: the dials shrink so the card

@@ -38,6 +38,15 @@ export type NotifyInput = {
  */
 export const whatsappAllowed = (outcome: ReviewOutcome) => outcome === "approved";
 
+/* The advisor's verdict, translated into the three states the inbox colours by.
+   A plain comment is not a decision and carries no status, so its row keeps the
+   neutral journey identity. */
+const OUTCOME_STATUS: Partial<Record<ReviewOutcome, "approved" | "rejected" | "changes">> = {
+  approved: "approved",
+  rejected: "rejected",
+  changes_requested: "changes",
+};
+
 /** The exact text a student reads in chat — parsed back apart client-side
  *  (see DecisionCard in components/chat/parts.tsx) into a title, a Stage →
  *  Step line and, if present, the advisor's note, so this stays plain text
@@ -113,6 +122,12 @@ export async function notifyReview(input: NotifyInput, options: { whatsapp?: str
     title: "You have a new journey update",
     body: "Open your conversation to read it.",
     link: "messages",
+    /* The outcome travels as DATA, not as words. The wording above stays
+       deliberately silent about the verdict for the reason set out just
+       above; this only lets the inbox colour the row — green, red or amber —
+       so the student can tell at a glance which of their steps moved, while
+       still having to open the conversation to read what was said. */
+    meta: { status: OUTCOME_STATUS[input.outcome] ?? undefined },
   });
 
   const viaWhatsApp = Boolean(options.whatsapp) && whatsappAllowed(input.outcome);

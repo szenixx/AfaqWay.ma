@@ -22,6 +22,7 @@ import { Emoji } from "@/components/onboarding/Emoji";
 import type { EmojiName } from "@/lib/onboarding/emoji";
 import { Answer, PhoneAnswer } from "@/components/onboarding/Answer";
 import { BackButton, BrandMark, Footer, Head, Progress, SaveNote, Stage, TopUtilities } from "@/components/onboarding/OnboardingShell";
+import { LangProvider, useLang, useT } from "@/lib/onboarding/lang";
 import ProgramPicker from "@/components/onboarding/ProgramPicker";
 import { PlanStep } from "@/components/onboarding/PlanPicker";
 import { BlueprintGrid } from "@/components/godui/blueprint-grid";
@@ -49,7 +50,18 @@ import type { StudentProfile } from "@/lib/programs/types";
 const numOrNull = (v: string | undefined) => { const n = parseFloat(v ?? ""); return Number.isNaN(n) ? null : n; };
 const degreeLabel = (s: string) => (s === "high_school" ? "High school" : s === "bachelor" ? "Bachelor's degree" : s === "master" ? "Master's degree" : "—");
 
+/* How long the handoff holds, whatever the network did. */
+const HANDOFF_MS = 3000;
+
 export default function ProfileSetup() {
+  return (
+    <LangProvider>
+      <ProfileSetupScreen />
+    </LangProvider>
+  );
+}
+
+function ProfileSetupScreen() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -69,6 +81,9 @@ export default function ProfileSetup() {
   const [legalView, setLegalView] = useState<null | "terms" | "refund">(null);
   const [switchTo, setSwitchTo] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  /* With the other hooks, above the loading return below: a hook called after a
+     conditional return changes the hook order between renders. */
+  const { lang, t } = useLang();
 
   const pRef = useRef(personal);
   const cRef = useRef(cfa);
@@ -221,16 +236,24 @@ export default function ProfileSetup() {
     if (!(agreeTerms && agreeRefund)) { setLegalError(true); return; }
     setFinishing(true);
     const id = uidRef.current;
-    if (id) {
-      await supabase.from("profiles").update({ onboarding_completed_at: new Date().toISOString(), onboarding_phase: "country_flow", onboarding_step: flow?.steps.length ?? 1 }).eq("id", id);
-      // Nobody leaves onboarding without an avatar.
-      await ensureGeneratedAvatar(id, (personal.gender || "prefer_not_to_say") as Gender);
-    }
+
+    /* The work and the wait run TOGETHER, not one after the other. Whatever the
+       writes cost, the transition lasts the same three seconds every time: a
+       fast connection does not get a flicker, and a slow one does not get a
+       longer wait stacked on top of the work. */
+    const work = (async () => {
+      if (id) {
+        await supabase.from("profiles").update({ onboarding_completed_at: new Date().toISOString(), onboarding_phase: "country_flow", onboarding_step: flow?.steps.length ?? 1 }).eq("id", id);
+        // Nobody leaves onboarding without an avatar.
+        await ensureGeneratedAvatar(id, (personal.gender || "prefer_not_to_say") as Gender);
+      }
+    })();
+    await Promise.all([work, new Promise((r) => setTimeout(r, HANDOFF_MS))]);
     router.replace("/dashboard");
   }
 
   if (loading || !screen) {
-    return <div className="onb-boot">Loading your profile…</div>;
+    return <div className="onb-boot">{t("Loading your profile…")}</div>;
   }
 
   // One bar for the whole journey; the group name only labels it for a screen reader.
@@ -241,7 +264,17 @@ export default function ProfileSetup() {
   const back = idx > 0 ? goBack : undefined;
 
   return (
-    <div className="onb-root" data-wide={screen.kind === "program" || isPricing || undefined}>
+    <div
+      className="onb-root"
+      /* The layout does not mirror in Darija — same direction, same positions,
+         only the words change. `lang` is still set so the browser picks an
+         Arabic face and shapes the script properly; `dir` deliberately is not. */
+      lang={lang === "ar" ? "ary" : "en"}
+      data-wide={screen.kind === "program" || isPricing || undefined}
+      /* Names the one screen whose mobile composition differs beyond spacing,
+         so the phone rules can reach the step header from outside the answer. */
+      data-step={isPricing ? (priceSub === 0 ? "plans" : "pay") : undefined}
+    >
       <BrandMark />
       <TopUtilities />
 
@@ -259,16 +292,6 @@ export default function ProfileSetup() {
             <img src="/illustrations/plans.webp?v=2" alt="" width={1500} height={581} />
           </div>
         )}
-        {finishing && (
-          <div className="onb-done" role="status" aria-live="assertive">
-            <svg className="onb-done-mark" viewBox="0 0 52 52" aria-hidden>
-              <circle cx="26" cy="26" r="23" />
-              <path d="M15 26.5 L22.5 34 L37.5 18.5" />
-            </svg>
-            <p className="onb-done-title">You&apos;re all set</p>
-            <p className="onb-done-sub">Building your workspace…</p>
-          </div>
-        )}
         <Progress pct={overallPct} label={labels[screen.group]} />
 
         <Stage screenKey={screen.id} direction={direction}>
@@ -279,8 +302,11 @@ export default function ProfileSetup() {
               {back ? <BackButton onBack={back} className="onb-note-back" /> : <span className="onb-note-back" aria-hidden />}
               <div className="onb-note-body">
                 <Emoji name={screen.emoji} size={84} className="onb-note-emoji" />
-                <h1 className="onb-q onb-q-big">{screen.title}</h1>
-                <p className="onb-sub">{screen.body}</p>
+                <h1 className="onb-q onb-q-big">
+                  {Object.entries(screen.titleVars ?? {}).reduce(
+                    (out, [k, v]) => out.replace(`{${k}}`, v), t(screen.title))}
+                </h1>
+                <p className="onb-sub">{t(screen.body)}</p>
               </div>
             </div>
           )}
@@ -317,8 +343,8 @@ export default function ProfileSetup() {
                       onEnter={goNext}
                     />
                   )}
-                  {q.note && <p className="onb-note-line">{q.note}</p>}
-                  {bad && <p className="onb-err" role="alert">{q.error}</p>}
+                  {q.note && <p className="onb-note-line">{t(q.note)}</p>}
+                  {bad && <p className="onb-err" role="alert">{t(q.error)}</p>}
 
                   {/* Revealed by this screen's own answer, and part of it: the
                       same Continue waits for these too. */}
@@ -327,7 +353,7 @@ export default function ProfileSetup() {
                     const fbad = showError && !(fv !== "" && f.isValid(fv));
                     return (
                       <div className="onb-followup" key={f.slot.type === "flow" ? f.slot.key : f.title}>
-                        <h2 className="onb-followup-label">{f.title}</h2>
+                        <h2 className="onb-followup-label">{t(f.title)}</h2>
                         {f.control.kind !== "phone" && (
                           <Answer
                             control={f.control}
@@ -335,12 +361,18 @@ export default function ProfileSetup() {
                             label={f.title}
                             emoji={f.emoji}
                             invalid={fbad}
+                            /* A follow-up appears BECAUSE the answer above it
+                               changed, so it must not take focus when it does:
+                               picking an English test would otherwise jump the
+                               cursor into the score box and open the keyboard
+                               over the question the student is still reading. */
+                            autoFocus={false}
                             onChange={(v) => writeSlot(f.slot, v)}
                             onCommit={flushSave}
                             onEnter={goNext}
                           />
                         )}
-                        {fbad && <p className="onb-err" role="alert">{f.error}</p>}
+                        {fbad && <p className="onb-err" role="alert">{t(f.error)}</p>}
                       </div>
                     );
                   })}
@@ -367,6 +399,7 @@ export default function ProfileSetup() {
               <Head
                 title={priceSub === 0 ? "How much help do you want?" : "Complete your payment"}
                 subtitle={priceSub === 0 ? "Two ways to do this: drive it yourself, or hand the paperwork to an advisor. You can change plan later." : "Transfer the amount, then upload the receipt. We verify it by hand."}
+                /* Head translates its own title and subtitle. */
                 onBack={back}
               />
               {priceSub === 0 ? (
@@ -413,14 +446,30 @@ export default function ProfileSetup() {
         )}
       </main>
 
+      {/* The handoff to the dashboard. Nothing is announced and nothing is
+          celebrated: the page goes soft behind a single spinner while the
+          workspace is prepared, and the next thing the student sees is the
+          dashboard. Outside .onb-card so the blur takes the whole surface
+          rather than the step frame. */}
+      {finishing && (
+        <div className="onb-handoff" role="status" aria-live="assertive">
+          <span className="onb-handoff-spin" aria-hidden />
+          <span className="onb-sr">{t("Opening your dashboard")}</span>
+        </div>
+      )}
+
       {switchTo && (
         <div className="onb-modal" role="dialog" aria-modal>
           <div className="onb-modal-card">
-            <h2>Switch destination?</h2>
-            <p>Switching to {countryByCode(switchTo)?.name} clears the {countryByCode(personal.destination_country)?.name} answers you have given so far.</p>
+            <h2>{t("Switch destination?")}</h2>
+            {/* Country names keep their own spelling in both languages, so they
+                are substituted into the sentence rather than translated with it. */}
+            <p>{t("Switching to {next} clears the {current} answers you have given so far.")
+              .replace("{next}", countryByCode(switchTo)?.name ?? "")
+              .replace("{current}", countryByCode(personal.destination_country)?.name ?? "")}</p>
             <div className="onb-modal-foot">
-              <Button variant="ghost" onPress={() => setSwitchTo(null)}>Cancel</Button>
-              <Button variant="danger" onPress={() => applySwitch(switchTo)}>Switch anyway</Button>
+              <Button variant="ghost" onPress={() => setSwitchTo(null)}>{t("Cancel")}</Button>
+              <Button variant="danger" onPress={() => applySwitch(switchTo)}>{t("Switch anyway")}</Button>
             </div>
           </div>
         </div>
@@ -456,38 +505,50 @@ function Summary({
   agreeTerms: boolean; agreeRefund: boolean; legalError: boolean;
   onTerms: () => void; onRefund: () => void; onRead: (d: "terms" | "refund") => void;
 }) {
+  const { lang, t } = useLang();
   const country = countryByCode(personal.destination_country);
   const plan = planById(cfa.pricing?.plan);
   const programId = Number((cfa.program_setup?.selected_programs ?? "").split("|").filter(Boolean)[0]);
   const program = PROGRAMS.find((p) => p.id === programId) ?? null;
   const intake = intakeByValue(cfa.timing_education?.intake_term)?.label ?? "—";
-  const rows: { emoji: EmojiName; label: string; value: string }[] = [
-    { emoji: country?.code === "LT" ? "flag-lt" : "globe", label: "Destination", value: country?.name ?? "—" },
+  /* The values that are NAMES — the country, the programme, the plan — are not
+     translated on either side of the recap: they are what the student will see
+     written on their own paperwork. The labels beside them are. */
+  const rows: { emoji: EmojiName; label: string; value: string; keep?: boolean }[] = [
+    { emoji: country?.code === "LT" ? "flag-lt" : "globe", label: "Destination", value: country?.name ?? "—", keep: true },
     { emoji: "target", label: "Study goal", value: degreeLabel(cfa.timing_education?.target_degree ?? "") },
-    { emoji: "graduation", label: "Programme", value: program ? program.name : "To be chosen with your advisor" },
+    { emoji: "graduation", label: "Programme", value: program ? program.name : "To be chosen with your advisor", keep: !!program },
     { emoji: "calendar", label: "Start", value: intake },
-    { emoji: "card", label: "Service", value: plan?.name ?? "—" },
+    { emoji: "card", label: "Service", value: plan?.name ?? "—", keep: true },
     { emoji: "handshake", label: "Advisor support", value: plan?.id === "full_service" ? "Included, end to end" : "On request, you drive it" },
   ];
 
-  const who = personal.full_name ? `${personal.full_name.trim().split(/\s+/)[0]}, this` : "This";
+  const first = personal.full_name.trim().split(/\s+/)[0] ?? "";
+  const who = personal.full_name ? `${first}, this` : "This";
+  /* The student number is an identifier, so its digits stay Western and it is
+     never re-spelled — only the sentence around it changes language. */
+  const stamp = userNumber != null ? `AWU-${String(userNumber).padStart(3, "0")}` : "";
   return (
     <div className="onb-summary">
       {onBack ? <BackButton onBack={onBack} className="onb-note-back" /> : <span className="onb-note-back" aria-hidden />}
 
       <div className="onb-summary-body">
         <Emoji name="party" size={72} className="onb-note-emoji" />
-        <h1 className="onb-q onb-q-big">Your AfaqWay plan is ready.</h1>
+        <h1 className="onb-q onb-q-big">{t("Your AfaqWay plan is ready.")}</h1>
         <p className="onb-sub">
-          {who} is what we build from here{userNumber != null ? `, under student number AWU-${String(userNumber).padStart(3, "0")}` : ""}.
+          {lang === "ar"
+            ? t(stamp ? "{name}, this is what we build from here, under student number {ref}." : "{name}, this is what we build from here.")
+                .replace("{name}", first || t("Student"))
+                .replace("{ref}", stamp)
+            : `${who} is what we build from here${stamp ? `, under student number ${stamp}` : ""}.`}
         </p>
 
         <ul className="onb-recap">
           {rows.map((r) => (
             <li key={r.label}>
               <Emoji name={r.emoji} size={22} />
-              <span className="onb-recap-label">{r.label}</span>
-              <span className="onb-recap-value">{r.value}</span>
+              <span className="onb-recap-label">{t(r.label)}</span>
+              <span className="onb-recap-value">{r.keep ? r.value : t(r.value)}</span>
             </li>
           ))}
         </ul>
@@ -499,24 +560,26 @@ function Summary({
         <SaveNote state={saveState} />
         <LegalLine checked={agreeTerms} onToggle={onTerms} onRead={() => onRead("terms")} text="I have read and agree to the Terms of Service." />
         <LegalLine checked={agreeRefund} onToggle={onRefund} onRead={() => onRead("refund")} text="I have read the Refund Policy." />
-        {legalError && <p className="onb-err" role="alert">Please accept both before we start your file.</p>}
+        {legalError && <p className="onb-err" role="alert">{t("Please accept both before we start your file.")}</p>}
       </div>
     </div>
   );
 }
 
 function LegalLine({ checked, onToggle, onRead, text }: { checked: boolean; onToggle: () => void; onRead: () => void; text: string }) {
+  const t = useT();
+  const label = t(text);
   return (
     <div className="onb-legal-line">
-      <Checkbox isSelected={checked} onChange={onToggle} aria-label={text}>
+      <Checkbox isSelected={checked} onChange={onToggle} aria-label={label}>
         <Checkbox.Content>
           <Checkbox.Control>
             <Checkbox.Indicator />
           </Checkbox.Control>
-          {text}
+          {label}
         </Checkbox.Content>
       </Checkbox>
-      <button type="button" className="onb-legal-read" onClick={onRead}>Read</button>
+      <button type="button" className="onb-legal-read" onClick={onRead}>{t("Read")}</button>
     </div>
   );
 }

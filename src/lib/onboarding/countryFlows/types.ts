@@ -33,6 +33,10 @@ export interface FieldDef {
   required?: boolean;
   options?: FieldOption[]; // select | segmented | multiselect
   maxSelect?: number; // multiselect: max choices (value stored pipe-joined)
+  /* Keeps a choice list two-across on a phone instead of collapsing to one
+     row per option. For short, scannable labels that would otherwise spend a
+     whole screen on six lines. */
+  phoneColumns?: 2;
   scale?: boolean;    // options are an ordered scale: each one shows a level meter
   inputMode?: "text" | "numeric" | "decimal";
   sanitize?: "digits" | "decimal" | "titlecase"; // reshape the value as the user types

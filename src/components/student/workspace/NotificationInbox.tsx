@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, Check } from "lucide-react";
 import { useNotifications, markRead, markAllRead, type Notification } from "@/lib/notifications";
-import { NOTIF_ICON } from "./Modules";
+import { notifIdentity } from "@/lib/notifIdentity";
 
 function dayGroup(iso: string): string {
   const d = new Date(iso);
@@ -93,7 +93,15 @@ export function NotificationInbox({ userId, onOpen, onClose }: {
             <div key={n.id}>
               {showHeader && <div className="sw-notifpop-group">{g}</div>}
               <button type="button" className={`sw-notifpop-row${n.read ? "" : " unread"}`} onClick={() => open(n)}>
-                <span className="sw-notifpop-ico">{NOTIF_ICON[n.kind] ?? <Bell size={15} />}</span>
+                {/* The tile says what KIND of thing this is before a word is
+                    read: the platform's own mark for an announcement, the
+                    route for the journey (coloured by how the step went), a
+                    chat bubble for an unanswered advisor message. */}
+                {/* Decorative: the title and body below already say what this
+                    is, so the tile is not repeated to a screen reader. */}
+                <span className="sw-notifpop-ico" data-tone={notifIdentity(n).tone} aria-hidden>
+                  {notifIdentity(n).icon}
+                </span>
                 <span className="sw-notifpop-body">
                   <span className="sw-notifpop-title">{n.title}</span>
                   {n.body && <span className="sw-notifpop-sub">{n.body}</span>}

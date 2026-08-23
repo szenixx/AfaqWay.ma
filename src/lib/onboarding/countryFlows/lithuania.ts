@@ -91,7 +91,7 @@ export const lithuaniaFlow: CountryFlow = {
                conditional test-detail fields). .af-row-2 collapses to a
                single column under 860px, same as every other paired row. */
             { kind: "segmented", key: "has_english_test", label: "Do you have an English test?", question: "Do you already have an English test?", emoji: "memo", required: true, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }], row: 1 },
-            { kind: "select", key: "english_test_type", label: "Which English test?", question: "Which test did you take?", emoji: "memo", required: true, placeholder: "Choose a test", options: [...ENGLISH_TESTS, { value: "other", label: "Other" }], showWhen: { field: "has_english_test", equals: "yes" }, row: 1 },
+            { kind: "select", key: "english_test_type", label: "Which English test?", question: "Which test did you take?", emoji: "memo", required: true, placeholder: "Choose a test", options: [...ENGLISH_TESTS, { value: "other", label: "Other" }], phoneColumns: 2, showWhen: { field: "has_english_test", equals: "yes" }, row: 1 },
             /* "Other" is a real answer, so it asks which test rather than
                leaving the file saying nothing more than "other". Its score is
                not asked: an unknown test has no scale we can compare. */

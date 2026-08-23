@@ -8,7 +8,9 @@ import { Button, ProgressBar } from "@heroui/react";
 import { LogoMark } from "@/components/ds/LogoMark";
 import { Emoji } from "./Emoji";
 import type { EmojiName } from "@/lib/onboarding/emoji";
+import type { OnbLang } from "@/lib/onboarding/darija";
 import { supabase } from "@/lib/supabase/client";
+import { useLang, useT } from "@/lib/onboarding/lang";
 
 /* The onboarding chrome.
 
@@ -37,16 +39,18 @@ export function BrandMark() {
   );
 }
 
-/* Real i18n is not wired yet (the decision is Modern Standard Arabic, text-only
-   RTL — see the language plan), so Arabic is listed and clearly marked rather
-   than silently doing nothing when picked.
+/* Darija, not Modern Standard Arabic, and the option says so. MSA is the
+   language Moroccan students are taught to write and not the one they think in;
+   the onboarding asks personal questions, and it should sound like a person
+   asking them. The label is the name of the language as it is actually spoken,
+   next to the flag of the people who speak it.
 
    Flags here are emoji artwork, not the design system's Flag: that component
    draws a flag from horizontal stripes, which a Union Jack is not, and neither
    the UK nor Morocco is a destination with stripe data behind it. */
-const LANGUAGES: { code: string; label: string; flag: EmojiName; ready: boolean }[] = [
-  { code: "en", label: "English", flag: "flag-gb", ready: true },
-  { code: "ar", label: "العربية", flag: "flag-ma", ready: false },
+const LANGUAGES: { code: OnbLang; label: string; flag: EmojiName }[] = [
+  { code: "en", label: "English", flag: "flag-gb" },
+  { code: "ar", label: "دارجة / العربية", flag: "flag-ma" },
 ];
 
 function useDismiss(open: boolean, close: () => void) {
@@ -68,6 +72,8 @@ export function TopUtilities() {
   const [confirmOut, setConfirmOut] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const box = useDismiss(open, () => setOpen(false));
+  const { lang, setLang, t } = useLang();
+  const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
 
   async function logout() {
     setLeaving(true);
@@ -79,20 +85,20 @@ export function TopUtilities() {
     <div className="onb-topright" ref={box}>
       {/* It sits one tap from every question, so it asks first. Nothing is lost
           either way, and the dialog is where that gets said. */}
-      <button type="button" className="onb-pill onb-pill-round onb-pill-danger" onClick={() => setConfirmOut(true)} title="Log out">
+      <button type="button" className="onb-pill onb-pill-round onb-pill-danger" onClick={() => setConfirmOut(true)} title={t("Log out")}>
         <LogOut size={16} strokeWidth={2} />
-        <span className="onb-sr">Log out</span>
+        <span className="onb-sr">{t("Log out")}</span>
       </button>
 
       {confirmOut && (
-        <div className="onb-modal" role="dialog" aria-modal aria-label="Log out" onClick={() => !leaving && setConfirmOut(false)}>
+        <div className="onb-modal" role="dialog" aria-modal aria-label={t("Log out")} onClick={() => !leaving && setConfirmOut(false)}>
           <div className="onb-modal-card" data-center onClick={(e) => e.stopPropagation()}>
             <Emoji name="wave" size={64} className="onb-modal-emoji" />
-            <h2>Log out?</h2>
-            <p>Every answer so far is saved. Sign back in and you will land on this exact question.</p>
+            <h2>{t("Log out?")}</h2>
+            <p>{t("Every answer so far is saved. Sign back in and you will land on this exact question.")}</p>
             <div className="onb-modal-foot">
-              <Button variant="secondary" size="lg" isDisabled={leaving} onPress={() => setConfirmOut(false)}>Stay here</Button>
-              <Button variant="danger" size="lg" isPending={leaving} onPress={logout}>Log out</Button>
+              <Button variant="secondary" size="lg" isDisabled={leaving} onPress={() => setConfirmOut(false)}>{t("Stay here")}</Button>
+              <Button variant="danger" size="lg" isPending={leaving} onPress={logout}>{t("Log out")}</Button>
             </div>
           </div>
         </div>
@@ -101,19 +107,19 @@ export function TopUtilities() {
       <div className="onb-pop-anchor">
         <button type="button" className="onb-pill" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           <Globe size={14} strokeWidth={2} />
-          English
+          {current.label}
         </button>
         {open && (
           <div className="onb-pop" role="menu">
             {LANGUAGES.map((l) => (
               <button
                 key={l.code} type="button" role="menuitem" className="onb-pop-item"
-                disabled={!l.ready} aria-current={l.ready || undefined}
-                onClick={() => setOpen(false)}
+                aria-current={l.code === lang || undefined}
+                onClick={() => { setLang(l.code); setOpen(false); }}
               >
                 <Emoji name={l.flag} size={18} />
                 {l.label}
-                {l.ready ? <span className="onb-pop-tag">Current</span> : <span className="onb-pop-tag onb-pop-soon">Coming soon</span>}
+                {l.code === lang && <span className="onb-pop-tag">Current</span>}
               </button>
             ))}
           </div>
@@ -127,8 +133,9 @@ export function TopUtilities() {
    One quiet bar across the top of the card. It answers "am I getting
    somewhere", and nothing more — it never competes with the question. */
 export function Progress({ pct, label }: { pct: number; label: string }) {
+  const t = useT();
   return (
-    <ProgressBar className="onb-progress" aria-label={`Setup progress, ${label}`} value={Math.round(pct)}>
+    <ProgressBar className="onb-progress" aria-label={`${t("Setup progress")}, ${t(label)}`} value={Math.round(pct)}>
       <div className="onb-progress-track" aria-hidden>
         <span className="onb-progress-fill" style={{ transform: `scaleX(${Math.max(0.02, pct / 100)})` }} />
       </div>
@@ -140,8 +147,9 @@ export function Progress({ pct, label }: { pct: number; label: string }) {
    Back, the question, and the fine print behind an info button — so the
    question itself never has to carry a second paragraph. */
 export function BackButton({ onBack, className }: { onBack: () => void; className?: string }) {
+  const t = useT();
   return (
-    <button type="button" className={`onb-iconbtn${className ? ` ${className}` : ""}`} onClick={onBack} aria-label="Back to the previous question">
+    <button type="button" className={`onb-iconbtn${className ? ` ${className}` : ""}`} onClick={onBack} aria-label={t("Back to the previous question")}>
       <ArrowLeft size={18} strokeWidth={2} />
     </button>
   );
@@ -150,25 +158,31 @@ export function BackButton({ onBack, className }: { onBack: () => void; classNam
 export function Head({ title, subtitle, hint, onBack }: { title: string; subtitle?: string; hint?: string; onBack?: () => void }) {
   const [open, setOpen] = useState(false);
   const box = useDismiss(open, () => setOpen(false));
-  const help = hint
-    ? `${hint[0].toUpperCase()}${hint.slice(1)}. Your answers save as you go, and you can change them later with your advisor.`
-    : "Your answers save as you go, and you can change any of them later with your advisor.";
+  const { lang, t } = useLang();
+  /* The English builds its help line by sentence-casing the hint and gluing a
+     second sentence on. Darija is written as whole sentences and is not
+     case-bearing, so it is looked up as one string and left alone. */
+  const help = lang === "ar"
+    ? [hint && t(hint), t("Your answers save as you go, and you can change any of them later with your advisor.")].filter(Boolean).join(" ")
+    : hint
+      ? `${hint[0].toUpperCase()}${hint.slice(1)}. Your answers save as you go, and you can change them later with your advisor.`
+      : "Your answers save as you go, and you can change any of them later with your advisor.";
 
   return (
     <div className="onb-head">
       <div className="onb-headrow">
         {onBack
-          ? <button type="button" className="onb-iconbtn" onClick={onBack} aria-label="Back to the previous question"><ArrowLeft size={18} strokeWidth={2} /></button>
+          ? <button type="button" className="onb-iconbtn" onClick={onBack} aria-label={t("Back to the previous question")}><ArrowLeft size={18} strokeWidth={2} /></button>
           : <span className="onb-iconbtn onb-iconbtn-ghost" aria-hidden />}
-        <h1 className="onb-q">{title}</h1>
+        <h1 className="onb-q">{t(title)}</h1>
         <div className="onb-pop-anchor" ref={box}>
-          <button type="button" className="onb-iconbtn" aria-haspopup="dialog" aria-expanded={open} aria-label="About this question" onClick={() => setOpen((v) => !v)}>
+          <button type="button" className="onb-iconbtn" aria-haspopup="dialog" aria-expanded={open} aria-label={t("About this question")} onClick={() => setOpen((v) => !v)}>
             <Info size={19} strokeWidth={2} />
           </button>
-          {open && <div className="onb-pop onb-pop-help" role="dialog" aria-label="About this question">{help}</div>}
+          {open && <div className="onb-pop onb-pop-help" role="dialog" aria-label={t("About this question")}>{help}</div>}
         </div>
       </div>
-      {subtitle && <p className="onb-sub">{subtitle}</p>}
+      {subtitle && <p className="onb-sub">{t(subtitle)}</p>}
     </div>
   );
 }
@@ -212,15 +226,17 @@ export function Footer({ onNext, nextLabel = "Continue", canNext, busy, saveStat
   busy?: boolean;
   saveState?: "idle" | "saving" | "saved" | "error";
 }) {
+  const t = useT();
   return (
     <div className="onb-foot">
       <SaveNote state={saveState} />
-      <Button className="onb-next" size="lg" fullWidth isDisabled={!canNext || busy} isPending={busy} onPress={onNext}>{nextLabel}</Button>
+      <Button className="onb-next" size="lg" fullWidth isDisabled={!canNext || busy} isPending={busy} onPress={onNext}>{t(nextLabel)}</Button>
     </div>
   );
 }
 
 export function SaveNote({ state }: { state?: "idle" | "saving" | "saved" | "error" }) {
+  const t = useT();
   if (!state || state === "idle" || state === "saved") return <span className="onb-save" />;
-  return <span className={`onb-save${state === "error" ? " onb-save-err" : ""}`}>{state === "saving" ? "Saving…" : "Couldn’t save, retrying"}</span>;
+  return <span className={`onb-save${state === "error" ? " onb-save-err" : ""}`}>{t(state === "saving" ? "Saving…" : "Couldn’t save, retrying")}</span>;
 }

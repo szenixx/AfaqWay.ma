@@ -26,6 +26,16 @@ export type Notification = {
   link: string;
   read: boolean;
   created_at: string;
+  /* Whatever the row needs beyond the four fields above, and nothing the
+     centre itself reads. A journey decision puts its outcome here so the
+     inbox can colour the row without the verdict being repeated in the
+     wording; the advisor sweep puts the message id here so a reminder is
+     raised once and not once per sweep.
+
+     Optional on purpose: rows written before the column existed come back
+     without it, and every reader treats that as "no extra information"
+     rather than breaking. */
+  meta?: { status?: "approved" | "rejected" | "changes"; message_id?: string } | null;
 };
 
 export type PlatformUpdate = {
@@ -76,14 +86,50 @@ export async function removeNotification(id: string): Promise<void> {
  * Raises a notification for one student. Called wherever something happens to
  * them, so the centre never has to poll another table.
  */
+/* PostgREST answers an unknown column with PGRST204 and a "could not find the
+   'x' column of 'y' in the schema cache" message. Matching that shape, rather
+   than the word "meta" anywhere in any error, is what keeps a genuine failure
+   from being mistaken for a missing column. */
+function isMissingMetaColumn(e: { code?: string; message: string }): boolean {
+  if (e.code === "PGRST204") return true;
+  return /could not find the .?meta.? column|column .*\bmeta\b.* does not exist/i.test(e.message);
+}
+
 export async function notify(
   userId: string,
-  input: { kind: NotifKind; title: string; body?: string; link?: string },
+  input: { kind: NotifKind; title: string; body?: string; link?: string; meta?: Notification["meta"] },
 ): Promise<void> {
-  const { error } = await supabase.from("notifications").insert({
+  const row: Record<string, unknown> = {
     user_id: userId, kind: input.kind, title: input.title,
     body: input.body ?? "", link: input.link ?? "",
-  });
+  };
+  if (input.meta) row.meta = input.meta;
+
+  let { error } = await supabase.from("notifications").insert(row);
+
+  /* The meta column arrives in a later migration than the table, so an
+     environment that has not run 22_notification_identity.sql yet retries
+     WITHOUT it: a student losing the news entirely is far worse than losing
+     the colour of its icon.
+
+     Narrow ON PURPOSE. It fires only on the schema-cache signature PostgREST
+     gives for a column it cannot find, never on a substring match against the
+     word "meta" — an RLS refusal or a constraint violation that happened to
+     mention the column would otherwise be silently downgraded to a successful
+     write with the metadata quietly dropped. Anything else falls straight
+     through to the warning below and is reported as a failure.
+
+     It also says so loudly, because a notification saved without its metadata
+     is a notification whose icon will be wrong, and that should not look like
+     an ordinary success in the log. */
+  if (error && input.meta && isMissingMetaColumn(error)) {
+    console.warn(
+      "[notifications] the `meta` column is missing, so this notification was saved WITHOUT its metadata "
+      + "and its icon will fall back to the neutral identity. Apply 22_notification_identity.sql.",
+    );
+    delete row.meta;
+    ({ error } = await supabase.from("notifications").insert(row));
+  }
   // A failed notification must never take down the action that caused it.
   if (error) console.warn("notification not delivered", error.message);
 }

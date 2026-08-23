@@ -492,3 +492,53 @@ while the log still printed a cheerful "Compiled".
   proves nothing. Restart it first, then re-fetch the chunk.
 - "Compiled in 91ms" is not evidence the change shipped. Grep the SERVED asset
   for the new selector; that is the check that actually catches this.
+
+## RTL is three decisions, not one (23 Aug 2026)
+Wiring Darija into the onboarding, I read one instruction ("make it read right
+to left") as a whole-page `dir="rtl"` and got corrected twice in a row: first to
+pure LTR, then to "typography follows Arabic, positions follow English", then
+narrowed again to the step title and description only.
+- Adding a language is at least THREE separate calls: which strings change,
+  whether the SCRIPT direction changes, and whether the LAYOUT mirrors. They
+  are independent. Assuming the third follows from the second is what cost the
+  round trips here.
+- Default to the narrowest: translate the words, leave every box where it is.
+  Mirroring a layout is a redesign, and this project's own note already said
+  "text-only RTL, not full mirror" before I started.
+- `unicode-bidi: plaintext` is the tool for "Arabic reads correctly but nothing
+  moves": per-element base direction from the first strong character, zero
+  effect on boxes. Pair it with an explicit `text-align` on the container,
+  because the initial `start` re-resolves against the child's new direction and
+  drifts to the far edge.
+
+## A hook added late lands after the early return (23 Aug 2026)
+I appended `useLang()` next to the other derived values in ProfileSetup, which
+sat BELOW `if (loading || !screen) return`. React logged a change in hook order
+between renders; tsc, eslint and `next build` all passed and said nothing.
+- Adding a hook to an existing component means finding the hook block, not the
+  place the value is used. Check for an early return between them.
+- The only thing that caught it was the dev server's runtime log. When a change
+  touches a component's hooks, read that log; a green build does not cover it.
+
+## Direction is three separate decisions, not one (23 Aug 2026)
+"Make it Arabic" got reversed four times in one session because I kept treating
+direction as a single switch. It is three:
+1. **Script direction** — does the sentence order and punctuate right-to-left.
+2. **Text alignment** — which edge the paragraph sits against.
+3. **Box order** — whether flex rows and icons mirror.
+The user wanted (1) yes, (2) only on the question and description, (3) almost
+never. Asking "which of these three?" up front would have saved every revert.
+- Icons, flags, logos and brand marks are IDENTITY, not words. They stay where
+  the English put them in every language. Only their text turns.
+- Carve out the exceptions explicitly and in writing: transition screens stay
+  English + LTR, the programme list stays English + LTR, numerals stay Western.
+
+## Key a translation map by the English source string (23 Aug 2026)
+Keying `darija.ts` by the English sentence rather than by invented keys meant
+"don't translate this" needed no list, no flag and no upkeep: a string that is
+absent from the map falls through `t()` unchanged. Every DO-NOT-TRANSLATE item
+in the review — country names, test names, plan names, bank logos — is
+protected by simply never being added.
+- Corollary: a sentence containing a link must be translated WHOLE and the
+  link split back out of it (`withLinks`). Concatenating fragments around a
+  link produces the English clause order in an Arabic sentence.

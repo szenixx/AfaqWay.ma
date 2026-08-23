@@ -15,7 +15,8 @@ import { GENDER_OPTIONS } from "@/lib/avatarIdentity";
 import type { EmojiName } from "./emoji";
 import { EMOJI_MAP } from "./emoji";
 import type { CountryFlow, CountryFlowStep, FieldDef, FieldOption } from "./countryFlows/types";
-import { fieldVisible, validateField, validWhatsapp, type Cfa, type Personal } from "./profileState";
+import { fieldVisible, isOldEnough, MIN_AGE, validateField, validWhatsappFor, type Cfa, type Personal } from "./profileState";
+import { scoreRule, validScore } from "./englishScores";
 
 /* ── Where an answer lives ───────────────────────────────────────────── */
 
@@ -39,11 +40,12 @@ export type Choice = {
 };
 
 export type Control =
-  | { kind: "choice"; choices: Choice[]; columns: 1 | 2; compact?: boolean }
+  | { kind: "choice"; choices: Choice[]; columns: 1 | 2; compact?: boolean; phoneColumns?: 2 }
   | { kind: "multi"; choices: Choice[]; max: number; columns: 1 | 2 }
   | { kind: "select"; choices: Choice[]; placeholder: string }
   | { kind: "text"; placeholder?: string; inputMode?: "text" | "numeric" | "decimal"; sanitize?: "digits" | "decimal" | "titlecase"; maxLength?: number }
   | { kind: "date" }
+  | { kind: "name" }
   | { kind: "phone" };
 
 export type Question = {
@@ -67,7 +69,7 @@ export type Question = {
 };
 
 export type Screen =
-  | { kind: "note"; id: string; group: number; emoji: EmojiName; title: string; body: string; cta: string }
+  | { kind: "note"; id: string; group: number; emoji: EmojiName; title: string; titleVars?: Record<string, string>; body: string; cta: string }
   | { kind: "question"; id: string; group: number; question: Question }
   | { kind: "program"; id: string; group: number; stepId: string; title: string; subtitle: string }
   | { kind: "pricing"; id: string; group: number; stepId: string }
@@ -153,7 +155,7 @@ function controlFor(f: FieldDef, stepVals: Record<string, string>): Control {
   if (f.kind === "segmented") return { kind: "choice", choices, columns: columnsFor(choices), compact: isCompact(choices) };
   if (f.kind === "select") {
     return choices.length <= MAX_CARD_OPTIONS
-      ? { kind: "choice", choices, columns: columnsFor(choices) }
+      ? { kind: "choice", choices, columns: columnsFor(choices), phoneColumns: f.phoneColumns }
       : { kind: "select", choices, placeholder: f.placeholder ?? "Select" };
   }
   return { kind: "text", placeholder: f.placeholder, inputMode: f.inputMode, sanitize: f.sanitize, maxLength: f.maxLength };
@@ -207,6 +209,15 @@ function planFields(step: CountryFlowStep): { primary: FieldDef; followUps: Fiel
 
 function questionFor(step: CountryFlowStep, f: FieldDef, stepVals: Record<string, string>): Question {
   const dis = f.disableOptionWhen && stepVals[f.disableOptionWhen.field] === f.disableOptionWhen.equals ? f.disableOptionWhen : null;
+
+  /* The score field is the one place a static min/max on the field cannot
+     express the rule: what counts as possible depends on which test the
+     student picked a screen earlier. `stepVals` carries that answer, and the
+     screens are rebuilt whenever it changes, so the range and the note under
+     the input follow the selection. */
+  const test = f.key === "english_test_score" ? (stepVals.english_test_type ?? "") : "";
+  const rule = test ? scoreRule(test) : null;
+
   return {
     slot: { type: "flow", stepId: step.id, key: f.key },
     title: f.question ?? f.label,
@@ -214,9 +225,9 @@ function questionFor(step: CountryFlowStep, f: FieldDef, stepVals: Record<string
     hint: f.hint,
     emoji: emojiOr(f.emoji, "sparkles"),
     control: controlFor(f, stepVals),
-    note: dis?.note ?? f.footnote,
-    isValid: (v) => validateField(f, v),
-    error: fieldError(f),
+    note: rule?.note ?? dis?.note ?? f.footnote,
+    isValid: test ? (v) => validScore(test, v) : (v) => validateField(f, v),
+    error: rule ? `That score is outside the range for this test. ${rule.note}` : fieldError(f),
   };
 }
 
@@ -231,15 +242,19 @@ export function applyForceRules(step: CountryFlowStep, stepVals: Record<string, 
 
 /* ── The universal (pre-country) questions ───────────────────────────── */
 
-const personalQuestions = (): Question[] => [
+const personalQuestions = (p: Personal): Question[] => [
   {
     slot: { type: "personal", key: "full_name" },
     title: "What is your full name?",
     subtitle: "Exactly as it is written in your passport, it goes on every document we prepare.",
     emoji: "id",
-    control: { kind: "text", placeholder: "Your full name", sanitize: "titlecase" },
-    isValid: (v) => v.trim().length > 1,
-    error: "Please enter your full name.",
+    /* Asked as two fields and stored as one. `full_name` is a single column and
+       this file is the contract the classic wizard writes through too, so the
+       split lives in the presentation and both halves compose back into the
+       same string rather than the schema growing a column. */
+    control: { kind: "name" },
+    isValid: (v) => v.trim().split(/\s+/).filter(Boolean).length >= 2,
+    error: "Please enter both your first and last name.",
   },
   {
     slot: { type: "personal", key: "gender" },
@@ -256,8 +271,10 @@ const personalQuestions = (): Question[] => [
     subtitle: "Age rules differ per programme and per visa step, so we check them for you.",
     emoji: "cake",
     control: { kind: "date" },
-    isValid: (v) => v !== "",
-    error: "Please enter your date of birth.",
+    /* Counted off today's calendar every time, so the rule stays true as years
+       pass rather than drifting behind a hardcoded cut-off. */
+    isValid: isOldEnough,
+    error: `You need to be over ${MIN_AGE - 1} to apply. Check the date you entered.`,
   },
   {
     slot: { type: "personal", key: "city" },
@@ -274,8 +291,11 @@ const personalQuestions = (): Question[] => [
     subtitle: "Your advisor reaches you here. We never share it with anyone.",
     emoji: "chat",
     control: { kind: "phone" },
-    isValid: validWhatsapp,
-    error: "Enter a valid WhatsApp number.",
+    isValid: (v) => validWhatsappFor(p.whatsapp_country_code, v),
+    error:
+      p.whatsapp_country_code.replace(/\s/g, "") === "+212"
+        ? "Enter a Moroccan mobile: 06/07 and ten digits, or 6/7 and nine."
+        : "Enter a valid WhatsApp number.",
   },
 ];
 
@@ -318,7 +338,7 @@ export function buildScreens(personal: Personal, cfa: Cfa, flow: CountryFlow | n
     cta: "Get started",
   });
   screens.push({ kind: "question", id: "q:destination", group: 0, question: destinationQuestion() });
-  for (const q of personalQuestions()) {
+  for (const q of personalQuestions(personal)) {
     screens.push({ kind: "question", id: `q:personal.${(q.slot as { key: string }).key}`, group: 0, question: q });
   }
 
@@ -332,7 +352,11 @@ export function buildScreens(personal: Personal, cfa: Cfa, flow: CountryFlow | n
       const name = firstName(personal.full_name);
       screens.push({
         kind: "note", id: "note:studies", group, emoji: "graduation",
-        title: name ? `Nice to meet you, ${name}.` : "Nice to meet you.",
+        /* A token rather than a finished sentence: the screen translates the
+           sentence and then drops the name in, so Darija gets to put the name
+           where Darija puts it. The English renders exactly as before. */
+        title: name ? "Nice to meet you, {name}." : "Nice to meet you.",
+        titleVars: name ? { name } : undefined,
         body: "Now the part that decides everything: what you have studied so far, and what you want to study next.",
         cta: "Continue",
       });

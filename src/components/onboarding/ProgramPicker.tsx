@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Info, TriangleAlert, X } from "lucide-react";
 import { Button, Input, Radio, RadioGroup, TextField } from "@heroui/react";
 import { Emoji } from "./Emoji";
@@ -9,6 +10,7 @@ import { findUniversity } from "@/lib/universities";
 import { logoPath } from "@/lib/universityAssets";
 import { recommend } from "@/lib/programs/engine";
 import type { MatchReason, Program, StudentProfile } from "@/lib/programs/types";
+import { useLang, useT } from "@/lib/onboarding/lang";
 
 /* One programme, picked either way: ranked against the answers so far, or
    searched by name for a student who already knows what they want. */
@@ -16,7 +18,9 @@ import type { MatchReason, Program, StudentProfile } from "@/lib/programs/types"
 const SHOWN = 14;
 
 const money = (p: Program) => (p.tuition_eur != null ? `€${p.tuition_eur.toLocaleString("en-US")}/yr` : null);
-const meta = (p: Program) => [p.university, p.field, money(p)].filter(Boolean).join(" · ");
+/* The university and the field. Tuition is rendered separately so it can carry
+   its own weight, but it belongs to THIS line, right after the university. */
+const metaTail = (p: Program) => [p.field].filter(Boolean).join(" · ");
 const logoOf = (name: string) => logoPath(findUniversity(name)?.slug);
 
 /* Only a perfect match earns colour. Every other score is a number the student
@@ -59,10 +63,24 @@ function facts(p: Program): [string, string][] {
 }
 
 function ProgramSheet({ program, reasons, onClose }: { program: Program; reasons?: MatchReason[]; onClose: () => void }) {
-  return (
-    <div className="onb-modal" role="dialog" aria-modal aria-label={program.name} onClick={onClose}>
+  /* document.body only exists on the client. Read once at first render rather
+     than set from an effect, which is both a lint error and a wasted paint. */
+  const [mounted] = useState(() => typeof document !== "undefined");
+  const { lang, t } = useLang();
+
+  /* Escape closes it, the same as the X and the backdrop. A dialog that can
+     only be dismissed by hitting a 32px target is a dialog a phone can trap
+     someone in. */
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [onClose]);
+
+  const sheet = (
+    <div className="onb-portal onb-modal" lang={lang === "ar" ? "ary" : "en"} role="dialog" aria-modal aria-label={program.name} onClick={onClose}>
       <div className="onb-prosheet" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="onb-prosheet-x" onClick={onClose} aria-label="Close"><X size={18} strokeWidth={2} /></button>
+        <button type="button" className="onb-prosheet-x" onClick={onClose} aria-label={t("Close")}><X size={18} strokeWidth={2} /></button>
 
         <header className="onb-prosheet-head">
           <span className="onb-prosheet-tag">{program.degree}</span>
@@ -80,16 +98,28 @@ function ProgramSheet({ program, reasons, onClose }: { program: Program; reasons
           <div className="onb-prosheet-gaps">
             <TriangleAlert size={17} strokeWidth={2} />
             <div>
-              <h3>Where you fall short today</h3>
+              <h3>{t("Where you fall short today")}</h3>
               <ul>{reasons.map((r, i) => <li key={i}>{r.text}</li>)}</ul>
             </div>
           </div>
         )}
 
-        <Button className="onb-next onb-prosheet-done" size="lg" fullWidth onPress={onClose}>Got it</Button>
+        <Button className="onb-next onb-prosheet-done" size="lg" fullWidth onPress={onClose}>{t("Got it")}</Button>
       </div>
     </div>
   );
+
+  /* Mounted on <body>, not where it is written.
+
+     The sheet is `position: fixed`, but the stage it lives in is a framer
+     motion div that carries a transform, and a transformed ancestor becomes
+     the containing block for fixed descendants. Inside the stage the overlay
+     was therefore sized to the step card rather than to the viewport, which is
+     what trapped it in the frame. A portal is the only thing that escapes that,
+     since the transform is applied by the animation and cannot be removed.
+
+     `.onb-portal` carries the token block it no longer inherits from the root. */
+  return mounted ? createPortal(sheet, document.body) : null;
 }
 
 const MODES = [
@@ -102,6 +132,7 @@ export default function ProgramPicker({ profile, selected, onSelect }: {
   selected: number[];
   onSelect: (ids: number[]) => void;
 }) {
+  const t = useT();
   const [mode, setMode] = useState<"help" | "know">("help");
   const [query, setQuery] = useState("");
   const [detail, setDetail] = useState<number | null>(null);
@@ -124,22 +155,22 @@ export default function ProgramPicker({ profile, selected, onSelect }: {
   const note = mode === "help"
     ? ready
       ? `Your ${Math.min(SHOWN, ranked.length)} closest matches out of ${ranked.length}, best first`
-      : "Fill in your field of interest and budget to see these ranked for you."
+      : t("Fill in your field of interest and budget to see these ranked for you.")
     : query.trim()
       ? `${rows.length} programme${rows.length === 1 ? "" : "s"} matching “${query.trim()}”`
       : `Every programme we work with. Showing ${rows.length} of ${PROGRAMS.length}.`;
 
   return (
     <>
-      <RadioGroup className="onb-opts onb-modes" data-cols="2" aria-label="How do you want to pick?" value={mode} onChange={(v) => setMode(v as "help" | "know")}>
+      <RadioGroup className="onb-opts onb-modes" data-cols="2" aria-label={t("How do you want to pick?")} value={mode} onChange={(v) => setMode(v as "help" | "know")}>
         {MODES.map((m) => (
           <Radio key={m.value} className="onb-opt" value={m.value}>
             {({ isSelected }) => (
               <Radio.Content className="onb-opt-in" data-on={isSelected || undefined}>
                 <Emoji name={m.emoji} size={22} className="onb-opt-emoji" />
                 <span className="onb-opt-text">
-                  <span className="onb-opt-label">{m.label}</span>
-                  <span className="onb-opt-sub">{m.sub}</span>
+                  <span className="onb-opt-label">{t(m.label)}</span>
+                  <span className="onb-opt-sub">{t(m.sub)}</span>
                 </span>
               </Radio.Content>
             )}
@@ -152,8 +183,8 @@ export default function ProgramPicker({ profile, selected, onSelect }: {
       {mode === "know" && (
         <div className="onb-inputbox onb-searchbox">
           <Emoji name="magnifier" size={17} className="onb-input-emoji" />
-          <TextField className="onb-field" aria-label="Search programmes" value={query} onChange={setQuery}>
-            <Input className="onb-input" placeholder="Search by name, field or university" />
+          <TextField className="onb-field" aria-label={t("Search programmes")} value={query} onChange={setQuery}>
+            <Input className="onb-input" placeholder={t("Search by name, field or university")} />
           </TextField>
         </div>
       )}
@@ -161,10 +192,10 @@ export default function ProgramPicker({ profile, selected, onSelect }: {
       <p className="onb-listnote">{note}</p>
 
       {rows.length === 0 ? (
-        <p className="onb-empty">Nothing matches that. Try a shorter word, or clear the search.</p>
+        <p className="onb-empty">{t("Nothing matches that. Try a shorter word, or clear the search.")}</p>
       ) : (
         <RadioGroup
-          className="onb-opts" aria-label="Programme"
+          className="onb-opts" aria-label={t("Programme")}
           value={selected[0] != null ? String(selected[0]) : ""}
           onChange={(v) => onSelect(v ? [Number(v)] : [])}
         >
@@ -185,7 +216,14 @@ export default function ProgramPicker({ profile, selected, onSelect }: {
                       )}
                       <span className="onb-opt-text">
                         <span className="onb-opt-label">{p.name}</span>
-                        <span className="onb-opt-sub">{meta(p)}</span>
+                        {/* One fee per programme, on the secondary line beside
+                            the university it belongs to. The name above stays
+                            the only thing competing for the eye. */}
+                        <span className="onb-opt-sub">
+                          {p.university}
+                          {money(p) && <> · <span className="onb-profee">{money(p)}</span></>}
+                          {metaTail(p) && ` · ${metaTail(p)}`}
+                        </span>
                       </span>
                       {r && <Score score={r.score} perfect={r.perfect} />}
                     </Radio.Content>
