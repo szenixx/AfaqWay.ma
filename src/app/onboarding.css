@@ -542,7 +542,9 @@
 .onb-feat-tag { margin: 3px 0 13px; font: 400 12px/17px var(--font-sans); color: var(--onb-ink-3); }
 .onb-feat-cols ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
 .onb-feat-cols li { display: flex; gap: 9px; font: 400 12.5px/17px var(--font-sans); color: var(--onb-ink); }
-.onb-feat-cols[dir="rtl"] li { flex-direction: row-reverse; text-align: right; }
+/* Same rule as the plan cards, and for the same reason: the container is
+   already rtl, so the row must NOT also be reversed. */
+.onb-feat-cols[dir="rtl"] li { flex-direction: row; text-align: right; }
 
 /* Only where it genuinely cannot fit does it get a scroll pane. */
 @media (max-height: 860px) {
@@ -1065,33 +1067,12 @@
   .onb-plan > .af-spotlight-content { padding: 0; }
   .onb-plan[data-on] { box-shadow: inset 0 0 0 1px var(--onb-brand); }
 
-  /* The picked card eases back to 92% so it sits inside its own margin rather
-     than filling the phone edge to edge, which is what makes a selected card
-     feel cramped on a small screen.
+  /* NO transform on the picked card. Scaling one of the two down by 8% is
+     what made the pair look mismatched: a selected card that is visibly
+     smaller than the one beside it reads as a rendering fault rather than as
+     breathing room. The pair stays the same size as each other, and the
+     selection is carried by the border and the wash instead. */
 
-     A transform, deliberately, and not a width or a font change: it takes the
-     card's PAINT down without touching the box the layout reserved for it, so
-     nothing reflows, the column keeps its rhythm, the unpicked card is
-     untouched, and the page itself is still at 100%. The origin is the centre,
-     so the shrink pulls in evenly from both sides and the card stays centred
-     with no chance of overflowing sideways. */
-  .onb-plan[data-on] {
-    transform: scale(.92);
-    transform-origin: center center;
-    transition: transform var(--onb-fast) var(--onb-ease);
-  }
-  .onb-plan-pick {
-    display: flex; flex-direction: column; width: 100%;
-    padding: 16px 16px 15px; border: none; border-radius: 22px; background: none;
-    text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  }
-  .onb-plan-pick:focus-visible { outline: 2px solid var(--onb-brand); outline-offset: -3px; }
-
-  /* "Most popular" takes its own line: on a 320px row it would otherwise
-     squeeze the plan name down to an ellipsis. Filled rather than tinted, and
-     set in its own face, because it is the one thing on this screen that is
-     not a fact about a plan — it is a recommendation. */
-  .onb-plan-head { gap: 9px; }
   .onb-plan h3 { min-width: 0; font-size: 16px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* The tick leads the row, so the row states its own selection rather than
@@ -1321,14 +1302,21 @@
 .onb-root[lang="ary"] .onb-note-body :is(.onb-q, .onb-sub) { text-align: center; }
 
 /* ── Feature lists read from the right ─────────────────────────────────
-   The tick and the feature text both start at the right edge and run inward,
-   which is where an Arabic reader's eye lands first. Only the ROW reverses:
-   the card keeps its own width, padding, gap and vertical rhythm, so the two
-   plans stay balanced against each other. */
+   The tick sits at the right edge and the feature text runs inward from it,
+   which is where an Arabic reader's eye lands first.
+
+   `direction: rtl` is the WHOLE mechanism, and it is important that it is the
+   only one: an rtl flex container already lays `row` out right to left, so
+   adding `row-reverse` on top of it reverses the reverse and puts the tick
+   back on the left. That is the bug this replaced. Row order is stated once,
+   here, and nowhere else.
+
+   Only the row turns. The card keeps its width, padding, gap and vertical
+   rhythm, so the two plans stay balanced against each other. */
 .onb-root[lang="ary"] .onb-plan-list li {
-  flex-direction: row-reverse;
-  text-align: right;
   direction: rtl;
+  flex-direction: row;
+  text-align: right;
 }
 .onb-root[lang="ary"] :is(.onb-plan-tagline, .onb-plan-readmore, .onb-readfirst) {
   direction: rtl;
@@ -1354,6 +1342,11 @@
 .onb-root[lang="ary"] .onb-modes .onb-opt-text {
   direction: rtl;
   unicode-bidi: isolate;
+  /* Stated explicitly, because the root sets an explicit `text-align: left`
+     that would otherwise inherit straight through the rtl and hold the label
+     against the left edge. No `align-items` here: the spans stretch, so the
+     alignment is the text's own, and the row's box order is untouched. */
+  text-align: right;
 }
 
 /* Anything a student TYPES runs left to right, in both languages, because the
