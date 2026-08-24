@@ -17,15 +17,15 @@ import { ReplaceDialog } from "../documents/ReplaceDialog";
 
 /* One step, start to finish, in one place.
 
-   Three numbered sections in a fixed order, because that is the order a
-   student actually needs them in: what am I being asked to do, how do I do
-   it, and what do I hand in. Everything the step needs is here — including
-   the upload itself, which used to bounce the student out to the Documents
-   module mid-task.
+   Two numbered sections in a fixed order. The first answers "what am I being
+   asked to do" and "how do I do it" together — the description and the
+   admin-authored Learn content (tips, links, videos, everything StepBlocks
+   resolves for this exact step) read as one explanation, not two competing
+   headings, so it stays ONE section with two labelled parts inside it.
+   Requirements is second and only appears when the stage actually asks for
+   something — a step with nothing to hand in has no use for an empty card.
 
-   A step with no document requirement drops section 3 entirely and gets a
-   "Mark as Done" button instead; there is nothing to hand in, so asking for
-   an upload would be a dead control. */
+   Uploading still happens here, not in the Documents module. */
 
 const DOC_ICON = (status: DocStatus) =>
   status === "approved" ? <CircleCheck size={17} />
@@ -143,17 +143,19 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenChat, onMar
           />
         )}
 
-        {/* ── 1 · What you need to do ── */}
+        {/* ── 1 · What you need & how to complete — one section, two labelled
+            parts. The description is the "what"; StepBlocks (tips, links,
+            videos, everything an advisor attached to this exact step) is the
+            "how". Never split into two cards — see the comment above. */}
         <section className="stpx-sec">
-          <div className="stpx-sec-head"><span className="stpx-num">1</span><h3>What you need to do</h3></div>
+          <div className="stpx-sec-head"><span className="stpx-num">1</span><h3>What you need & how to complete</h3></div>
+
+          <h4 className="stpx-subhead">What you need</h4>
           <p className="stpx-lead">
             {step.description || "Your advisor has not added a description for this step yet."}
           </p>
-        </section>
 
-        {/* ── 2 · How to complete it ── */}
-        <section className="stpx-sec">
-          <div className="stpx-sec-head"><span className="stpx-num">2</span><h3>How to complete it</h3></div>
+          <h4 className="stpx-subhead">How to complete</h4>
           <StepBlocks
             stepId={step.id} fallback="Your advisor has not added any guidance to this step yet."
             plan={plan} study={study}
@@ -164,11 +166,11 @@ export function JourneyStepModal({ stage, step, open, onClose, onOpenChat, onMar
           />
         </section>
 
-        {/* ── 3 · Required documents — only when the step actually asks for one ── */}
+        {/* ── 2 · Requirements — only when the step actually asks for one ── */}
         {needsDocs && (
           <section className="stpx-sec">
             <div className="stpx-sec-head">
-              <span className="stpx-num">3</span><h3>Required documents</h3>
+              <span className="stpx-num">2</span><h3>Requirements</h3>
               <span className="stpx-count">{docs.verified}/{docs.required} verified</span>
             </div>
 

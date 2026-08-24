@@ -192,6 +192,13 @@
 /* Everything in the card sits above the optional BlueprintGrid behind it. */
 .onb-card > *:not(.blueprint):not(.onb-cardart) { position: relative; z-index: 1; }
 
+/* "How much help do you want?" only: the frame reads slightly large next to
+   the two plan cards, so it is zoomed out 5% on desktop (3% on mobile, in the
+   767px block below). `transform: scale` with the default centred origin
+   shrinks the box toward its own centre — the page, the viewport and every
+   other step are untouched, and the frame does not drift while it shrinks. */
+.onb-root[data-step="plans"] .onb-card { transform: scale(.95); transform-origin: center center; }
+
 /* The pricing watermark. Bottom-anchored because the drawing stands on a
    ground line, so the card's own floor is the one it belongs on. */
 .onb-cardart {
@@ -769,11 +776,20 @@
 .onb-legal .onb-save { position: static; margin: 0 0 2px; }
 .onb-legal-read { background: none; border: none; padding: 0; cursor: pointer; font: 500 13px/19px var(--font-sans); color: var(--onb-brand); text-decoration: underline; }
 .onb-legal[data-bad] .checkbox__control { border-color: var(--red); }
-/* A checkbox, not a radio. The library rounds its control by `--radius * .8`,
-   and --radius is 14px on this surface, which on a 16px box is very nearly a
-   circle. Squared off to the proportion the design system's own control uses
-   (.af-check: 7px on 20px). Border, fill and tick are left to the library. */
-.onb-legal .checkbox__control { border-radius: 6px; }
+/* A checkbox, not a radio. The library ships it at 16px with a near-invisible
+   #DFDFDF stroke (the `--border` token, mapped above) — legible as an outline
+   next to nothing, but read against a check icon it disappears entirely.
+   Enlarged and squared off to the exact proportion the design system's own
+   control uses (.af-check: 20px box, 7px radius, 1.5px stroke), with a
+   stroke dark enough to read as a real checkbox in the empty state. The
+   checked fill is untouched — `--accent` already resolves to the platform
+   blue above, so it was never the weak half of this control. */
+.onb-legal .checkbox__control {
+  width: 20px; height: 20px;
+  border-radius: 7px;
+  border-width: 1.5px;
+  border-color: var(--onb-ink-3);
+}
 
 /* ── Payment ───────────────────────────────────────────────────────────
    Same rows, same fields, same footer geometry as every other step. The logic
@@ -1182,6 +1198,10 @@
   .onb-root[data-step="plans"] .onb-plan-list { padding: 11px 14px 0; gap: 8px; }
   .onb-root[data-step="plans"] .onb-plan-readmore { padding: 9px 14px 12px; }
   .onb-root[data-step="plans"] .onb-plan-bar { padding-top: 10px; }
+  /* Mobile gets a lighter touch than desktop's 5% — the card is already the
+     full screen here, so 3% is enough to read as "zoomed out" without eating
+     into the tap targets. Same centred-origin scale, same "frame only". */
+  .onb-root[data-step="plans"] .onb-card { transform: scale(.97); }
 
   /* ── The payment step, likewise ────────────────────────────────────
      Slimmer type and tighter rows so the receipt drop stays reachable without

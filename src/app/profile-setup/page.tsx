@@ -22,6 +22,7 @@ import { Emoji } from "@/components/onboarding/Emoji";
 import type { EmojiName } from "@/lib/onboarding/emoji";
 import { Answer, PhoneAnswer } from "@/components/onboarding/Answer";
 import { BackButton, BrandMark, Footer, Head, Progress, SaveNote, Stage, TopUtilities } from "@/components/onboarding/OnboardingShell";
+import { TesterControls } from "@/components/tester/TesterControls";
 import { LangProvider, useLang, useT } from "@/lib/onboarding/lang";
 import ProgramPicker from "@/components/onboarding/ProgramPicker";
 import { PlanStep } from "@/components/onboarding/PlanPicker";
@@ -69,6 +70,7 @@ function ProfileSetupScreen() {
   const [cfa, setCfa] = useState<Cfa>({});
   const [userNumber, setUserNumber] = useState<number | null>(null);
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
 
   const [screenId, setScreenId] = useState<string | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -112,6 +114,7 @@ function ProfileSetupScreen() {
       if (admin.role) { router.replace("/admin"); return; }
       uidRef.current = user.id;
       setSessionUserId(user.id);
+      setSessionEmail(user.email ?? null);
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (cancelled) return;
       const row = (data ?? {}) as Record<string, unknown>;
@@ -232,6 +235,22 @@ function ProfileSetupScreen() {
     setTimeout(() => { moving.current = false; }, 240);
   }
 
+  /* Tester only: jump straight to any screen, skipping the answer gate the
+     same way advance() already does for "skip current step". Reachable only
+     through TesterControls, which renders for nobody but the one QA email. */
+  function jumpTo(id: string) {
+    if (moving.current) return;
+    const target = screens.findIndex((s) => s.id === id);
+    if (target === -1 || !screen) return;
+    flushSave();
+    moving.current = true;
+    setShowError(false);
+    setDirection(target > idx ? 1 : -1);
+    setScreenId(id);
+    if (screens[target].group !== screen.group) void persistPosition(screens[target].group);
+    setTimeout(() => { moving.current = false; }, 240);
+  }
+
   async function finish() {
     if (!(agreeTerms && agreeRefund)) { setLegalError(true); return; }
     setFinishing(true);
@@ -263,6 +282,18 @@ function ProfileSetupScreen() {
   const isSummary = screen.kind === "summary";
   const back = idx > 0 ? goBack : undefined;
 
+  /* A plain, untranslated label for the tester's "jump to step" dropdown —
+     it never needs to be as polished as what a student reads, only readable
+     enough to pick the right screen. */
+  const screenLabel = (s: Screen, i: number): string => {
+    if (s.kind === "note") return s.title;
+    if (s.kind === "question") return s.question.title;
+    if (s.kind === "program") return s.title;
+    if (s.kind === "pricing") return "How much help do you want?";
+    if (s.kind === "summary") return "Your AfaqWay plan is ready.";
+    return `Step ${i + 1}`;
+  };
+
   return (
     <div
       className="onb-root"
@@ -276,7 +307,19 @@ function ProfileSetupScreen() {
       data-step={isPricing ? (priceSub === 0 ? "plans" : "pay") : undefined}
     >
       <BrandMark />
-      <TopUtilities />
+      <TopUtilities
+        extra={(
+          <TesterControls
+            email={sessionEmail}
+            live={{
+              screens: screens.map((s, i) => ({ id: s.id, title: screenLabel(s, i) })),
+              currentId: screen.id,
+              onSkipStep: advance,
+              onJumpStep: jumpTo,
+            }}
+          />
+        )}
+      />
 
       <main className="onb-card">
         {/* The plan screen is the one decision with a price on it, so the card

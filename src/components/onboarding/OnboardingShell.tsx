@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Info, LogOut } from "lucide-react";
@@ -70,7 +70,8 @@ function useDismiss(open: boolean, close: () => void) {
   return box;
 }
 
-export function TopUtilities() {
+/** Rendered first, before the language switcher — the tester-only trigger uses this. */
+export function TopUtilities({ extra }: { extra?: ReactNode } = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
@@ -87,6 +88,7 @@ export function TopUtilities() {
 
   return (
     <div className="onb-topright" ref={box}>
+      {extra}
       {/* It sits one tap from every question, so it asks first. Nothing is lost
           either way, and the dialog is where that gets said. */}
       <button type="button" className="onb-pill onb-pill-round onb-pill-danger" onClick={() => setConfirmOut(true)} title={t("Log out")}>

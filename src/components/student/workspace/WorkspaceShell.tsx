@@ -31,6 +31,7 @@ import { JrButton } from "./journey/parts";
 import { Toaster as SonnerToaster } from "sonner";
 import { AnimatedGridPattern } from "@/components/home/AnimatedGridPattern";
 import { NotificationInbox } from "./NotificationInbox";
+import { TesterControls } from "@/components/tester/TesterControls";
 import {
   Journey, Documents, Support,
   Subscription, Profile, Settings, type WsProfile,
@@ -299,6 +300,9 @@ export default function WorkspaceShell({
             </div>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "none" }}>
+              {/* Renders nothing for every account but the one QA tester
+                  email — see src/lib/tester.ts. */}
+              <TesterControls email={profile.email} />
               <div style={{ position: "relative" }}>
                 {/* Every notification still reaches the student as a toast
                     and lives in the conversation, but the bell itself still

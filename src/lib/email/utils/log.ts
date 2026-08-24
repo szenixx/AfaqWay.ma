@@ -1,5 +1,5 @@
 import "server-only";
-import { serviceClient } from "./serviceClient";
+import { serviceClient } from "@/lib/supabase/service";
 import type { SenderId } from "../senders";
 import type { TemplateMeta } from "../types";
 import type { Locale } from "../i18n/locales";

@@ -9,7 +9,7 @@ import { plansForCountry, PLAN_LABEL } from "@/config/pricing";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
 import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar, DataTable, Pill, Status, Portal, type Column } from "@/components/ds";
-import { fetchStaffEmails, isStaffProfile } from "@/lib/admin";
+import { fetchStatExclusions, isStaffProfile } from "@/lib/admin";
 
 type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
 type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
@@ -48,10 +48,11 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
 
   const load = useCallback(async () => {
     setLoading(true);
-    /* Staff are excluded from both the table and the statistics. An
-       administrator signing in creates a profile row exactly like a student's,
-       and counting those made the team part of the customer numbers. */
-    const staff = await fetchStaffEmails();
+    /* Staff, and an explicitly excluded tester account, are left out of both
+       the table and the statistics. An administrator signing in creates a
+       profile row exactly like a student's, and counting those made the team
+       part of the customer numbers. */
+    const staff = await fetchStatExclusions();
     const { data } = await supabase.from("profiles").select("id, user_number, full_name, email, city, plan, banned, whatsapp_country_code, whatsapp_number, destination_country").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
     setRows(((data ?? []) as U[]).filter((u) => !isStaffProfile(staff, u.email)));
     // Statistics cover every registered profile, not only the paid users listed

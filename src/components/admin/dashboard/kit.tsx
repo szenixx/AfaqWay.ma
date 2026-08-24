@@ -10,6 +10,7 @@ import { countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
 import { UserAvatar, DataTable, type Column } from "@/components/ds";
 import { EmailHealthButton } from "./EmailHealthButton";
+import { fetchStatExclusions, isStaffProfile } from "@/lib/admin";
 
 const PALETTE = ["#2E3BC7", "#4DABF7", "#20C997", "#FFA94D", "#F06595", "#845EF7", "#22B8CF", "#FCC419"];
 // per-stat accent colours so the KPI row isn't a monochrome block
@@ -254,14 +255,25 @@ export function useWalletData() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
-      const { data: pay } = await supabase.from("payments").select("id, user_id, plan, amount, method, status, created_at").order("created_at", { ascending: false }).limit(400);
-      const rows = (pay ?? []) as Payment[];
-      setPayments(rows);
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, plan, destination_country").eq("plan_status", "active");
-      setActive((profs ?? []).map((p) => ({ plan: (p as { plan: string | null }).plan })));
+      /* Staff, and an explicitly excluded tester account, never belong in the
+         money the Finance dashboard reports — neither as a paying student nor
+         as a receipt in the ledger. Fetched alongside profiles rather than
+         only `plan_status = "active"`, because a pending or rejected payment
+         from an excluded account still needs its owner's email to filter. */
+      const [{ data: pay }, { data: profs }, excluded] = await Promise.all([
+        supabase.from("payments").select("id, user_id, plan, amount, method, status, created_at").order("created_at", { ascending: false }).limit(400),
+        supabase.from("profiles").select("id, email, full_name, plan, plan_status, destination_country"),
+        fetchStatExclusions(),
+      ]);
+      type Prof = { id: string; email: string | null; full_name: string | null; plan: string | null; plan_status: string | null; destination_country: string | null };
+      const visible = ((profs ?? []) as Prof[]).filter((p) => !isStaffProfile(excluded, p.email));
+      const excludedIds = new Set(((profs ?? []) as Prof[]).filter((p) => isStaffProfile(excluded, p.email)).map((p) => p.id));
+
+      setPayments(((pay ?? []) as Payment[]).filter((p) => !excludedIds.has(p.user_id)));
+      setActive(visible.filter((p) => p.plan_status === "active").map((p) => ({ plan: p.plan })));
       const nm: Record<string, string> = {};
       const co: Record<string, string> = {};
-      (profs ?? []).forEach((p) => { const r = p as { id: string; full_name: string | null; destination_country: string | null }; nm[r.id] = r.full_name ?? "—"; if (r.destination_country) co[r.id] = r.destination_country; });
+      visible.forEach((r) => { nm[r.id] = r.full_name ?? "—"; if (r.destination_country) co[r.id] = r.destination_country; });
       setNames(nm); setCountryOf(co);
       setLoading(false);
     })();

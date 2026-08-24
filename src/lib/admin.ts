@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { TESTER_EMAIL } from "@/lib/tester";
 
 export type AdminRole = "admin" | "superadmin" | null;
 
@@ -31,3 +32,14 @@ export async function fetchStaffEmails(): Promise<Set<string>> {
 /** True when this profile belongs to a member of the team, not a student. */
 export const isStaffProfile = (staff: Set<string>, email: string | null | undefined): boolean =>
   !!email && staff.has(email.toLowerCase());
+
+/** Staff plus the excluded tester account (lib/tester.ts — the single source
+    for that email), lowercased: every account that should not count toward a
+    user or revenue statistic anywhere in the admin workspace. The tester
+    account itself stays fully functional; only its contribution to
+    statistics is dropped. */
+export async function fetchStatExclusions(): Promise<Set<string>> {
+  const excluded = await fetchStaffEmails();
+  excluded.add(TESTER_EMAIL);
+  return excluded;
+}

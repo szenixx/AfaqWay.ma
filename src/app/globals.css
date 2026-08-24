@@ -2632,6 +2632,13 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 /* Section 1 is the instruction itself, so it gets reading-size type, capped
    at a comfortable measure rather than running the full modal width. */
 .stpx-lead { margin: 0; font: 400 16px/27px var(--font-sans); color: var(--ink); max-width: 68ch; }
+/* Labels the "what you need" / "how to complete" parts inside section 1
+   without turning either into its own card — a small caption, not a second
+   .stpx-sec-head. The general-sibling selector gives every subhead after the
+   first extra breathing room, whatever sits between them (a <p>, StepBlocks'
+   own markup). */
+.stpx-subhead { margin: 0 0 8px; font: 700 11.5px/16px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+.stpx-subhead ~ .stpx-subhead { margin-top: 24px; }
 .stpx-hint { margin: 16px 0 0; font: 500 12.5px/19px var(--font-sans); color: var(--ink-soft); }
 
 /* Upload progress: a multi-document step is a multi-step process, and one
@@ -2692,6 +2699,38 @@ textarea.be-md { font: 400 12.5px/20px ui-monospace, SFMono-Regular, Menlo, mono
 }
 .stpx-foot.chat-gold > .jr-btn svg { color: #3D2C05; }
 @media (prefers-reduced-motion: reduce) { .stpx-foot.chat-gold > .jr-btn::after { animation: none; opacity: 0; } }
+
+/* ══ Tester Controls (tstr) ═══════════════════════════════════════════════
+   The one QA-account control centre — src/components/tester/TesterControls.
+   Deliberately its own small utility skin rather than blending fully into
+   the workspace product surface: it is a tool, not a feature, and the user
+   asked for it to read as "a small admin control centre". Built from the
+   same dialog primitives (.dlg, JrButton) everywhere else in the workspace
+   uses, so it is still unmistakably AfaqWay, never a foreign component kit. */
+.tstr-trigger {
+  width: 42px; height: 42px; border-radius: 999px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--red); color: #fff; border: 1px solid var(--red);
+  cursor: pointer; box-shadow: 0 1px 2px rgba(23,35,58,.06), 0 8px 18px -10px rgba(178,59,39,.55);
+  transition: transform 160ms var(--ease), box-shadow 160ms var(--ease), background 160ms var(--ease);
+}
+.tstr-trigger:hover { background: #9A3020; transform: translateY(-1px); box-shadow: 0 1px 2px rgba(23,35,58,.08), 0 12px 22px -10px rgba(178,59,39,.7); }
+.tstr-trigger:active { transform: none; }
+
+.tstr-code-dlg { max-width: 380px; }
+.tstr-code-row { display: flex; gap: 12px; justify-content: center; padding: 6px 0 2px; }
+.tstr-code-box { width: 52px; height: 60px; padding: 0; text-align: center; font: 700 24px/1 var(--font-sans); letter-spacing: 0; }
+.tstr-code-status { height: 20px; margin-top: 10px; text-align: center; font: 500 12.5px/18px var(--font-sans); color: var(--red); }
+
+.tstr-panel { max-width: 620px; }
+.tstr-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tstr-row + .tstr-row { margin-top: 10px; }
+.tstr-row .af-select { min-width: 200px; }
+.tstr-wrap { row-gap: 8px; }
+.tstr-hint { margin: 0; font: 400 12.5px/18px var(--font-sans); color: var(--ink-faint); }
+.tstr-msg { padding: 10px 14px; border-radius: 12px; font: 600 12.5px/18px var(--font-sans); }
+.tstr-msg-ok { background: var(--green-tint); color: var(--green); }
+.tstr-msg-err { background: var(--red-tint); color: var(--red); }
 
 /* Phone: the two-column doc row stacks, the upload control goes full width
    so it stays the obvious next action, and type steps down just enough to

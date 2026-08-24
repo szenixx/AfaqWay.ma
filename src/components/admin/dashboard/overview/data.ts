@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { countryByCode } from "@/components/profile-setup/countries";
-import { fetchStaffEmails, isStaffProfile } from "@/lib/admin";
+import { fetchStatExclusions, isStaffProfile } from "@/lib/admin";
 
 export type Student = {
   id: string;
@@ -73,19 +73,25 @@ export function useOverviewData() {
       supabase.from("payments")
         .select("id, user_id, plan, amount, currency, method, status, created_at")
         .order("created_at", { ascending: false }).limit(300),
-      /* Who on this list is staff rather than a student. */
-      fetchStaffEmails(),
+      /* Who on this list is staff, or an excluded tester, rather than a
+         real student. */
+      fetchStatExclusions(),
     ]);
     /* Administrators get a profile row like anyone else, so counting profiles
        counted the team as customers: with no students at all the dashboard
        still reported a user. Filtered at the source, so every figure derived
        from `students` below — the totals, the trends, the plan splits — drops
-       them together rather than each card remembering to. */
+       them together rather than each card remembering to. Payments follow the
+       same filter below, so approved revenue never counts a tester's receipt
+       either. */
     setStudents(((p.data ?? []) as Student[]).filter((s) => !isStaffProfile(staff, s.email)));
     setApprovals((a.data ?? []) as Approval[]);
     setDocs((d.data ?? []) as Doc[]);
     setMsgs((m.data ?? []) as Msg[]);
-    setPayments((pay.data ?? []) as Payment[]);
+    const excludedIds = new Set(
+      ((p.data ?? []) as Student[]).filter((s) => isStaffProfile(staff, s.email)).map((s) => s.id),
+    );
+    setPayments(((pay.data ?? []) as Payment[]).filter((r) => !excludedIds.has(r.user_id)));
     setAsOf(Date.now());
     setLoading(false);
   }, []);

@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { StorageError } from "@/types/storage";
+import { isTesterEmail } from "@/lib/tester";
 
 /* Request authentication for API routes.
    The browser sends its Supabase access token; we verify it server-side and
@@ -8,7 +9,7 @@ import { StorageError } from "@/types/storage";
    makes runs under the caller's own RLS policies and can never read another
    user's rows. */
 
-export type Caller = { id: string; email: string | null; isAdmin: boolean; isSuperAdmin: boolean };
+export type Caller = { id: string; email: string | null; isAdmin: boolean; isSuperAdmin: boolean; isTester: boolean };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -41,5 +42,14 @@ export async function authenticate(req: Request): Promise<{ caller: Caller; supa
     isSuperAdmin = isAdmin && row?.role === "superadmin";
   }
 
-  return { caller: { id: data.user.id, email: data.user.email ?? null, isAdmin, isSuperAdmin }, supabase };
+  return {
+    caller: {
+      id: data.user.id, email: data.user.email ?? null, isAdmin, isSuperAdmin,
+      // The one QA account — see lib/tester.ts. Not derived from `isAdmin`:
+      // the tester never becomes a real admin, and an admin is never the tester
+      // just by holding a role.
+      isTester: isTesterEmail(data.user.email),
+    },
+    supabase,
+  };
 }
