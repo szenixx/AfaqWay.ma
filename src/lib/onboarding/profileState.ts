@@ -89,7 +89,14 @@ export const MOROCCO_DIAL = "+212";
    without it (612345678, nine digits). Mobile prefixes are 6 and 7; landlines
    (5) are rejected, because this number has to receive WhatsApp. */
 export function validMoroccanMobile(n: string): boolean {
-  const d = n.replace(/\D/g, "");
+  let d = n.replace(/\D/g, "");
+  /* The dial-code box sits right beside the number box, small and easy to
+     miss on a phone — a student typing their whole number, code included,
+     into the number field is a real way to get stuck here. A valid mobile
+     never starts with 2, so a leading 00212/212 can only be that dial code
+     typed in the wrong place; stripping it is unambiguous and safe. */
+  if (d.startsWith("00212")) d = d.slice(5);
+  else if (d.startsWith("212")) d = d.slice(3);
   if (d.startsWith("0")) return /^0[67]\d{8}$/.test(d);
   return /^[67]\d{8}$/.test(d);
 }
