@@ -389,18 +389,25 @@ export default function WorkspaceShell({
       <MobileNavigationHeader
         activeKey={nav}
         rightExtra={
-          <div style={{ position: "relative" }}>
-            <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
-              <span className="sw-bell-ico"><Bell size={22} /></span>
-              {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
-            </button>
-            {notifOpen && (
-              <NotificationInbox
-                userId={profile.userId}
-                onOpen={(link) => navigate(link as Nav)}
-                onClose={() => setNotifOpen(false)}
-              />
-            )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Renders nothing for every account but the one QA tester email
+                (src/lib/tester.ts) — this is the mobile bar, a separate
+                component from the desktop topbar above, so it needs its own
+                copy of this line to appear in phone mode at all. */}
+            <TesterControls email={profile.email} />
+            <div style={{ position: "relative" }}>
+              <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+                <span className="sw-bell-ico"><Bell size={22} /></span>
+                {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
+              </button>
+              {notifOpen && (
+                <NotificationInbox
+                  userId={profile.userId}
+                  onOpen={(link) => navigate(link as Nav)}
+                  onClose={() => setNotifOpen(false)}
+                />
+              )}
+            </div>
           </div>
         }
       >
