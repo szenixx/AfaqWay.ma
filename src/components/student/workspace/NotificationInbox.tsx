@@ -1,18 +1,25 @@
 "use client";
 
-/* NotificationInbox — a mini module that drops out of the bell button itself,
-   the way godui's notification-inbox popover works: anchored to its trigger,
-   not centred over the page. Grouped by day, one row per notification with an
-   icon tile in place of an avatar (there is no "actor" in this data — a
-   notification is raised by the platform, not a person) and a title/body/time
-   stack, exactly the row shape the reference groups as actor/action/target.
-   Clicking a row marks it read and navigates, the same behaviour the full
-   Notifications module already has — this is the same list, closer to hand. */
+/* NotificationInbox — the bell in the top bar and the list that drops out of
+   it, rebuilt on HeroUI's Popover so the open/outside-click/Escape handling
+   this used to hand-roll with its own window listener is the library's job
+   instead. It owns its own trigger now (a real anchor for Popover to
+   position against) rather than being a separate popover the shell had to
+   remember to keep in sync with a shared boolean.
 
-import { useEffect, useRef, useState } from "react";
+   The row shape is unchanged: an icon tile in place of an avatar (there is
+   no "actor" in this data — a notification is raised by the platform, not a
+   person), grouped by day, title/body/time. Clicking a row marks it read
+   and navigates to the page it's about — never removes it from the list; a
+   read notification is exactly as available afterwards as before, same as
+   the full Notifications module already behaves. */
+
+import { useRef, useState } from "react";
 import { Bell, Check } from "lucide-react";
+import { Button, Popover } from "@heroui/react";
 import { useNotifications, markRead, markAllRead, type Notification } from "@/lib/notifications";
 import { notifIdentity } from "@/lib/notifIdentity";
+import { useAfqHuiPortal } from "@/lib/useAfqHuiPortal";
 
 function dayGroup(iso: string): string {
   const d = new Date(iso);
@@ -34,91 +41,101 @@ const relTime = (iso: string) => {
   return `${Math.round(hrs / 24)}d`;
 };
 
-export function NotificationInbox({ userId, onOpen, onClose }: {
+export function NotificationInbox({ userId, onOpen, plain }: {
   userId: string;
-  /** Navigates the workspace to the notification's page, then closes the popover. */
+  /** Navigates the workspace to the notification's page. */
   onOpen: (link: string) => void;
-  onClose: () => void;
+  /** The mobile top bar's icon buttons render without the card background
+      the desktop ones carry at rest — same trigger, same behaviour. */
+  plain?: boolean;
 }) {
   const { items, unread, reload } = useNotifications(userId);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const portal = useAfqHuiPortal(triggerRef);
 
-  useEffect(() => {
-    /* The bell button itself sits outside this popover's own DOM subtree, so
-       without the trigger check below, tapping it while open used to fire
-       both handlers in the same gesture: mousedown closes here first, then
-       click re-opens via the trigger's own setNotifOpen(v => !v) — the
-       popover would visually close and instantly reopen, unable to be
-       dismissed by re-tapping the bell. */
-    const close = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (ref.current && !ref.current.contains(target) && !target.closest?.("[data-notif-trigger]")) onClose();
-    };
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("mousedown", close);
-    window.addEventListener("keydown", key);
-    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("keydown", key); };
-  }, [onClose]);
-
-  const open = async (n: Notification) => {
+  const openNotification = async (n: Notification) => {
     if (!n.read) { await markRead(userId, n.id); void reload(); }
+    setOpen(false);
+    // Read AFTER closing: the popover should not sit open while the page
+    // underneath it changes.
     if (n.link) onOpen(n.link);
-    onClose();
   };
 
   let lastGroup = "";
 
   return (
-    <div ref={ref} className="sw-notifpop" role="dialog" aria-label="Notifications">
-      <header className="sw-notifpop-head">
-        <span>Notifications</span>
-        {/* AWAITED, then reloaded. Firing both together started the write and
-            the re-read in the same tick, so the reload raced the UPDATE, came
-            back with the rows still unread, and overwrote the optimistic patch
-            — the badge cleared for a frame and then returned, which is what
-            made "mark all read" look like it did nothing. The row handler
-            above already awaits its markRead; this one did not. */}
-        {unread > 0 && (
-          <button type="button" onClick={() => { void (async () => { await markAllRead(userId); await reload(); })(); }}>
-            <Check size={12} />Mark all read
-          </button>
-        )}
-      </header>
+    <span ref={triggerRef} style={{ display: "contents" }}>
+    <Popover isOpen={open} onOpenChange={setOpen}>
+      {/* A plain element carries no press behaviour of its own — Popover's
+          own PressResponder context is read only by a component that calls
+          usePress (HeroUI's Button, or one wrapped in Pressable), never by
+          a bare DOM element — so the trigger itself has to BE the pressable
+          thing. Popover.Trigger already renders one (a div, role="button",
+          wrapped in Pressable); nesting a second, real <button> inside it
+          would just be two interactive elements announcing as one, so the
+          icon markup here stays plain spans and every button-ish attribute
+          (the label, the trigger hook, the visual classes) lives on
+          Popover.Trigger instead. */}
+      <Popover.Trigger
+        aria-label="Notifications" data-notif-trigger
+        className={`sw-iconbtn${plain ? " plain" : ""}${open ? " active" : ""}${unread > 0 ? " unread" : ""}`}
+      >
+        <span className="sw-bell-ico"><Bell size={22} /></span>
+        {unread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
+      </Popover.Trigger>
 
-      <div className="sw-notifpop-list">
-        {items.length === 0 ? (
-          <div className="sw-notifpop-empty">
-            <Bell size={22} />
-            <span>Nothing yet</span>
+      <Popover.Content className="sw-notifpop" placement="bottom end" UNSTABLE_portalContainer={portal ?? undefined}>
+        <Popover.Dialog aria-label="Notifications" className="p-0">
+          <header className="sw-notifpop-head">
+            <span>Notifications</span>
+            {unread > 0 && (
+              <Button
+                onPress={() => { void (async () => { await markAllRead(userId); await reload(); })(); }}
+                size="sm" variant="tertiary"
+              >
+                <Check size={12} />Mark all read
+              </Button>
+            )}
+          </header>
+
+          <div className="sw-notifpop-list">
+            {items.length === 0 ? (
+              <div className="sw-notifpop-empty">
+                <Bell size={22} />
+                <span>Nothing yet</span>
+              </div>
+            ) : items.slice(0, 20).map((n) => {
+              const g = dayGroup(n.created_at);
+              const showHeader = g !== lastGroup;
+              lastGroup = g;
+              return (
+                <div key={n.id}>
+                  {showHeader && <div className="sw-notifpop-group">{g}</div>}
+                  <button type="button" className={`sw-notifpop-row${n.read ? "" : " unread"}`} onClick={() => void openNotification(n)}>
+                    {/* The tile says what KIND of thing this is before a word is
+                        read: the platform's own mark for an announcement, the
+                        route for the journey (coloured by how the step went), a
+                        chat bubble for an unanswered advisor message. */}
+                    {/* Decorative: the title and body below already say what this
+                        is, so the tile is not repeated to a screen reader. */}
+                    <span className="sw-notifpop-ico" data-tone={notifIdentity(n).tone} aria-hidden>
+                      {notifIdentity(n).icon}
+                    </span>
+                    <span className="sw-notifpop-body">
+                      <span className="sw-notifpop-title">{n.title}</span>
+                      {n.body && <span className="sw-notifpop-sub">{n.body}</span>}
+                    </span>
+                    <span className="sw-notifpop-time">{relTime(n.created_at)}</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        ) : items.slice(0, 20).map((n) => {
-          const g = dayGroup(n.created_at);
-          const showHeader = g !== lastGroup;
-          lastGroup = g;
-          return (
-            <div key={n.id}>
-              {showHeader && <div className="sw-notifpop-group">{g}</div>}
-              <button type="button" className={`sw-notifpop-row${n.read ? "" : " unread"}`} onClick={() => open(n)}>
-                {/* The tile says what KIND of thing this is before a word is
-                    read: the platform's own mark for an announcement, the
-                    route for the journey (coloured by how the step went), a
-                    chat bubble for an unanswered advisor message. */}
-                {/* Decorative: the title and body below already say what this
-                    is, so the tile is not repeated to a screen reader. */}
-                <span className="sw-notifpop-ico" data-tone={notifIdentity(n).tone} aria-hidden>
-                  {notifIdentity(n).icon}
-                </span>
-                <span className="sw-notifpop-body">
-                  <span className="sw-notifpop-title">{n.title}</span>
-                  {n.body && <span className="sw-notifpop-sub">{n.body}</span>}
-                </span>
-                <span className="sw-notifpop-time">{relTime(n.created_at)}</span>
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
+    </span>
   );
 }
 

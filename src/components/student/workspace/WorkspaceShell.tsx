@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import {
   House, Map as MapIcon, FileText, LifeBuoy,
   CreditCard, UserRound, Settings as SettingsIcon, LogOut, ChevronDown,
-  ChevronLeft, ChevronRight, CalendarDays, Bell,
+  ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { ChatBubbleIcon } from "@svg-animated-icons/react";
 import { MobileNavigationHeader } from "./MobileNavigationHeader";
@@ -25,7 +25,6 @@ import { planById } from "@/lib/plans";
 import { supabase } from "@/lib/supabase/client";
 import { useAvatarUrl } from "@/lib/avatar";
 import { nextScheduleEvent } from "@/lib/schedule";
-import { useNotifications } from "@/lib/notifications";
 import { UserAvatar, BrandLogo, AnimatedModal, DialogHead, DialogFoot } from "@/components/ds";
 import { JrButton } from "./journey/parts";
 import { Toaster as SonnerToaster } from "sonner";
@@ -82,12 +81,7 @@ export default function WorkspaceShell({
 }) {
   const [menu, setMenu] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
-  /* Drives both the bell's red dot and its "keeps moving until read"
-     animation — the same live count the popover itself reads, so the two
-     never disagree about whether something is still unread. */
-  const { unread: notifUnread } = useNotifications(profile.userId);
   const [sidebarMini, setSidebarMini] = useState(() => !SIDEBAR_EXPANDED_NAV.has(nav));
   /* Announce this student as online for as long as the workspace is open. */
   usePresenceBroadcast(profile.userId, { name: profile.fullName, role: "student" });
@@ -303,24 +297,12 @@ export default function WorkspaceShell({
               {/* Renders nothing for every account but the one QA tester
                   email — see src/lib/tester.ts. */}
               <TesterControls email={profile.email} />
-              <div style={{ position: "relative" }}>
-                {/* Every notification still reaches the student as a toast
-                    and lives in the conversation, but the bell itself still
-                    rings gently for as long as something here is unread, with
-                    its own dot. It only settles once the popover (or the
-                    thing it links to) marks the row read. */}
-                <button type="button" data-notif-trigger className={`sw-iconbtn${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
-                  <span className="sw-bell-ico"><Bell size={22} /></span>
-                  {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
-                </button>
-                {notifOpen && (
-                  <NotificationInbox
-                    userId={profile.userId}
-                    onOpen={(link) => navigate(link as Nav)}
-                    onClose={() => setNotifOpen(false)}
-                  />
-                )}
-              </div>
+              {/* Every notification still reaches the student as a toast and
+                  lives in the conversation, but the bell itself still rings
+                  gently for as long as something here is unread, with its
+                  own dot. It only settles once the popover (or the thing it
+                  links to) marks the row read. */}
+              <NotificationInbox userId={profile.userId} onOpen={(link) => navigate(link as Nav)} />
               <button type="button" className={`sw-iconbtn${nav === "messages" ? " active" : ""}${chatUnread > 0 ? " unread" : ""}`} onClick={() => navigate("messages")} aria-label="Messages">
                 <ChatBubbleIcon disableHover className="sw-topbar-icon" />
                 {chatUnread > 0 && nav !== "messages" && <span className="sw-dot">{chatUnread > 9 ? "9+" : chatUnread}</span>}
@@ -395,19 +377,7 @@ export default function WorkspaceShell({
                 component from the desktop topbar above, so it needs its own
                 copy of this line to appear in phone mode at all. */}
             <TesterControls email={profile.email} />
-            <div style={{ position: "relative" }}>
-              <button type="button" data-notif-trigger className={`sw-iconbtn plain${notifOpen ? " active" : ""}${notifUnread > 0 ? " unread" : ""}`} onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
-                <span className="sw-bell-ico"><Bell size={22} /></span>
-                {notifUnread > 0 && <span className="sw-dot sw-dot-plain" aria-hidden />}
-              </button>
-              {notifOpen && (
-                <NotificationInbox
-                  userId={profile.userId}
-                  onOpen={(link) => navigate(link as Nav)}
-                  onClose={() => setNotifOpen(false)}
-                />
-              )}
-            </div>
+            <NotificationInbox onOpen={(link) => navigate(link as Nav)} plain userId={profile.userId} />
           </div>
         }
       >

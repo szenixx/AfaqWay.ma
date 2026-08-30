@@ -876,8 +876,27 @@ a {
    full-height panel short of the fold. Admin heights are therefore expressed
    as --adm-vh (viewport height ÷ zoom factor), which lands on exactly one
    screen at whatever zoom is set here. Change both values together. */
-.adm-root { --adm-zoom: 1; --adm-vh: 100vh; zoom: var(--adm-zoom);
+.adm-root { --adm-zoom: 1; --adm-vh: 100vh; --adm-anchor-w: 1920px; --adm-unzoom-floor: .55; zoom: var(--adm-zoom);
   min-height: var(--adm-vh); position: relative; background: #EBEEF4; overflow-x: hidden; }
+
+/* Browser-zoom neutralisation — the same technique as the student workspace's
+   .sw-root (see --sw-anchor-w further down), applied around this console's
+   neutral 1x base instead of a 10% one: the console keeps rendering at
+   exactly its 1920px-reference size no matter what the browser's own zoom is
+   set to, down to a floor that stops a genuinely narrow window from being
+   mistaken for a zoomed one (see the full derivation on --sw-anchor-w).
+   Desktop only, same as the rest of this file's admin rules — admin has no
+   mobile layout to protect from this, and mobile keeps the plain zoom:1
+   above untouched. */
+@media (min-width: 1024px) {
+  @supports (width: calc(1px * tan(atan2(1px, 1px)))) {
+    .adm-root {
+      --adm-unzoom: clamp(var(--adm-unzoom-floor), tan(atan2(100vw, var(--adm-anchor-w))), 1);
+      --adm-zoom: var(--adm-unzoom);
+      --adm-vh: calc(100dvh / var(--adm-unzoom));
+    }
+  }
+}
 .adm-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; }
 .adm-bg > span { width: 80vmin; height: 80vmin; filter: blur(7px); opacity: .18; display: block; transform: translate(4%, 6%); }
 .adm-bg svg { width: 100%; height: 100%; }
@@ -1241,15 +1260,14 @@ a {
 .sw-menu-row:hover { background: var(--subtle); }
 .sw-menu-row.danger { color: var(--red); }
 
-/* Notification inbox popover — drops from the bell button itself (anchored to
-   its own position:relative wrapper), not centred over the page. */
-.sw-notifpop { position: absolute; top: calc(100% + 10px); right: 0; width: 360px; max-width: calc(100vw - 24px);
-  background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 48px rgba(23,35,58,.18);
-  z-index: 60; overflow: hidden; }
+/* Notification inbox popover — a HeroUI Popover, anchored to the bell itself
+   by the library's own floating position logic, not a CSS position:absolute
+   parent-relative offset. This is only the visual treatment now. */
+.sw-notifpop { width: 360px; max-width: calc(100vw - 24px);
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 18px 48px rgba(23,35,58,.18);
+  overflow: hidden; }
 .sw-notifpop-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
   border-bottom: 1px solid var(--line-soft); font: 700 13.5px/18px var(--font-sans); color: var(--ink); }
-.sw-notifpop-head button { display: flex; align-items: center; gap: 4px; border: none; background: none; cursor: pointer;
-  font: 600 11.5px/16px var(--font-sans); color: var(--indigo-600); padding: 0; }
 .sw-notifpop-list { max-height: min(70vh, 420px); overflow-y: auto; padding: 6px; }
 .sw-notifpop-group { padding: 10px 8px 4px; font: 700 10px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
 .sw-notifpop-row { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 9px 8px; border: none;
@@ -1895,10 +1913,27 @@ body {
 .jr-overall-pct { display: block; font: 800 24px/28px var(--font-sans); color: var(--indigo-600); }
 .jr-overall-label { font: 400 11px/15px var(--font-sans); color: var(--ink-faint); }
 
-/* Shared glass surface. The header joins the same family as the navigator and
-   the stage frames below it, so the module reads as one stack of frames rather
-   than loose text above a set of cards. */
-.jr-nav, .jr-stage, .jr-head {
+/* Shared glass surface. The header and the navigator are deliberately more
+   solid than the expanded stage frame below them: they carry the roadmap's
+   summary numbers and the stage-to-stage overview, so they read as the
+   grounded, always-legible layer, while .jr-stage (unchanged, further down)
+   keeps the lighter glass treatment for the content a student opens into. */
+.jr-nav, .jr-head {
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow: 0 1px 1px rgba(23,35,58,.02), 0 16px 40px -30px rgba(23,35,58,.5);
+  transition: background 240ms var(--ease), border-color 240ms var(--ease),
+              box-shadow 240ms var(--ease), transform 240ms var(--ease);
+}
+.jr-nav:hover, .jr-head:hover {
+  background: var(--card);
+  border-color: rgba(255,255,255,1);
+  box-shadow: 0 1px 1px rgba(23,35,58,.03), 0 22px 52px -28px rgba(23,35,58,.58);
+  transform: translateY(-2px);
+}
+.jr-stage {
   background: rgba(255,255,255,.62);
   backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -1910,90 +1945,21 @@ body {
 /* The frame answers the cursor: it clears to solid white and lifts, so the one
    you are pointing at separates from the stack instead of all of them reading
    as the same flat pane. */
-.jr-nav:hover, .jr-stage:hover, .jr-head:hover {
+.jr-stage:hover {
   background: var(--card);
   border-color: rgba(255,255,255,1);
   box-shadow: 0 1px 1px rgba(23,35,58,.03), 0 22px 52px -28px rgba(23,35,58,.58);
   transform: translateY(-2px);
 }
 
-/* ── Journey artwork ═══════════════════════════════════════════════════════
-   One 3D render summarising the roadmap in the header, and one per stage in
-   the navigator, all from the same set. Every one of them is a BACKGROUND
-   layer: z-index 0, with each piece of content in the card raised a layer
-   above, so wherever a render sits it can never cover a word or a control. */
-
-/* The roadmap summary sits right beside the progress figure, at the end of the
-   header where the journey it draws also ends.
-
-   Sized by HEIGHT, not width. The header is only about 110px tall and the
-   render is 16:9, so a width-driven size ran it past the top and bottom edges
-   and `overflow: hidden` cropped it. Bounding the height instead means the
-   whole illustration is always visible and its width simply follows. */
 .jr-head { position: relative; overflow: hidden; }
 .jr-head > * { position: relative; z-index: 1; }
 
-/* The stage mark. Deliberately NO overflow:hidden on the card — .jr-navplan
-   straddles the top edge by design and clipping would cut the badge in half —
-   so the render stays inside the card's bounds rather than bleeding past them.
-
-   Width is a share of the card, not a fixed size: the five columns are `1fr`
-   each with no minimum, so they get narrow long before any breakpoint fires. */
+/* No illustration in a stage card any more, so nothing here needs a
+   background layer or a clip box — .jr-navplan still straddles the card's
+   top edge by design, which is the one reason this card never carries its
+   own overflow:hidden. */
 .jr-navcard { position: relative; }
-.jr-navcard > *:not(.jr-navart-slot) { position: relative; z-index: 1; }
-/* The clip layer covers the WHOLE card and carries its radius, so the artwork
-   is cut by the card's own boundary. It lives here rather than as overflow on
-   the card itself because .jr-navplan straddles the card's top edge by design:
-   as a sibling of this layer that badge is untouched, while anything inside it
-   is clipped. */
-.jr-navart-slot {
-  position: absolute; z-index: 0; inset: 0;
-  overflow: hidden; border-radius: 18px;
-  pointer-events: none; user-select: none;
-}
-/* The AfaqWay Support card's treatment, at this card's scale: right-anchored
-   with a small bleed the frame clips, vertically centred, a share of the width,
-   and the same low opacity. See .dx-support-art in dashboard.css, which these
-   numbers follow so the two surfaces read as one system.
-
-   The oversized corner-hung version this replaces cut the object on two sides
-   at once, which read as a picture trimmed by accident rather than artwork the
-   frame happens to run past. */
-.jr-navart {
-  position: absolute; right: -9%; top: 50%; transform: translateY(-52%);
-  width: 56%; max-width: 118px; height: auto;
-  /* Atmosphere, not subject. One value for all five, so no stage's object
-     reads louder than another's, and every one of them sits below the title,
-     the status and the bar rather than competing with them. */
-  opacity: .32;
-  transition: opacity 220ms var(--ease);
-}
-/* The render holds ONE opacity in every state: inactive, hovered, current,
-   waiting approval, open, completed. Which stage is live is already said by the
-   card's background, its border, the accent, the status badge and the progress
-   bar, and a decorative object brightening on top of all that only competes
-   with the content it is meant to sit behind. */
-/* ── Per-stage nudges ────────────────────────────────────────────────
-   Two stages need a hair of adjustment the shared rule cannot give them,
-   because each object has its own proportions inside a square canvas. */
-
-/* Stage 1's laptop is the widest of the five (316x216), so at a shared width
-   it is also the shortest, and centring left it sitting low against the taller
-   objects beside it. `top` rather than the translate, because translateY is a
-   share of the ELEMENT's height and this is the flattest one, so the same
-   percentage moves it least. */
-.jr-navart-slot[data-art="explore"] .jr-navart { top: 40%; }
-
-/* Stage 5 is the end of the roadmap and was the most hidden of the five: the
-   plane's nose ran off the right edge into the bleed. It keeps almost all of
-   its width inside the card and sits a little larger. */
-.jr-navart-slot[data-art="arrival"] .jr-navart {
-  right: -1%; width: 62%; max-width: 126px;
-}
-
-/* A locked stage dims its furniture, and the render is furniture — the same
-   treatment the icon, badge and bar already get. */
-.jr-navcard.locked .jr-navart { opacity: .16; }
 
 /* Compact stage timeline — every stage in one row. */
 .jr-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-rows: 1fr; align-items: stretch; gap: 6px; padding: 12px; border-radius: 24px; }
