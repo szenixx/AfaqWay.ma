@@ -1,0 +1,132 @@
+/* ══ Admin Payment Methods — HeroUI, wearing AfaqWay ══════════════════════
+
+   The theme lives in admin-overview.css: `.afq-hui` declares every semantic
+   token HeroUI reads, and this page wears the same class, so it cannot drift
+   from Overview/Wallet on colour, radius or depth. Only layout lives here.
+
+   Spacing contract, shared with Overview/Wallet:
+     outer 20px · section 16px · card gap 14px · card pad 16px.
+
+   One screen, fixed, exactly like the Wallet: the method list scrolls in its
+   own area, the frame itself does not. */
+
+.pm-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(var(--adm-vh, 100vh) - 52px);
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 26px;
+  box-shadow: 0 20px 54px rgba(23, 35, 58, .12);
+  font-family: var(--font-sans);
+}
+.adm-main:has(.pm-root) { padding: 4px; }
+
+/* ══ Header ════════════════════════════════════════════════════════════════ */
+.pm-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex: none; min-height: 48px;
+}
+.pm-head-title { margin: 0; font: 700 19px/25px var(--font-sans); color: #17233A; letter-spacing: -.02em; }
+.pm-head-sub { margin: 2px 0 0; font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+
+/* ══ Method list ═════════════════════════════════════════════════════════
+   Flex-wrap rather than a CSS grid on purpose: a grid reserves a phantom
+   empty cell for a trailing row that doesn't fill (5 methods in 2 columns
+   leaves one card alone on its row, grid or not) — that empty cell is
+   exactly the "awkward empty space" a fixed column grid would show here.
+   Flex-wrap has no such cell: the last card just sits at the row's start.
+   `align-items: flex-start` keeps each card at its own natural height too,
+   never stretched to match a taller neighbour's field grid. */
+.pm-grid {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start;
+  gap: 10px;
+  padding: 2px 2px 4px;
+}
+.pm-card {
+  /* Two up on a normal desktop width, three once there is genuinely room —
+     `min-width` is what actually decides the count at any given width,
+     `flex-basis` just gives the browser a starting point to wrap from. */
+  flex: 1 1 340px; min-width: 300px; max-width: 100%;
+}
+@media (min-width: 1100px) {
+  .pm-card { flex-basis: calc(50% - 5px); }
+}
+@media (min-width: 1500px) {
+  .pm-card { flex-basis: calc(33.333% - 7px); }
+}
+
+/* Compact configuration cards, not dashboard cards: tighter padding than the
+   platform default (`.afq-hui .card` is 16px/10px gap), smaller logo tile,
+   smaller type. Nothing shown was removed, only the room around it. */
+.afq-hui .pm-card { padding: 10px 12px; gap: 8px; transition: opacity 160ms ease; }
+/* A method switched off is not broken or hidden, just parked — dimmed
+   rather than greyed out entirely, so its own details are still legible
+   while re-enabling it. */
+.pm-card.is-off { opacity: .62; }
+.pm-card.is-off:hover, .pm-card.is-off:focus-within { opacity: .85; }
+
+.pm-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.pm-card-id { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.pm-card-logo {
+  flex: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface-tertiary); border-radius: 9px;
+}
+.pm-card-logo img { max-width: 19px; max-height: 19px; object-fit: contain; }
+.pm-card-name { display: flex; flex-direction: column; min-width: 0; }
+.pm-card-name b { font: 600 13px/17px var(--font-sans); color: #17233A; }
+.pm-card-name span { font: 400 11px/15px var(--font-sans); color: #8695AB; }
+
+/* The reorder chevrons: a small stacked pair, subordinate to the logo and
+   name they sit beside — a control, not a fifth piece of card content. */
+.pm-card-reorder { display: inline-flex; flex-direction: column; gap: 1px; margin-right: 1px; flex: none; }
+.pm-card-reorder .button { min-width: 22px; width: 22px; height: 18px; padding: 0; }
+
+.pm-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+.pm-fields--note { grid-template-columns: 1fr; }
+
+/* An instant method (no beneficiary/RIB to configure) still gets a real line
+   of content instead of the fields grid — its own description, already-real
+   data from PAY_METHODS, never invented. */
+.pm-card-desc { margin: 2px 0 0; font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+
+.pm-extra-label {
+  font: 600 10px/13px var(--font-sans); letter-spacing: .05em; text-transform: uppercase;
+  color: #8695AB; margin-top: 1px;
+}
+.pm-extra-empty { margin: 0; font: 400 11.5px/16px var(--font-sans); color: #B7C0D1; }
+.pm-extra-row { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
+.pm-extra-row > :first-child { flex: 1 1 130px; }
+.pm-extra-row > :nth-child(2) { flex: 2 1 170px; }
+.pm-extra-switch { flex: none; align-self: center; }
+.pm-extra-remove { flex: none; align-self: center; }
+.pm-extra-add { align-self: flex-start; }
+
+.pm-card-foot { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+
+/* ══ Empty / loading ═══════════════════════════════════════════════════════ */
+.pm-skel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pm-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 26px 16px; text-align: center; color: #8695AB;
+}
+.pm-empty p { margin: 0; font: 400 12px/17px var(--font-sans); }
+
+/* ══ Responsive ════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  /* .pm-card's own flex-basis/min-width already collapse to one column
+     naturally below the 1100px breakpoint above — only the skeleton, a
+     fixed CSS grid, needs telling explicitly. */
+  .pm-skel-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  /* Too little height to hold everything at once — the page scrolls again
+     rather than clipping content, matching Overview/Wallet's own rule. */
+  .pm-root { height: auto; overflow: visible; padding: 14px; gap: 14px; border-radius: 18px; }
+  .pm-fields { grid-template-columns: 1fr; }
+}

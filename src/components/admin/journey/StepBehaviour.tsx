@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Settings2, Trash2 } from "lucide-react";
-import { Input, TextArea, Select, Checkbox } from "@/components/ds";
-import { JrButton } from "@/components/student/workspace/journey/parts";
+import { Button, Checkbox, Chip, Input, Label, ListBox, Select, TextArea, TextField, Tooltip } from "@heroui/react";
 import { saveStep, type DbStep } from "@/lib/journeyDb";
 
 /* How a step behaves, not what it says.
@@ -33,8 +32,11 @@ const COMPLETION = [
   { value: "decision", label: "Decided by the residence permit outcome" },
 ];
 
+/* "none" is a UI-only sentinel — React Aria selection keys are unreliable
+   with an empty-string id. The persisted rule still stores "" (no capture
+   rule at all), translated at the write site below. */
 const CAPTURE = [
-  { value: "", label: "Nothing" },
+  { value: "none", label: "Nothing" },
   { value: "vfs_appointment", label: "VFS appointment date and time" },
 ];
 
@@ -66,25 +68,28 @@ export function StepBehaviour({ step, onSaved }: { step: DbStep; onSaved?: (rule
   const writeGate = (next: string[]) => write({ gate: next });
 
   return (
-    <>
-      <div className="jm-block">
-        <div className="jm-req-head" style={{ marginBottom: 10 }}>
-          <span className="jm-ico tone-blue"><Settings2 size={15} /></span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="jm-req-title">How this step completes</div>
-            <div className="jm-req-sub">
-              The database enforces this too, so a student can never complete a step you keep for review.
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="afq-mini-card">
+        <div className="afq-mini-head">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <Chip color="accent" size="sm" variant="soft"><Settings2 size={13} /></Chip>
+            <div style={{ minWidth: 0 }}>
+              <div className="afq-mini-title">How this step completes</div>
+              <div className="afq-mini-sub">The database enforces this too, so a student can never complete a step you keep for review.</div>
             </div>
           </div>
         </div>
 
-        <Select
-          label="Completed by" value={completion} options={COMPLETION}
-          onChange={(v) => write({ completion: v === "review" ? "" : v })}
-        />
+        <TextField fullWidth>
+          <Label>Completed by</Label>
+          <Select onSelectionChange={(k) => write({ completion: k === "review" ? "" : String(k) })} selectedKey={completion}>
+            <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+            <Select.Popover><ListBox>{COMPLETION.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+          </Select>
+        </TextField>
 
         {completion === "decision" && (
-          <p className="be-hint">
+          <p className="afq-mini-sub">
             Self Service students report the outcome in a dialog. Full Service students see no button:
             an administrator records the result on their profile instead.
           </p>
@@ -93,99 +98,94 @@ export function StepBehaviour({ step, onSaved }: { step: DbStep; onSaved?: (rule
 
       {/* The confirmation question, in the words the step should ask. */}
       {completion !== "review" && (
-        <div className="jm-block">
-          <div className="jm-req-title" style={{ marginBottom: 8 }}>Confirmation dialog</div>
-          <Input
-            label="Dialog title" value={confirm.title ?? ""} placeholder="VFS appointment"
-            onChange={(e) => writeConfirm({ title: e.target.value })}
-          />
-          <TextArea
-            rows={2} label="Question" value={confirm.question ?? ""}
-            placeholder="Have you completed your VFS interview successfully?"
-            onChange={(e) => writeConfirm({ question: e.target.value })}
-          />
-          <Input
-            label="Confirm button" value={confirm.confirmLabel ?? ""} placeholder="Yes, it is done"
-            onChange={(e) => writeConfirm({ confirmLabel: e.target.value })}
-          />
-          <p className="be-hint">Leave the question empty and the step completes without asking.</p>
+        <div className="afq-mini-card">
+          <div className="afq-mini-title">Confirmation dialog</div>
+          <TextField fullWidth onChange={(v) => writeConfirm({ title: v })} value={confirm.title ?? ""}>
+            <Label>Dialog title</Label>
+            <Input placeholder="VFS appointment" variant="secondary" />
+          </TextField>
+          <TextField fullWidth onChange={(v) => writeConfirm({ question: v })} value={confirm.question ?? ""}>
+            <Label>Question</Label>
+            <TextArea placeholder="Have you completed your VFS interview successfully?" rows={2} variant="secondary" />
+          </TextField>
+          <TextField fullWidth onChange={(v) => writeConfirm({ confirmLabel: v })} value={confirm.confirmLabel ?? ""}>
+            <Label>Confirm button</Label>
+            <Input placeholder="Yes, it is done" variant="secondary" />
+          </TextField>
+          <p className="afq-mini-sub">Leave the question empty and the step completes without asking.</p>
         </div>
       )}
 
       {/* "Add a checklist before allowing the student to mark the step as completed." */}
-      <div className="jm-block">
-        <div className="jm-req-title" style={{ marginBottom: 8 }}>Checklist before completing</div>
-        {gate.length === 0 && <p className="be-hint">No checklist. The student can confirm straight away.</p>}
+      <div className="afq-mini-card">
+        <div className="afq-mini-title">Checklist before completing</div>
+        {gate.length === 0 && <p className="afq-mini-sub">No checklist. The student can confirm straight away.</p>}
         {gate.map((item, i) => (
-          <div key={i} className="be-row">
-            <span className="be-marker">✓</span>
-            <Input
-              value={item} placeholder="Something the student must have" containerStyle={{ flex: 1 }}
-              onChange={(e) => writeGate(gate.map((v, n) => (n === i ? e.target.value : v)))}
-            />
-            <button
-              type="button" className="chat-act" title="Remove" style={{ color: "var(--red)" }}
-              onClick={() => writeGate(gate.filter((_, n) => n !== i))}
-            >
-              <Trash2 size={13} />
-            </button>
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span aria-hidden style={{ color: "#256B49" }}>✓</span>
+            <TextField fullWidth onChange={(v) => writeGate(gate.map((x, n) => (n === i ? v : x)))} value={item}>
+              <Input placeholder="Something the student must have" variant="secondary" />
+            </TextField>
+            <Tooltip>
+              <Tooltip.Trigger>
+                <Button aria-label="Remove" isIconOnly onPress={() => writeGate(gate.filter((_, n) => n !== i))} size="sm" variant="danger-soft">
+                  <Trash2 size={13} />
+                </Button>
+              </Tooltip.Trigger>
+              <Tooltip.Content>Remove</Tooltip.Content>
+            </Tooltip>
           </div>
         ))}
-        <JrButton icon={<Plus size={14} />} onClick={() => writeGate([...gate, ""])}>Add checklist item</JrButton>
+        <Button onPress={() => writeGate([...gate, ""])} size="sm" style={{ alignSelf: "flex-start" }} variant="tertiary"><Plus size={14} /> Add checklist item</Button>
       </div>
 
-      <div className="jm-block">
-        <div className="jm-req-title" style={{ marginBottom: 8 }}>Before the step opens</div>
-        <Checkbox
-          checked={Boolean(rules.requiresSteps)}
-          onChange={(v) => write({ requiresSteps: v })}
-          label="Lock until every earlier step in this stage is finished"
-        />
-        <p className="be-hint">
-          The student sees a checklist of what is still outstanding instead of an unexplained lock.
-        </p>
+      <div className="afq-mini-card">
+        <div className="afq-mini-title">Before the step opens</div>
+        <Checkbox isSelected={Boolean(rules.requiresSteps)} onChange={(v) => write({ requiresSteps: v })}>
+          <Checkbox.Content><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>Lock until every earlier step in this stage is finished</Checkbox.Content>
+        </Checkbox>
+        <p className="afq-mini-sub">The student sees a checklist of what is still outstanding instead of an unexplained lock.</p>
       </div>
 
-      <div className="jm-block">
-        <div className="jm-req-title" style={{ marginBottom: 8 }}>Ask for something first</div>
-        <Select
-          label="Collect before completing" value={String(rules.capture ?? "")} options={CAPTURE}
-          onChange={(v) => write({ capture: v })}
-        />
-        <p className="be-hint">
-          The appointment form saves the date and time, adds a Schedule event, and books the
-          7 day, 3 day, 24 hour and 2 hour reminders.
-        </p>
+      <div className="afq-mini-card">
+        <div className="afq-mini-title">Ask for something first</div>
+        <TextField fullWidth>
+          <Label>Collect before completing</Label>
+          <Select onSelectionChange={(k) => write({ capture: k === "none" ? "" : String(k) })} selectedKey={String(rules.capture || "none")}>
+            <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+            <Select.Popover><ListBox>{CAPTURE.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+          </Select>
+        </TextField>
+        <p className="afq-mini-sub">The appointment form saves the date and time, adds a Schedule event, and books the 7 day, 3 day, 24 hour and 2 hour reminders.</p>
       </div>
 
       {/* One-shot message when the stage opens. */}
-      <div className="jm-block">
-        <div className="jm-req-title" style={{ marginBottom: 8 }}>Announce when this stage unlocks</div>
-        <Input
-          label="Event name" value={announce.event ?? ""} placeholder="vfs_prepare"
-          onChange={(e) => write({ announce: e.target.value ? { ...announce, event: e.target.value } : "" })}
-        />
+      <div className="afq-mini-card">
+        <div className="afq-mini-title">Announce when this stage unlocks</div>
+        <TextField fullWidth onChange={(v) => write({ announce: v ? { ...announce, event: v } : "" })} value={announce.event ?? ""}>
+          <Label>Event name</Label>
+          <Input placeholder="vfs_prepare" variant="secondary" />
+        </TextField>
         {announce.event && (
           <>
-            <Input
-              label="Follow-up event (optional)" value={announce.followUpEvent ?? ""} placeholder="vfs_prepare_followup"
-              onChange={(e) => write({ announce: { ...announce, followUpEvent: e.target.value } })}
-            />
-            <Input
-              label="Follow-up after (hours)" type="number" inputMode="numeric"
-              value={String(announce.followUpHours ?? "")} placeholder="48"
-              onChange={(e) => write({ announce: { ...announce, followUpHours: Number(e.target.value) || 0 } })}
-            />
+            <TextField fullWidth onChange={(v) => write({ announce: { ...announce, followUpEvent: v } })} value={announce.followUpEvent ?? ""}>
+              <Label>Follow-up event (optional)</Label>
+              <Input placeholder="vfs_prepare_followup" variant="secondary" />
+            </TextField>
+            <TextField fullWidth onChange={(v) => write({ announce: { ...announce, followUpHours: Number(v) || 0 } })} value={String(announce.followUpHours ?? "")}>
+              <Label>Follow-up after (hours)</Label>
+              <Input inputMode="numeric" placeholder="48" type="number" variant="secondary" />
+            </TextField>
           </>
         )}
-        <p className="be-hint">
+        <p className="afq-mini-sub">
           The wording lives in the message templates, one row per channel, so the same event reaches the
           platform and WhatsApp without being written twice. Sent once per student.
         </p>
       </div>
 
-      <p className="jm-saved">{saved ? "Behaviour saved" : "Changes save as you edit"}</p>
-    </>
+      <p className="afq-mini-sub">{saved ? "Behaviour saved" : "Changes save as you edit"}</p>
+    </div>
   );
 }
 

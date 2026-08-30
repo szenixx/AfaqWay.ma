@@ -6,11 +6,13 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Info, LogOut } from "lucide-react";
 import { Button, ProgressBar } from "@heroui/react";
 import { LogoMark } from "@/components/ds/LogoMark";
+import { Portal } from "@/components/ds";
 import { Emoji } from "./Emoji";
 import type { EmojiName } from "@/lib/onboarding/emoji";
 import type { OnbLang } from "@/lib/onboarding/darija";
 import { supabase } from "@/lib/supabase/client";
 import { useLang, useT } from "@/lib/onboarding/lang";
+import { useIsPhone } from "@/lib/useIsPhone";
 
 /* The onboarding chrome.
 
@@ -50,10 +52,11 @@ export function BrandMark() {
    the UK nor Morocco is a destination with stripe data behind it. */
 const LANGUAGES: { code: OnbLang; label: string; short: string; flag: EmojiName }[] = [
   { code: "en", label: "English", short: "English", flag: "flag-gb" },
-  /* Two labels, because the two places have different jobs. The MENU names the
-     language in full, so someone opening it knows exactly what they are
-     picking. The BADGE is a 90px chip in a crowded corner and only has to say
-     which one is on, so it carries the short form. */
+  /* Two labels, because two places have two different jobs. The DESKTOP MENU
+     and the phone's full-screen picker both name the language in its own
+     script — someone choosing a language needs to recognise its name, not
+     read English. The BADGE is a 90px chip in a crowded corner and only has
+     to say which one is on, so it carries the short form too. */
   { code: "ar", label: "دارجة / العربية", short: "العربية", flag: "flag-ma" },
 ];
 
@@ -73,12 +76,9 @@ function useDismiss(open: boolean, close: () => void) {
 /** Rendered first, before the language switcher — the tester-only trigger uses this. */
 export function TopUtilities({ extra }: { extra?: ReactNode } = {}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const box = useDismiss(open, () => setOpen(false));
-  const { lang, setLang, t } = useLang();
-  const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
+  const { t } = useLang();
 
   async function logout() {
     setLeaving(true);
@@ -87,7 +87,7 @@ export function TopUtilities({ extra }: { extra?: ReactNode } = {}) {
   }
 
   return (
-    <div className="onb-topright" ref={box}>
+    <div className="onb-topright">
       {extra}
       {/* It sits one tap from every question, so it asks first. Nothing is lost
           either way, and the dialog is where that gets said. */}
@@ -110,33 +110,132 @@ export function TopUtilities({ extra }: { extra?: ReactNode } = {}) {
         </div>
       )}
 
-      <div className="onb-pop-anchor">
-        <button type="button" className="onb-pill" aria-haspopup="menu" aria-expanded={open}
-          aria-label={`${t("Language")}: ${current.short}`}
-          onClick={() => setOpen((v) => !v)}>
-          {/* The active language's own flag, not a generic globe: the flag is
-              the fastest read of which language is on, and it swaps the moment
-              the choice does. Only ever one language here — the other lives in
-              the menu, never beside it. */}
-          <Emoji name={current.flag} size={16} />
-          {current.short}
-        </button>
+      <LanguageSwitcher />
+    </div>
+  );
+}
+
+/* ── Language switcher ────────────────────────────────────────────────
+   Desktop keeps the small dropdown exactly as it always worked. A phone
+   gets a different STRUCTURE, not a smaller version of the same one: a
+   compact pill (with a one-time "checking" pulse the first time it mounts)
+   that opens a full-screen, heavily blurred picker instead of a corner
+   popover — a menu that small, that close to the edge of the screen, is
+   exactly the kind of target a thumb misses. */
+function LanguageSwitcher() {
+  const phone = useIsPhone();
+  const { lang, setLang, t } = useLang();
+  const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
+
+  /* Purely a moment of polish, not a real lookup — the language is already
+     known from the very first render, on both platforms. Seven seconds is
+     long enough to read as deliberate rather than a glitch, short enough
+     that nobody is left staring at a pulsing button wondering if something
+     broke. */
+  const [checking, setChecking] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setChecking(false), 7000);
+    return () => clearTimeout(id);
+  }, []);
+
+  const [open, setOpen] = useState(false);
+  /* useDismiss's ref is only ever attached to a DOM node in the DESKTOP
+     branch below (.onb-pop-anchor). On mobile that ref stays null forever,
+     which made its "was this click outside the box?" check — `!box.current
+     ?.contains(...)` — true for literally every click, including a tap ON
+     one of the two option buttons: the global mousedown listener closed the
+     sheet out from under the tap before its own onClick could land. Gating
+     the hook itself off on mobile (`open && !phone`) is what actually fixes
+     it — the full-screen overlay already closes itself on a backdrop tap,
+     it never needed this listener at all. */
+  const box = useDismiss(open && !phone, () => setOpen(false));
+  /* A pick lands, visibly, before the sheet vanishes. setLang fires the same
+     instant — the whole onboarding is already retranslating underneath by
+     the time this flash plays — but closing in the same tick as the tap
+     read as nothing happening at all. */
+  const [picked, setPicked] = useState<OnbLang | null>(null);
+  function choose(code: OnbLang) {
+    setPicked(code);
+    setLang(code);
+    setTimeout(() => { setOpen(false); setPicked(null); }, 220);
+  }
+
+  /* The trigger itself is now identical on both platforms: a beacon (see
+     .onb-pill-attn) sitting on top of the real, already-working button for
+     the first seven seconds, never a separate step in front of it — tapping
+     or clicking it early opens the same menu tapping the settled pill would.
+     Neutral and generic on purpose, on desktop too: it always reads
+     "Language" with a plain globe, never the current pick, so the button
+     itself is not something to read while looking for the switcher in the
+     first place. Only WHAT OPENS still differs — the full-screen sheet on a
+     phone, the small anchored menu ("like now") everywhere else. */
+  const trigger = (
+    <button
+      type="button" className={`onb-pill onb-pill-neutral${checking ? " onb-pill-attn" : ""}`}
+      aria-haspopup={phone ? "dialog" : "menu"} aria-expanded={open}
+      aria-label={`${t("Language")}: ${current.short}`}
+      onClick={() => { if (phone) setOpen(true); else setOpen((v) => !v); }}
+    >
+      <Emoji name="globe" size={16} />
+      {t("Language")}
+    </button>
+  );
+
+  // `phone &&` also covers a resize across the breakpoint mid-countdown —
+  // the desktop menu must never be gated behind a mobile-only animation.
+  if (phone) {
+    return (
+      <>
+        {trigger}
         {open && (
-          <div className="onb-pop" role="menu">
-            {LANGUAGES.map((l) => (
-              <button
-                key={l.code} type="button" role="menuitem" className="onb-pop-item"
-                aria-current={l.code === lang || undefined}
-                onClick={() => { setLang(l.code); setOpen(false); }}
-              >
-                <Emoji name={l.flag} size={18} />
-                {l.label}
-                {l.code === lang && <span className="onb-pop-tag">Current</span>}
-              </button>
-            ))}
-          </div>
+          <Portal>
+            {/* No X: tapping the blurred backdrop itself closes without
+                choosing, same as it would with one — the two option frames
+                stopPropagation so picking a language cannot also register as
+                a backdrop tap. */}
+            <div
+              className="onb-lang-overlay" role="dialog" aria-modal aria-label={t("Language")}
+              onClick={() => setOpen(false)}
+            >
+              <div className="onb-lang-opts" onClick={(e) => e.stopPropagation()}>
+                {LANGUAGES.map((l) => (
+                  <button
+                    key={l.code} type="button"
+                    className={`onb-lang-opt${picked === l.code ? " onb-lang-opt-picked" : ""}`}
+                    aria-current={l.code === lang || undefined}
+                    disabled={picked !== null}
+                    onClick={() => choose(l.code)}
+                  >
+                    <Emoji name={l.flag} size={22} />
+                    {l.short}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Portal>
         )}
-      </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="onb-pop-anchor" ref={box}>
+      {trigger}
+      {open && (
+        <div className="onb-pop" role="menu">
+          {LANGUAGES.map((l) => (
+            <button
+              key={l.code} type="button" role="menuitem" className="onb-pop-item"
+              aria-current={l.code === lang || undefined}
+              onClick={() => { setLang(l.code); setOpen(false); }}
+            >
+              <Emoji name={l.flag} size={18} />
+              {l.label}
+              {l.code === lang && <span className="onb-pop-tag">Current</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

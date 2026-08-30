@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { PAY_METHODS, planById, type PayMethod } from "@/lib/plans";
+import { orderedPayMethods, planById, type PayMethod } from "@/lib/plans";
 import { uploadUserFile, deleteUserFile } from "@/lib/storage/client";
 
 /* The payment path, once.
@@ -22,7 +22,7 @@ export type Pricing = {
 };
 
 export type Extra = { title: string; value: string; copyable: boolean };
-type MethodRow = { enabled: boolean; beneficiary?: string | null; rib?: string | null; note?: string | null; extra_details?: Extra[] };
+type MethodRow = { enabled: boolean; beneficiary?: string | null; rib?: string | null; note?: string | null; extra_details?: Extra[]; sort?: number };
 
 export function usePaymentFlow({ userId, pricing, setPricing, onApproved }: {
   userId: string;
@@ -39,15 +39,18 @@ export function usePaymentFlow({ userId, pricing, setPricing, onApproved }: {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("payment_methods").select("id, enabled, beneficiary, rib, note, extra_details");
+      const { data } = await supabase.from("payment_methods").select("id, enabled, beneficiary, rib, note, extra_details, sort");
       const map: Record<string, MethodRow> = {};
       (data ?? []).forEach((r) => { const x = r as MethodRow & { id: string }; map[x.id] = x; });
       setPm(map);
     })();
   }, []);
 
+  /* Same order Payment Methods admin shows and lets a superadmin change —
+     a student's checkout must never drift from what the admin arranged. */
+  const sortById = Object.fromEntries(Object.entries(pm).flatMap(([id, o]) => o.sort != null ? [[id, o.sort]] : []));
   // Static config (logo, colour, kind) merged with the super-admin's overrides.
-  const methods: (PayMethod & { extra: Extra[] })[] = PAY_METHODS.map((m) => {
+  const methods: (PayMethod & { extra: Extra[] })[] = orderedPayMethods(sortById).map((m) => {
     const o = pm[m.id];
     const extra: Extra[] = o && Array.isArray(o.extra_details) ? o.extra_details : [];
     if (!o) return { ...m, extra };

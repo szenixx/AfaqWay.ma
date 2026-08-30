@@ -55,6 +55,15 @@ export async function fileUrl(path: string, download?: string, ttl?: number): Pr
   }
 }
 
+/** Opens a stored file in a new browser tab — the platform's one "Preview"
+    action. No in-app viewer: every "Preview" button, on the admin side or
+    the student's own, calls this same function, so opening a file behaves
+    identically everywhere rather than each page rolling its own. */
+export async function openFilePreview(path: string): Promise<void> {
+  const url = await fileUrl(path);
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+}
+
 /** Delete a stored file by its "r2:<key>" path (or raw key). */
 export async function deleteUserFile(path: string): Promise<void> {
   const res = await fetch("/api/delete", {

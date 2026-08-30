@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Reorder } from "framer-motion";
 import { ArrowDown, ArrowUp, Bell, Copy, FileText, GripVertical, Paperclip, Plus, Trash2, Undo2 } from "lucide-react";
-import { Input, TextArea, Select, Toggle, Checkbox, Loader, AnimatedModal } from "@/components/ds";
+import { Button, Chip, Input, Label, ListBox, Select, Skeleton, Switch, Tabs, TextArea, TextField, Tooltip } from "@heroui/react";
 import { uploadUserFile } from "@/lib/storage/client";
 import {
   deleteBlock, deleteReminder, emptyRequirement, fetchBlocks, fetchReminders, reorder,
   saveBlock, saveReminder, saveStep, stepAllowsSkip, stepRequirements,
   type DbBlock, type DbReminder, type DbStep, type DocRequirement,
 } from "@/lib/journeyDb";
-import { JrButton } from "@/components/student/workspace/journey/parts";
+import { AdminDialog } from "@/components/admin/AdminDialog";
 import { BLOCK_KINDS, blockKindOf, starterData, type BlockKind } from "@/lib/journeyBlocks";
 import { BlockEditor, PlanPicker } from "./BlockEditors";
 import { StepBehaviour } from "./StepBehaviour";
@@ -20,17 +20,36 @@ import { StepBehaviour } from "./StepBehaviour";
    Everything a student reads inside a Journey step is built here: the Learn
    blocks, notes and alerts, links, downloadable attachments, and the reminders
    that surface in the Journey page, Schedule, Dashboard and notifications.
-   Blocks are reorderable and can be switched off individually. */
+   Blocks are reorderable and can be switched off individually.
+
+   The block list's drag-to-reorder is framer-motion's Reorder — a bespoke
+   interaction HeroUI has no equivalent for — kept exactly; only the chrome
+   around it (tabs, fields, row controls) is HeroUI. */
 
 const KIND_OPTIONS = BLOCK_KINDS.map((k) => ({ value: k.value, label: k.label }));
-
-
 const REMINDER_KINDS = ["upload", "meeting", "interview", "payment", "visa", "deadline", "custom"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
 const PRIORITIES = ["low", "normal", "high"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
 const REPEATS = ["none", "daily", "weekly", "monthly"].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
 
+/** A HeroUI Select from a plain value/label list, matching the one already
+ *  established in BlockEditors — the same shape, so a picker never looks
+ *  different depending on which tab it happens to sit in. */
+function PickSelect({ value, onChange, options, label }: {
+  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; label?: string;
+}) {
+  return (
+    <Select onSelectionChange={(k) => onChange(String(k))} selectedKey={value}>
+      {label ? <Label>{label}</Label> : <Label className="sr-only">Select</Label>}
+      <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+      <Select.Popover>
+        <ListBox>{options.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox>
+      </Select.Popover>
+    </Select>
+  );
+}
+
 export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => void }) {
-  const [tab, setTab] = useState<"content" | "documents" | "behaviour" | "reminders">("content");
+  const [tab, setTab] = useState("content");
   /* Document requirements live in journey_steps.rules, so an administrator can
      define what a step needs without any schema change. The Documents module
      reads exactly this list. */
@@ -180,202 +199,221 @@ export function StepEditor({ step, onClose }: { step: DbStep; onClose: () => voi
   const removeReminder = async (r: DbReminder) => { await deleteReminder(r.id); await load(); };
 
   return (
-    <AnimatedModal open onClose={onClose} className="jm-editor" ariaLabel={`Editing ${step.title}`}>
-      <header className="jr-modal-head">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="jr-modal-title">{step.title}</div>
-          <div className="jr-modal-sub">Step content · students see enabled blocks only</div>
-        </div>
-        <span className="chat-tabs">
-          <button type="button" className={`chat-tab${tab === "content" ? " active" : ""}`} onClick={() => setTab("content")}>Content</button>
-          <button type="button" className={`chat-tab${tab === "documents" ? " active" : ""}`} onClick={() => setTab("documents")}>Documents</button>
-          <button type="button" className={`chat-tab${tab === "behaviour" ? " active" : ""}`} onClick={() => setTab("behaviour")}>Behaviour</button>
-          <button type="button" className={`chat-tab${tab === "reminders" ? " active" : ""}`} onClick={() => setTab("reminders")}>Reminders</button>
-        </span>
-      </header>
+    <AdminDialog
+      description="Step content · students see enabled blocks only"
+      footer={(
+        <>
+          <span className="afq-mini-sub" style={{ marginRight: "auto" }}>
+            {saving ? "Saving…" : savedAt ? "All changes saved" : "Changes save automatically"}
+          </span>
+          <Button isDisabled={undo.length === 0} onPress={undoLast} size="sm" variant="secondary"><Undo2 size={14} /> Undo</Button>
+          <Button onPress={async () => { await flushSaves(); onClose(); }} size="sm" variant="primary">Done</Button>
+        </>
+      )}
+      icon={<FileText className="size-5" />}
+      onClose={onClose}
+      size="xl"
+      title={step.title}
+    >
+      <input onChange={onFile} ref={fileRef} style={{ display: "none" }} type="file" />
 
-      <div className="jr-modal-body">
-        <input ref={fileRef} type="file" style={{ display: "none" }} onChange={onFile} />
+      <Tabs className="afq-form" onSelectionChange={(k) => setTab(String(k))} selectedKey={tab} variant="secondary">
+        <Tabs.ListContainer>
+          <Tabs.List aria-label="Step editor sections">
+            <Tabs.Tab id="content">Content<Tabs.Indicator /></Tabs.Tab>
+            <Tabs.Tab id="documents">Documents<Tabs.Indicator /></Tabs.Tab>
+            <Tabs.Tab id="behaviour">Behaviour<Tabs.Indicator /></Tabs.Tab>
+            <Tabs.Tab id="reminders">Reminders<Tabs.Indicator /></Tabs.Tab>
+          </Tabs.List>
+        </Tabs.ListContainer>
 
-        {loading ? <Loader block /> : tab === "content" ? (
-          <>
-            {blocks.length === 0 && <p className="jr-sec-text">No content yet. Add the first block below.</p>}
+        <Tabs.Panel id="content">
+          {loading ? (
+            <Skeleton className="h-40 w-full rounded-2xl" />
+          ) : (
+            <>
+              {blocks.length === 0 && <p className="afq-mini-sub">No content yet. Add the first block below.</p>}
 
-            <Reorder.Group as="div" axis="y" values={blocks} onReorder={setBlocks} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {blocks.map((b) => {
-                const kind = blockKindOf(b.kind);
-                return (
-                  <Reorder.Item
-                    as="div" key={b.id} value={b}
-                    onDragEnd={() => { void persistBlockOrder(); }}
-                    className={`jm-block${b.enabled ? "" : " off"}`}
-                    transition={{ type: "spring", stiffness: 520, damping: 32 }}
-                    whileDrag={{ scale: 1.02, boxShadow: "0 20px 45px rgba(23,35,58,.18)" }}
-                    style={{ cursor: "grab" }}
-                  >
-                    <div className="jm-block-head">
-                      <span className="jm-grip" style={{ cursor: "grab" }}><GripVertical size={14} /></span>
-                      <Select
-                        value={kind} onChange={(v) => changeKind(b, v as BlockKind)} options={KIND_OPTIONS}
-                        ariaLabel="Block type" containerStyle={{ minWidth: 168 }}
-                      />
-                      <Select
-                        value={b.audience} onChange={(v) => patchBlock(b, { audience: v as DbBlock["audience"] })}
-                        options={[{ value: "student", label: "Student" }, { value: "advisor", label: "Advisor only" }]}
-                        ariaLabel="Audience" containerStyle={{ minWidth: 150 }}
-                      />
-                      <Toggle checked={b.enabled} onChange={(v) => patchBlock(b, { enabled: v })} ariaLabel="Enabled" />
-                      <button type="button" className="chat-act" title="Duplicate block" onClick={() => duplicateBlock(b)}><Copy size={14} /></button>
-                      <button type="button" className="chat-act" title="Delete block" onClick={() => removeBlock(b)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
-                    </div>
+              <Reorder.Group as="div" axis="y" onReorder={setBlocks} style={{ display: "flex", flexDirection: "column", gap: 12 }} values={blocks}>
+                {blocks.map((b) => {
+                  const kind = blockKindOf(b.kind);
+                  return (
+                    <Reorder.Item
+                      as="div" className="afq-mini-card" key={b.id}
+                      onDragEnd={() => { void persistBlockOrder(); }}
+                      style={{ cursor: "grab", opacity: b.enabled ? 1 : 0.55 }}
+                      transition={{ type: "spring", stiffness: 520, damping: 32 }}
+                      value={b}
+                      whileDrag={{ scale: 1.02, boxShadow: "0 20px 45px rgba(23,35,58,.18)" }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span aria-hidden style={{ cursor: "grab", color: "#B7C0D1" }}><GripVertical size={14} /></span>
+                        <PickSelect onChange={(v) => changeKind(b, v as BlockKind)} options={KIND_OPTIONS} value={kind} />
+                        <PickSelect
+                          onChange={(v) => patchBlock(b, { audience: v as DbBlock["audience"] })}
+                          options={[{ value: "student", label: "Student" }, { value: "advisor", label: "Advisor only" }]}
+                          value={b.audience}
+                        />
+                        <Switch aria-label="Enabled" isSelected={b.enabled} onChange={(v) => patchBlock(b, { enabled: v })}>
+                          <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
+                        </Switch>
+                        <span style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+                          <Tooltip><Tooltip.Trigger><Button aria-label="Duplicate block" isIconOnly onPress={() => duplicateBlock(b)} size="sm" variant="tertiary"><Copy size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Duplicate</Tooltip.Content></Tooltip>
+                          <Tooltip><Tooltip.Trigger><Button aria-label="Delete block" isIconOnly onPress={() => removeBlock(b)} size="sm" variant="danger-soft"><Trash2 size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Delete</Tooltip.Content></Tooltip>
+                        </span>
+                      </div>
 
-                    {/* Each kind edits exactly the shape the student renderer reads. */}
-                    <BlockEditor
-                      kind={kind} block={b} patch={(patch) => patchBlock(b, patch)}
-                      onPickFile={() => pickFile(b.id)} uploading={uploading === b.id}
-                    />
-                    {/* Which plan sees it — one control, every kind. Blocks the
-                        import tagged for a single plan were otherwise invisible
-                        as such, so an edit could silently reach half the students. */}
-                    <PlanPicker block={b} patch={(patch) => patchBlock(b, patch)} />
-                  </Reorder.Item>
-                );
-              })}
-            </Reorder.Group>
+                      {/* Each kind edits exactly the shape the student renderer reads. */}
+                      <BlockEditor block={b} kind={kind} onPickFile={() => pickFile(b.id)} patch={(patch) => patchBlock(b, patch)} uploading={uploading === b.id} />
+                      {/* Which plan sees it — one control, every kind. Blocks the
+                          import tagged for a single plan were otherwise invisible
+                          as such, so an edit could silently reach half the students. */}
+                      <PlanPicker block={b} patch={(patch) => patchBlock(b, patch)} />
+                    </Reorder.Item>
+                  );
+                })}
+              </Reorder.Group>
 
-            <div className="jm-addblock">
-              <span className="jm-addblock-label"><Plus size={14} />Add block</span>
-              <div className="jm-addblock-kinds">
-                {BLOCK_KINDS.map((k) => (
-                  <button key={k.value} type="button" className="chat-chip" onClick={() => addBlock(k.value)}>{k.label}</button>
-                ))}
-              </div>
-            </div>
-          </>
-        ) : tab === "documents" ? (
-          <>
-            <div className="jm-block">
-              <div className="jm-req-head" style={{ marginBottom: 0 }}>
-                <span className="jm-ico tone-blue"><FileText size={15} /></span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="jm-req-title">Step settings</div>
-                  <div className="jm-req-sub">These requirements appear in the Documents module, which stays the only place a student uploads.</div>
+              <div className="afq-mini-card" style={{ marginTop: 12 }}>
+                <span className="afq-mini-sub"><Plus size={14} /> Add block</span>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {BLOCK_KINDS.map((k) => (
+                    <Button key={k.value} onPress={() => addBlock(k.value)} size="sm" variant="tertiary">{k.label}</Button>
+                  ))}
                 </div>
-                <Checkbox
-                  checked={allowSkip} onChange={(v) => persistRules(reqs, v)}
-                  label="Allow students to skip this step"
-                />
               </div>
+            </>
+          )}
+        </Tabs.Panel>
+
+        <Tabs.Panel id="documents">
+          <div className="afq-mini-card">
+            <div className="afq-mini-head">
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <Chip color="accent" size="sm" variant="soft"><FileText size={13} /></Chip>
+                <div style={{ minWidth: 0 }}>
+                  <div className="afq-mini-title">Step settings</div>
+                  <div className="afq-mini-sub">These requirements appear in the Documents module, which stays the only place a student uploads.</div>
+                </div>
+              </div>
+              <Switch isSelected={allowSkip} onChange={(v) => persistRules(reqs, v)}>
+                <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control>Allow students to skip this step</Switch.Content>
+              </Switch>
             </div>
+          </div>
 
-            {reqs.length === 0 && <p className="jr-sec-text">No documents required on this step yet.</p>}
+          {reqs.length === 0 && <p className="afq-mini-sub">No documents required on this step yet.</p>}
 
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: reqs.length ? 8 : 0 }}>
             {reqs.map((r, i) => (
-              <div key={r.key} className="jm-block">
-                <div className="jm-block-head">
-                  <span className="jm-ico tone-blue"><FileText size={15} /></span>
-                  <Input
-                    placeholder="Document name" value={r.name}
-                    onChange={(e) => patchReq(i, { name: e.target.value })} containerStyle={{ flex: 1, minWidth: 160 }}
-                  />
-                  <Select
-                    value={r.required ? "required" : "optional"}
+              <div className="afq-mini-card" key={r.key}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Chip color="accent" size="sm" variant="soft"><FileText size={13} /></Chip>
+                  <TextField onChange={(v) => patchReq(i, { name: v })} style={{ flex: 1, minWidth: 160 }} value={r.name}>
+                    <Label className="sr-only">Document name</Label>
+                    <Input placeholder="Document name" variant="secondary" />
+                  </TextField>
+                  <PickSelect
                     onChange={(v) => patchReq(i, { required: v === "required" })}
                     options={[{ value: "required", label: "Required" }, { value: "optional", label: "Optional" }]}
-                    ariaLabel="Requirement" containerStyle={{ minWidth: 140 }}
+                    value={r.required ? "required" : "optional"}
                   />
-                  <button type="button" className="chat-act" title="Move up" onClick={() => moveReq(i, -1)} disabled={i === 0}><ArrowUp size={14} /></button>
-                  <button type="button" className="chat-act" title="Move down" onClick={() => moveReq(i, 1)} disabled={i === reqs.length - 1}><ArrowDown size={14} /></button>
-                  <button type="button" className="chat-act" title="Remove document" onClick={() => removeReq(i)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
+                  <Tooltip><Tooltip.Trigger><Button aria-label="Move up" isDisabled={i === 0} isIconOnly onPress={() => moveReq(i, -1)} size="sm" variant="tertiary"><ArrowUp size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Move up</Tooltip.Content></Tooltip>
+                  <Tooltip><Tooltip.Trigger><Button aria-label="Move down" isDisabled={i === reqs.length - 1} isIconOnly onPress={() => moveReq(i, 1)} size="sm" variant="tertiary"><ArrowDown size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Move down</Tooltip.Content></Tooltip>
+                  <Tooltip><Tooltip.Trigger><Button aria-label="Remove document" isIconOnly onPress={() => removeReq(i)} size="sm" variant="danger-soft"><Trash2 size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Remove</Tooltip.Content></Tooltip>
                 </div>
 
-                <Input
-                  placeholder="Short description, shown under the name" value={r.description}
-                  onChange={(e) => patchReq(i, { description: e.target.value })} containerStyle={{ marginBottom: 8 }}
-                />
-                <TextArea
-                  rows={2} placeholder="Upload instructions for the student" value={r.instructions}
-                  onChange={(e) => patchReq(i, { instructions: e.target.value })}
-                />
-                <TextArea
-                  rows={2} placeholder="Internal notes (administrators only)" value={r.notes}
-                  onChange={(e) => patchReq(i, { notes: e.target.value })}
-                />
+                <TextField fullWidth onChange={(v) => patchReq(i, { description: v })} value={r.description}>
+                  <Label className="sr-only">Description</Label>
+                  <Input placeholder="Short description, shown under the name" variant="secondary" />
+                </TextField>
+                <TextField fullWidth onChange={(v) => patchReq(i, { instructions: v })} value={r.instructions}>
+                  <Label className="sr-only">Instructions</Label>
+                  <TextArea placeholder="Upload instructions for the student" rows={2} variant="secondary" />
+                </TextField>
+                <TextField fullWidth onChange={(v) => patchReq(i, { notes: v })} value={r.notes}>
+                  <Label className="sr-only">Internal notes</Label>
+                  <TextArea placeholder="Internal notes (administrators only)" rows={2} variant="secondary" />
+                </TextField>
 
-                <div className="sch-row2" style={{ marginTop: 8 }}>
-                  <Input
-                    label="Accepted file types" placeholder="pdf,jpg,png" value={r.acceptedTypes}
-                    onChange={(e) => patchReq(i, { acceptedTypes: e.target.value })}
-                  />
-                  <Input
-                    label="Maximum size (MB)" type="number" inputMode="numeric" value={String(r.maxSizeMb)}
-                    onChange={(e) => patchReq(i, { maxSizeMb: Math.max(1, Number(e.target.value) || 1) })}
-                  />
+                <div className="afq-form-row">
+                  <TextField fullWidth onChange={(v) => patchReq(i, { acceptedTypes: v })} value={r.acceptedTypes}>
+                    <Label>Accepted file types</Label>
+                    <Input placeholder="pdf,jpg,png" variant="secondary" />
+                  </TextField>
+                  <TextField fullWidth onChange={(v) => patchReq(i, { maxSizeMb: Math.max(1, Number(v) || 1) })} value={String(r.maxSizeMb)}>
+                    <Label>Maximum size (MB)</Label>
+                    <Input inputMode="numeric" type="number" variant="secondary" />
+                  </TextField>
                 </div>
 
                 {/* Sample file, template or downloadable PDF for this requirement. */}
-                <div className="jm-attach" style={{ marginTop: 8 }}>
-                  <span className="jm-attach-name">
-                    <Paperclip size={14} />
-                    {r.templateName || "No sample or template attached"}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span className="afq-mini-sub" style={{ flex: 1 }}>
+                    <Paperclip size={14} /> {r.templateName || "No sample or template attached"}
                   </span>
-                  {r.templatePath && <JrButton onClick={() => patchReq(i, { templatePath: "", templateName: "" })}>Remove</JrButton>}
-                  <JrButton tone="outline" disabled={uploading === `req:${i}`} onClick={() => pickTemplate(i)}>
+                  {r.templatePath && <Button onPress={() => patchReq(i, { templatePath: "", templateName: "" })} size="sm" variant="tertiary">Remove</Button>}
+                  <Button isDisabled={uploading === `req:${i}`} onPress={() => pickTemplate(i)} size="sm" variant="secondary">
                     {uploading === `req:${i}` ? "Uploading…" : r.templatePath ? "Replace file" : "Attach template"}
-                  </JrButton>
+                  </Button>
                 </div>
               </div>
             ))}
+          </div>
 
-            <button type="button" className="jm-addstep" onClick={addReq}><Plus size={15} />Add required document</button>
-          </>
-        ) : tab === "behaviour" ? (
-          /* Everything the importer can write into a step's rules, an
-             administrator can read and change. Keyed on the step so switching
-             steps re-reads the rules rather than keeping the previous ones. */
+          <Button onPress={addReq} size="sm" style={{ marginTop: 10 }} variant="tertiary"><Plus size={14} /> Add required document</Button>
+        </Tabs.Panel>
+
+        <Tabs.Panel id="behaviour">
+          {/* Everything the importer can write into a step's rules, an
+              administrator can read and change. Keyed on the step so switching
+              steps re-reads the rules rather than keeping the previous ones. */}
           <StepBehaviour key={step.id} step={step} />
-        ) : (
-          <>
-            {reminders.length === 0 && <p className="jr-sec-text">No reminders on this step yet.</p>}
+        </Tabs.Panel>
+
+        <Tabs.Panel id="reminders">
+          {reminders.length === 0 && <p className="afq-mini-sub">No reminders on this step yet.</p>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {reminders.map((r) => (
-              <div key={r.id} className="jm-block">
-                <div className="jm-block-head">
-                  <span className="jm-ico tone-amber"><Bell size={15} /></span>
-                  <Select value={r.kind} onChange={(v) => patchReminder(r, { kind: v })} options={REMINDER_KINDS} ariaLabel="Reminder type" containerStyle={{ minWidth: 150 }} />
-                  <Toggle checked={r.enabled} onChange={(v) => patchReminder(r, { enabled: v })} ariaLabel="Enabled" />
-                  <button type="button" className="chat-act" title="Delete reminder" onClick={() => removeReminder(r)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
+              <div className="afq-mini-card" key={r.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <Chip color="warning" size="sm" variant="soft"><Bell size={13} /></Chip>
+                  <PickSelect onChange={(v) => patchReminder(r, { kind: v })} options={REMINDER_KINDS} value={r.kind} />
+                  <Switch aria-label="Enabled" isSelected={r.enabled} onChange={(v) => patchReminder(r, { enabled: v })}>
+                    <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
+                  </Switch>
+                  <Tooltip><Tooltip.Trigger><Button aria-label="Delete reminder" isIconOnly onPress={() => removeReminder(r)} size="sm" style={{ marginLeft: "auto" }} variant="danger-soft"><Trash2 size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Delete</Tooltip.Content></Tooltip>
                 </div>
-                <Input placeholder="Reminder title" value={r.title} onChange={(e) => patchReminder(r, { title: e.target.value })} containerStyle={{ marginBottom: 8 }} />
-                <TextArea rows={2} placeholder="Notification message" value={r.message ?? ""} onChange={(e) => patchReminder(r, { message: e.target.value })} />
-                <div className="sch-row2" style={{ marginTop: 8 }}>
-                  <Input type="datetime-local" label="Due" value={(r.due_at ?? "").slice(0, 16)} onChange={(e) => patchReminder(r, { due_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
-                  <Select label="Repeat" value={r.repeat_rule ?? "none"} onChange={(v) => patchReminder(r, { repeat_rule: v })} options={REPEATS} />
+                <TextField fullWidth onChange={(v) => patchReminder(r, { title: v })} value={r.title}>
+                  <Label className="sr-only">Reminder title</Label>
+                  <Input placeholder="Reminder title" variant="secondary" />
+                </TextField>
+                <TextField fullWidth onChange={(v) => patchReminder(r, { message: v })} value={r.message ?? ""}>
+                  <Label className="sr-only">Notification message</Label>
+                  <TextArea placeholder="Notification message" rows={2} variant="secondary" />
+                </TextField>
+                <div className="afq-form-row">
+                  <TextField fullWidth onChange={(v) => patchReminder(r, { due_at: v ? new Date(v).toISOString() : null })} value={(r.due_at ?? "").slice(0, 16)}>
+                    <Label>Due</Label>
+                    <Input type="datetime-local" variant="secondary" />
+                  </TextField>
+                  <PickSelect label="Repeat" onChange={(v) => patchReminder(r, { repeat_rule: v })} options={REPEATS} value={r.repeat_rule ?? "none"} />
                 </div>
-                <div className="sch-row2">
-                  <Select label="Priority" value={r.priority ?? "normal"} onChange={(v) => patchReminder(r, { priority: v })} options={PRIORITIES} />
-                  <Select
-                    label="Notify via" value={(r.channels ?? ["dashboard"])[0]}
-                    onChange={(v) => patchReminder(r, { channels: [v] })}
+                <div className="afq-form-row">
+                  <PickSelect label="Priority" onChange={(v) => patchReminder(r, { priority: v })} options={PRIORITIES} value={r.priority ?? "normal"} />
+                  <PickSelect
+                    label="Notify via" onChange={(v) => patchReminder(r, { channels: [v] })}
                     options={[{ value: "dashboard", label: "Dashboard" }, { value: "email", label: "Email" }, { value: "push", label: "Push" }]}
+                    value={(r.channels ?? ["dashboard"])[0]}
                   />
                 </div>
               </div>
             ))}
-            <button type="button" className="jm-addstep" onClick={addReminder}><Plus size={15} />Add reminder</button>
-          </>
-        )}
-      </div>
-
-      <footer className="jr-modal-foot">
-        <span className="jm-saved">
-          {saving ? "Saving…" : savedAt ? "All changes saved" : "Changes save automatically"}
-        </span>
-        <JrButton icon={<Undo2 size={14} />} disabled={undo.length === 0} onClick={undoLast}>
-          Undo
-        </JrButton>
-        <JrButton tone="primary" size="md" onClick={async () => { await flushSaves(); onClose(); }}>Done</JrButton>
-      </footer>
-    </AnimatedModal>
+          </div>
+          <Button onPress={addReminder} size="sm" style={{ marginTop: 10 }} variant="tertiary"><Plus size={14} /> Add reminder</Button>
+        </Tabs.Panel>
+      </Tabs>
+    </AdminDialog>
   );
 }
 

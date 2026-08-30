@@ -97,25 +97,30 @@ export function useAdvisorIdentity(userId: string | null | undefined): AdvisorId
        message would keep resetting "typing" true then piling up expiries
        that fire out of order. */
     let hideTimer: ReturnType<typeof setTimeout> | null = null;
-    const channel = supabase
-      .channel(`advisor-${userId.slice(0, 8)}`)
-      .on("broadcast", { event: "typing" }, (payload) => {
-        if (cancelled) return;
-        const from = (payload.payload as { role?: string } | null)?.role;
-        if (from !== "admin") return;
-        setTyping(true);
-        if (hideTimer) clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => { if (!cancelled) setTyping(false); }, 2600);
-      })
-      .on("postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
-        () => { void read(); });
-    channel.subscribe();
+    const onTyping = () => {
+      if (cancelled) return;
+      setTyping(true);
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => { if (!cancelled) setTyping(false); }, 2600);
+    };
+    const onMessage = () => { void read(); };
+
+    /* The channel itself is a shared singleton (see advisorChannel() below) —
+       this effect only registers and unregisters listeners on it. Tapping
+       between the Messages tab and anything else on a phone mounts and
+       unmounts this component quickly and repeatedly; recreating and
+       resubscribing a channel of the SAME name on every one of those cycles
+       is exactly the race presence.ts's own comment already documents:
+       supabase-js can hand back a channel that is still mid-teardown from the
+       previous mount, and subscribing to it again throws. */
+    const key = userId.slice(0, 8);
+    advisorChannel(userId);
+    addAdvisorListener(key, onTyping, onMessage);
 
     return () => {
       cancelled = true;
       if (hideTimer) clearTimeout(hideTimer);
-      void supabase.removeChannel(channel);
+      removeAdvisorListener(key, onTyping, onMessage);
     };
   }, [userId]);
 
@@ -127,43 +132,72 @@ export function useAdvisorIdentity(userId: string | null | undefined): AdvisorId
   }), [adminId, online, lastSeen, typing]);
 }
 
-/* Tells the student's chat that an administrator is composing a reply.
+/* One realtime channel per student conversation — shared by both the sender
+ * (broadcastAdvisorTyping, called from the admin console) and the listener
+ * side (useAdvisorIdentity, on the student's own screen), the same way
+ * presence.ts's single channel is shared by every reader of online status.
  *
- * Was creating a brand-new, never-subscribed channel on every keystroke
- * (AdminChat calls this from the composer's own onChange, with no
- * debounce) and sending on it unawaited. Broadcasting on a channel that
- * hasn't finished joining is unreliable, and every one of those sends was a
- * fire-and-forget promise with no .catch — on a student typing a real
- * sentence that's dozens of unhandled rejections a second on the very
- * socket connection the message list's own realtime subscription shares,
- * which is exactly the kind of thing that leaves that subscription in a
- * bad state until the page is reloaded.
+ * Two bugs lived here before this shape. First: broadcastAdvisorTyping was
+ * creating a brand-new, never-subscribed channel on every keystroke (AdminChat
+ * calls it from the composer's own onChange, with no debounce) and sending on
+ * it unawaited — broadcasting on a channel that hasn't finished joining is
+ * unreliable, and every one of those sends was a fire-and-forget promise with
+ * no .catch, dozens of unhandled rejections a second on the very socket
+ * connection the message list's own realtime subscription shares. Second:
+ * useAdvisorIdentity created and fully tore down ITS OWN channel of the exact
+ * same name on every mount/unmount — normal on a phone, where switching away
+ * from Messages and back is quick and frequent — and supabase-js can hand
+ * back a channel that is still mid-teardown from the previous mount, so
+ * subscribing to it again throws instead of quietly reconnecting.
  *
- * Fixed the same way presence.ts's shared channel is: one channel per
- * student, created and subscribed once, reused after that — and throttled,
- * since "the advisor is typing" doesn't need a message on every keystroke
- * to stay true for the 2.6s window the receiving end holds it for. */
-const typingChannels = new Map<string, RealtimeChannel>();
-const lastTypingSentAt = new Map<string, number>();
-const TYPING_THROTTLE_MS = 1500;
+ * Fixed the same way presence.ts is: one channel per student, created and
+ * subscribed exactly once and never removed; every mount of
+ * useAdvisorIdentity only adds and removes lightweight listener callbacks on
+ * it, which is safe to do as many times, and as quickly, as a phone allows. */
+const advisorChannels = new Map<string, RealtimeChannel>();
+const advisorTypingListeners = new Map<string, Set<() => void>>();
+const advisorMessageListeners = new Map<string, Set<() => void>>();
 
-function typingChannel(userId: string): RealtimeChannel {
+function advisorChannel(userId: string): RealtimeChannel {
   const key = userId.slice(0, 8);
-  let ch = typingChannels.get(key);
-  if (!ch) {
-    ch = supabase.channel(`advisor-${key}`);
-    ch.subscribe();
-    typingChannels.set(key, ch);
-  }
+  let ch = advisorChannels.get(key);
+  if (ch) return ch;
+  ch = supabase
+    .channel(`advisor-${key}`)
+    .on("broadcast", { event: "typing" }, (payload) => {
+      const from = (payload.payload as { role?: string } | null)?.role;
+      if (from !== "admin") return;
+      for (const cb of advisorTypingListeners.get(key) ?? []) cb();
+    })
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
+      () => { for (const cb of advisorMessageListeners.get(key) ?? []) cb(); });
+  ch.subscribe();
+  advisorChannels.set(key, ch);
   return ch;
 }
+
+function addAdvisorListener(key: string, onTyping: () => void, onMessage: () => void) {
+  if (!advisorTypingListeners.has(key)) advisorTypingListeners.set(key, new Set());
+  if (!advisorMessageListeners.has(key)) advisorMessageListeners.set(key, new Set());
+  advisorTypingListeners.get(key)!.add(onTyping);
+  advisorMessageListeners.get(key)!.add(onMessage);
+}
+
+function removeAdvisorListener(key: string, onTyping: () => void, onMessage: () => void) {
+  advisorTypingListeners.get(key)?.delete(onTyping);
+  advisorMessageListeners.get(key)?.delete(onMessage);
+}
+
+const lastTypingSentAt = new Map<string, number>();
+const TYPING_THROTTLE_MS = 1500;
 
 export function broadcastAdvisorTyping(userId: string) {
   const key = userId.slice(0, 8);
   const now = Date.now();
   if (now - (lastTypingSentAt.get(key) ?? 0) < TYPING_THROTTLE_MS) return;
   lastTypingSentAt.set(key, now);
-  typingChannel(userId)
+  advisorChannel(userId)
     .send({ type: "broadcast", event: "typing", payload: { role: "admin" } })
     .catch(() => { /* a missed typing ping is cosmetic; never let it surface as an error */ });
 }

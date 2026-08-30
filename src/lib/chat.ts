@@ -19,16 +19,33 @@ export type Reactions = Record<string, ("user" | "admin")[]>;
  *  Goes through `react_to_message` (SECURITY DEFINER), not a raw update: the
  *  RPC is what keeps the toggle atomic and every other column untouched. */
 export async function toggleReaction(messageId: string, emoji: string): Promise<Reactions | null> {
-  const { data, error } = await supabase.rpc("react_to_message", { p_message_id: messageId, p_emoji: emoji });
-  if (error || !data?.ok) return null;
-  return (data.reactions ?? {}) as Reactions;
+  try {
+    const { data, error } = await supabase.rpc("react_to_message", { p_message_id: messageId, p_emoji: emoji });
+    if (error || !data?.ok) return null;
+    return (data.reactions ?? {}) as Reactions;
+  } catch {
+    // Called fire-and-forget from a tap on an emoji; a network blip must
+    // never surface as an unhandled rejection on the chat's own socket.
+    return null;
+  }
 }
 
 /** Marks every message from the OTHER side of `userId`'s conversation as seen.
  *  Call this whenever the thread is the thing on screen — a student calls it
- *  with their own id, an admin calls it with the student's id. */
+ *  with their own id, an admin calls it with the student's id.
+ *
+ *  Every caller fires this without awaiting it (mount, or every incoming
+ *  message), so a transient network failure — common enough on mobile —
+ *  must not become an unhandled promise rejection. Marking "seen" a moment
+ *  late is cosmetic; an unhandled rejection on the same client the chat's
+ *  own realtime subscription runs on is the kind of thing that has already
+ *  destabilised that subscription once before (see advisor.ts). */
 export async function markMessagesSeen(userId: string): Promise<void> {
-  await supabase.rpc("mark_messages_seen", { p_user_id: userId });
+  try {
+    await supabase.rpc("mark_messages_seen", { p_user_id: userId });
+  } catch {
+    /* seen-state is a display hint, never worth surfacing as an error */
+  }
 }
 
 /** A short, fixed palette so the picker is a strip, not a full emoji keyboard —

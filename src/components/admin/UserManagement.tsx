@@ -1,34 +1,79 @@
 "use client";
 
+/* User Management.
+
+   Rebuilt on HeroUI v3, wearing the same `afq-hui` theme as the rest of the
+   admin workspace: Card, Table, Chip, Avatar, Select, Pagination and Modal do
+   the structure. Data and behaviour are unchanged — the same `profiles`
+   query, the same plan-change guard, the same ban confirm, the same Program
+   modal. The one detail view a row opens — UserDetails — is its own,
+   already-built module and is unchanged here; this file is the roster around
+   it. */
+
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Download, TriangleAlert, Eye, Pencil, MessageCircle, Mail, GraduationCap, Check, X, Users, UserCheck, UserX } from "lucide-react";
+import {
+  Avatar, Button, Card, Chip, Input, Label, ListBox, Modal, Pagination, SearchField, Select,
+  Skeleton, Table, Tabs, TextField, Tooltip,
+} from "@heroui/react";
+import {
+  Ban, Check, Download, Eye, GraduationCap, Mail, MessageCircle, Pencil, Users, UserCheck, UserX,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { UserDetails } from "./users/UserDetails";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { plansForCountry, PLAN_LABEL } from "@/config/pricing";
 import { planById } from "@/lib/plans";
 import { PROGRAMS } from "@/lib/programs/catalog";
-import { Input, Select, MetricCard, trendBadge, fieldIcon, UserAvatar, DataTable, Pill, Status, Portal, type Column } from "@/components/ds";
+import { pageNumbers } from "@/lib/pageNumbers";
 import { fetchStatExclusions, isStaffProfile } from "@/lib/admin";
+import { trendBadge } from "@/components/ds";
+import { ConfirmDialog, type ConfirmTone } from "./ConfirmDialog";
 
-type U = { id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null; plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null; destination_country: string | null };
+type U = {
+  id: string; user_number: number | null; full_name: string | null; email: string | null; city: string | null;
+  plan: string | null; banned: boolean; whatsapp_country_code: string | null; whatsapp_number: string | null;
+  destination_country: string | null;
+};
 type PRow = { id: string; banned: boolean; created_at: string | null; plan_status: string | null; plan_activated_at: string | null };
 type AdminProgram = { name: string; university: string; price: string; source: "catalog" | "custom" };
+type TrendBadge = { value: string; dir: "up" | "down" | "flat" } | undefined;
 
 /* Session-stable clock for the 30/60-day trend windows: the comparison must
    not shift between renders, and it keeps render pure. */
 const NOW = Date.now();
+const PER_PAGE = 10;
 
 const awu = (n: number | null) => "AWU-" + String(n ?? 0).padStart(3, "0");
-
-// Compact icon control button.
-const ctrl = { width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid var(--line)", background: "var(--card)", color: "var(--ink-soft)", cursor: "pointer", textDecoration: "none", flex: "none" } as const;
-const ctrlBlue = { ...ctrl, border: "1px solid var(--indigo-line)", background: "var(--indigo-tint)", color: "var(--indigo-text)" };
-const ctrlRed = { ...ctrl, border: "1px solid var(--red-line)", background: "var(--red-tint)", color: "var(--red)" };
-
 const planLabel = (p: string | null) => p === "full_service" ? "Full Service" : p === "self_service" ? "Self Service" : "—";
+const initials = (n: string | null) =>
+  (n ?? "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 
-export default function UserManagement({ initialPlan, initialCountry, title, onOpenChat }: { initialPlan?: "self_service" | "full_service"; initialCountry?: string; title?: string; onOpenChat?: (userId: string) => void } = {}) {
+function Kpi({ label, value, tone, icon, badge, control, loading }: {
+  label: string; value: number; tone: "blue" | "green" | "red"; icon: React.ReactNode;
+  badge?: TrendBadge; control?: React.ReactNode; loading: boolean;
+}) {
+  return (
+    <Card className={`um-kpi um-t-${tone}`} variant="default">
+      <div className="um-kpi-top">
+        <span className="um-kpi-label">{label}</span>
+        <span aria-hidden className="um-kpi-ico">{icon}</span>
+      </div>
+      <div className="um-kpi-bottom">
+        {loading ? <Skeleton className="h-7 w-14 rounded-md" /> : <span className="um-kpi-value">{value.toLocaleString("en-GB")}</span>}
+        {!loading && badge && (
+          <Chip color={badge.dir === "up" ? "success" : badge.dir === "down" ? "danger" : "default"} size="sm" variant="soft">
+            {badge.value}
+          </Chip>
+        )}
+      </div>
+      {control && <div className="um-kpi-year">{control}</div>}
+    </Card>
+  );
+}
+
+export default function UserManagement({ initialPlan, initialCountry, title, onOpenChat }: {
+  initialPlan?: "self_service" | "full_service"; initialCountry?: string; title?: string; onOpenChat?: (userId: string) => void;
+} = {}) {
   const planLock = initialPlan ?? null;
   const countryLock = initialCountry ?? null;
   const [rows, setRows] = useState<U[]>([]);
@@ -40,33 +85,33 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
   const [track, setTrack] = useState<U | null>(null);
   const [program, setProgram] = useState<U | null>(null);
   const [countryFilter, setCountryFilter] = useState<"all" | string>(initialCountry ?? "all");
-  /* The plan filter only appears once a country is chosen, and offers exactly
-     the plans that country sells. */
   const [planFilter, setPlanFilter] = useState<"all" | string>(initialPlan ?? "all");
   const [sortBy, setSortBy] = useState<"recent" | "name" | "plan" | "country">("recent");
-  const [confirm, setConfirm] = useState<{ title: string; body: string; tone: "orange" | "red"; onYes: () => void } | null>(null);
+  const [page, setPage] = useState(1);
+  const [confirm, setConfirm] = useState<{ title: string; body: string; tone: ConfirmTone; onYes: () => void } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     /* Staff, and an explicitly excluded tester account, are left out of both
-       the table and the statistics. An administrator signing in creates a
-       profile row exactly like a student's, and counting those made the team
-       part of the customer numbers. */
+       the table and the statistics. */
     const staff = await fetchStatExclusions();
-    const { data } = await supabase.from("profiles").select("id, user_number, full_name, email, city, plan, banned, whatsapp_country_code, whatsapp_number, destination_country").eq("plan_status", "active").order("plan_activated_at", { ascending: false });
+    const { data } = await supabase.from("profiles")
+      .select("id, user_number, full_name, email, city, plan, banned, whatsapp_country_code, whatsapp_number, destination_country")
+      .eq("plan_status", "active").order("plan_activated_at", { ascending: false });
     setRows(((data ?? []) as U[]).filter((u) => !isStaffProfile(staff, u.email)));
-    // Statistics cover every registered profile, not only the paid users listed
-    // in the table, so they are fetched alongside it.
     const { data: everyone } = await supabase.from("profiles").select("id, email, banned, created_at, plan_status, plan_activated_at");
     setAllProfiles(((everyone ?? []) as (PRow & { email: string | null })[]).filter((p) => !isStaffProfile(staff, p.email)) as PRow[]);
     setLoading(false);
   }, []);
+  // Fetching from Supabase is the "subscribe to an external system" case; the
+  // state set here is the query result, not derived render state.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
   const stats = useMemo(() => {
     const byCountry: Record<string, number> = {};
     rows.forEach((r) => { const c = r.destination_country || "—"; byCountry[c] = (byCountry[c] ?? 0) + 1; });
-    return { total: rows.length, countries: Object.keys(byCountry).filter((c) => c !== "—").length, banned: rows.filter((r) => r.banned).length, byCountry };
+    return { total: rows.length, banned: rows.filter((r) => r.banned).length, byCountry };
   }, [rows]);
 
   const cards = useMemo(() => {
@@ -91,8 +136,7 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
 
     return {
       total, banned, bannedShare, activeInYear,
-      growth: trendBadge(newThisMonth, newPrevMonth),
-      activeGrowth: trendBadge(activeInYear, activePrevYear),
+      growth: trendBadge(newThisMonth, newPrevMonth), activeGrowth: trendBadge(activeInYear, activePrevYear),
       years: years.length ? years : [{ value: year, label: year }],
     };
   }, [allProfiles, year]);
@@ -106,8 +150,6 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
       && (!q || (r.full_name ?? "").toLowerCase().includes(q) || (r.email ?? "").toLowerCase().includes(q)));
   }, [rows, query, countryFilter, planFilter, planLock]);
 
-  /* Plans are per country, so the second filter can only offer what that
-     destination actually sells. */
   const availablePlans = useMemo(() => plansForCountry(countryFilter === "all" ? null : countryFilter), [countryFilter]);
 
   const sorted = useMemo(() => {
@@ -115,76 +157,13 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
     if (sortBy === "name") copy.sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? ""));
     else if (sortBy === "plan") copy.sort((a, b) => (a.plan ?? "").localeCompare(b.plan ?? ""));
     else if (sortBy === "country") copy.sort((a, b) => (a.destination_country ?? "").localeCompare(b.destination_country ?? ""));
-    return copy;   // "recent" keeps the query order, newest activation first
+    return copy; // "recent" keeps the query order, newest activation first
   }, [list, sortBy]);
 
-  /* Column definitions for the shared table. Every cell renders exactly what
-     the hand-written table rendered; only the markup around them changed. */
-  const columns = useMemo<Column<U>[]>(() => [
-    {
-      key: "user", header: "User",
-      sortValue: (u) => (u.full_name ?? "").toLowerCase(),
-      cell: (u) => (
-        <span className="um-user">
-          <UserAvatar size={36} user={{ id: u.id, name: u.full_name }} />
-          <span className="um-user-text">
-            <b>{u.full_name || "Unnamed"}</b>
-            <em>
-              {awu(u.user_number)}
-              {u.banned && <Status state="error" label="Suspended" />}
-            </em>
-          </span>
-        </span>
-      ),
-    },
-    {
-      key: "contact", header: "Contact", secondary: true,
-      sortValue: (u) => (u.email ?? "").toLowerCase(),
-      cell: (u) => (
-        <span className="um-contact">
-          <span>{u.email || "—"}</span>
-          {u.whatsapp_number && <em>{`${u.whatsapp_country_code ?? ""}${u.whatsapp_number}`}</em>}
-        </span>
-      ),
-    },
-    {
-      key: "country", header: "Country", secondary: true,
-      sortValue: (u) => u.destination_country ?? "",
-      cell: (u) => u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—",
-    },
-    {
-      key: "plan", header: "Plan",
-      sortValue: (u) => u.plan ?? "",
-      cell: (u) => (
-        <Select
-          value={u.plan ?? ""} icon={fieldIcon("plan")} ariaLabel="Change plan"
-          options={[{ value: "self_service", label: "Self Service" }, { value: "full_service", label: "Full Service" }]}
-          onChange={(v) => setConfirm({ title: "Change this user's plan?", body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.", tone: "orange", onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); } })}
-          style={{ minWidth: 168 }}
-        />
-      ),
-    },
-    {
-      key: "city", header: "City", secondary: true,
-      sortValue: (u) => u.city ?? "",
-      cell: (u) => u.city || "—",
-    },
-    {
-      key: "controls", header: "Controls",
-      cell: (u) => (
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <button type="button" title="Track" onClick={() => setTrack(u)} style={ctrl}><Eye size={16} /></button>
-          <button type="button" title="Edit details" onClick={() => setEdit(u)} style={ctrlBlue}><Pencil size={16} /></button>
-          <button type="button" title="Change program / major" onClick={() => setProgram(u)} style={ctrlBlue}><GraduationCap size={16} /></button>
-          {onOpenChat && <button type="button" title="Chat" onClick={() => onOpenChat(u.id)} style={ctrlBlue}><MessageCircle size={16} /></button>}
-          <a title="Email" href={u.email ? `mailto:${u.email}` : undefined} style={ctrl}><Mail size={16} /></a>
-          <button type="button" title={u.banned ? "Unban" : "Ban"} onClick={() => setConfirm({ title: u.banned ? "Unban this user?" : "Ban this user?", body: u.banned ? "They will regain access to their workspace." : "They will lose access to their workspace until you unban them.", tone: "red", onYes: () => { void patch(u.id, { banned: !u.banned }); setConfirm(null); } })} style={ctrlRed}><Ban size={16} /></button>
-        </div>
-      ),
-    },
-  // `patch` is stable enough for this list: it only closes over `load`.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [onOpenChat]);
+  const pages = Math.max(1, Math.ceil(sorted.length / PER_PAGE));
+  const current = Math.min(page, pages);
+  const shown = sorted.slice((current - 1) * PER_PAGE, current * PER_PAGE);
+  const reset = (fn: () => void) => { fn(); setPage(1); };
 
   async function patch(id: string, p: Record<string, unknown>) { await supabase.from("profiles").update(p).eq("id", id); void load(); }
   async function saveEdit() {
@@ -192,6 +171,16 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
     await supabase.from("profiles").update({ full_name: edit.full_name, city: edit.city, whatsapp_number: edit.whatsapp_number }).eq("id", edit.id);
     setEdit(null); void load();
   }
+  const askPlanChange = (u: U, v: string) => setConfirm({
+    title: "Change this user's plan?", tone: "warning",
+    body: "Only change a plan if the user has actually paid for it. Changing a plan the user hasn't paid for is not allowed.",
+    onYes: () => { void patch(u.id, { plan: v }); setConfirm(null); },
+  });
+  const askBan = (u: U) => setConfirm({
+    title: u.banned ? "Unban this user?" : "Ban this user?", tone: "danger",
+    body: u.banned ? "They will regain access to their workspace." : "They will lose access to their workspace until you unban them.",
+    onYes: () => { void patch(u.id, { banned: !u.banned }); setConfirm(null); },
+  });
 
   function exportExcel() {
     const head = ["Name", "ID", "Email", "Plan", "Amount paid", "City", "Chosen country"];
@@ -210,138 +199,322 @@ export default function UserManagement({ initialPlan, initialCountry, title, onO
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-        <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{title ?? "Users management"}</h1>
+    <div className={`afq-hui um-root${planLock ? " is-locked" : ""}`}>
+      <header className="um-head">
+        <div>
+          <h1 className="um-head-title">{title ?? "User Management"}</h1>
+          <p className="um-head-sub">{sorted.length} of {rows.length} {rows.length === 1 ? "user" : "users"}</p>
+        </div>
         {!planLock && (
-          <button type="button" onClick={exportExcel} disabled={rows.length === 0} style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: rows.length ? "pointer" : "not-allowed", opacity: rows.length ? 1 : 0.5, font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>
-            <Download size={15} />
-            Export Excel
-          </button>
+          <Tooltip>
+            <Tooltip.Trigger>
+              <Button isDisabled={rows.length === 0} onPress={exportExcel} size="sm" variant="secondary">
+                <Download size={14} /> Export Excel
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>Download the paid-user roster as CSV</Tooltip.Content>
+          </Tooltip>
         )}
-      </div>
+      </header>
+
       {!planLock && (
-        <>
-          <div className="mc-grid">
-            <MetricCard
-              tone="blue" title="Total Users" subtitle="All registered users on the platform"
-              value={cards.total} icon={<Users size={24} strokeWidth={1.6} />} badge={cards.growth}
-              menu={[{ label: "Refresh statistics", onSelect: () => { void load(); } }]}
-            />
-            <MetricCard
-              tone="green" title="Active Users" subtitle="Users active during the selected year"
-              value={cards.activeInYear} icon={<UserCheck size={24} strokeWidth={1.6} />} badge={cards.activeGrowth}
-              control={<Select value={year} onChange={setYear} options={cards.years} ariaLabel="Year" />}
-              menu={[{ label: "Refresh statistics", onSelect: () => { void load(); } }]}
-            />
-            <MetricCard
-              tone="red" title="Banned Users" subtitle="Users permanently or temporarily banned"
-              value={cards.banned} icon={<UserX size={24} strokeWidth={1.6} />}
-              badge={cards.banned ? { value: `${cards.bannedShare}% of users`, dir: "down" } : undefined}
-              menu={[{ label: "Refresh statistics", onSelect: () => { void load(); } }]}
-            />
-          </div>
+        /* One wrapper, always: `.um-root` is a 3-row CSS grid (header / this
+           block / the table), and a bare Fragment here would hand the grid
+           two separate top-level children whenever the country pills also
+           render — the pills would land in the table's own `1fr` row and
+           stretch to fill it, which is exactly the oversized "Lithuania: 1"
+           card this replaces. Wrapping keeps the grid's child count fixed
+           at 3 no matter how many countries exist, from zero upward. */
+        <div className="um-top">
+          {loading ? (
+            <div className="um-skel-kpis">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton className="h-24 w-full rounded-2xl" key={i} />)}
+            </div>
+          ) : (
+            <div className="um-kpis">
+              <Kpi badge={cards.growth} icon={<Users size={15} />} label="Total Users" loading={loading} tone="blue" value={cards.total} />
+              <Kpi
+                badge={cards.activeGrowth} icon={<UserCheck size={15} />} label="Active Users" loading={loading} tone="green"
+                value={cards.activeInYear}
+                control={(
+                  <Select className="um-select" onSelectionChange={(k) => setYear(String(k))} selectedKey={year}>
+                    <Label className="sr-only">Year</Label>
+                    <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {cards.years.map((y) => <ListBox.Item id={y.value} key={y.value} textValue={y.label}>{y.label}<ListBox.ItemIndicator /></ListBox.Item>)}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+                )}
+              />
+              <Kpi
+                badge={cards.banned ? { value: `${cards.bannedShare}% of users`, dir: "down" } : undefined}
+                icon={<UserX size={15} />} label="Banned Users" loading={loading} tone="red" value={cards.banned}
+              />
+            </div>
+          )}
           {Object.keys(stats.byCountry).length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+            <div className="um-countries">
               {Object.entries(stats.byCountry).sort((a, b) => b[1] - a[1]).map(([c, n]) => (
-                <Pill key={c} tone="grey">{c === "—" ? "No country" : (countryByCode(c)?.name ?? c)}: {n}</Pill>
+                <Chip color="default" key={c} size="sm" variant="soft">{c === "—" ? "No country" : (countryByCode(c)?.name ?? c)}: {n}</Chip>
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 18 }}>
-        {!countryLock && (
-          <Select
-            value={countryFilter}
-            onChange={(v) => { setCountryFilter(v); setPlanFilter("all"); }}
-            icon={fieldIcon("country")} ariaLabel="Filter by country"
-            options={[{ value: "all", label: "All countries" }, ...COUNTRIES.filter((c) => c.available).map((c) => ({ value: c.code, label: c.name }))]}
-            style={{ maxWidth: 220 }} containerStyle={{ minWidth: 190 }}
-          />
-        )}
-        {/* Appears only when a country is selected, listing that country's plans. */}
-        {!planLock && countryFilter !== "all" && availablePlans.length > 0 && (
-          <Select
-            value={planFilter} onChange={setPlanFilter} icon={fieldIcon("plan")} ariaLabel="Filter by plan"
-            options={[{ value: "all", label: "All plans" }, ...availablePlans.map((p) => ({ value: p, label: PLAN_LABEL[p] }))]}
-            style={{ maxWidth: 200 }} containerStyle={{ minWidth: 180 }}
-          />
-        )}
-        <Select
-          value={sortBy} onChange={(v) => setSortBy(v as typeof sortBy)} ariaLabel="Sort users"
-          options={[
-            { value: "recent", label: "Most recent" }, { value: "name", label: "Name A–Z" },
-            { value: "plan", label: "Plan" }, { value: "country", label: "Country" },
-          ]}
-          style={{ maxWidth: 180 }} containerStyle={{ minWidth: 160 }}
-        />
-        <Input icon={fieldIcon("search")} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email" aria-label="Search users" containerStyle={{ flex: "1 1 220px", maxWidth: 340 }} />
-      </div>
 
-      {/* The shared table renders the rows; the filters, search and sort above
-          still own which rows and in what order. */}
-      <DataTable
-        rows={sorted}
-        rowKey={(u) => u.id}
-        loading={loading}
-        columns={columns}
-        empty="No paid users yet. They appear here once a payment is approved."
-        footer={
-          <>
-            <span className="ds-table-count">{sorted.length} of {rows.length} {rows.length === 1 ? "user" : "users"}</span>
-            {sorted.length !== rows.length && <Pill tone="indigo" size="sm">Filtered</Pill>}
-          </>
-        }
-      />
+      <Card className="um-card" variant="default">
+        <Card.Content className="um-card-body">
+          <div className="um-filters">
+            {!countryLock && (
+              <Select className="um-select" onSelectionChange={(k) => reset(() => { setCountryFilter(String(k)); setPlanFilter("all"); })} selectedKey={countryFilter}>
+                <Label className="sr-only">Country</Label>
+                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="all" textValue="All countries">All countries<ListBox.ItemIndicator /></ListBox.Item>
+                    {COUNTRIES.filter((c) => c.available).map((c) => (
+                      <ListBox.Item id={c.code} key={c.code} textValue={c.name}>{c.name}<ListBox.ItemIndicator /></ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            )}
+            {!planLock && countryFilter !== "all" && availablePlans.length > 0 && (
+              <Select className="um-select" onSelectionChange={(k) => reset(() => setPlanFilter(String(k)))} selectedKey={planFilter}>
+                <Label className="sr-only">Plan</Label>
+                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="all" textValue="All plans">All plans<ListBox.ItemIndicator /></ListBox.Item>
+                    {availablePlans.map((p) => (
+                      <ListBox.Item id={p} key={p} textValue={PLAN_LABEL[p]}>{PLAN_LABEL[p]}<ListBox.ItemIndicator /></ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            )}
+            <Select className="um-select" onSelectionChange={(k) => setSortBy(String(k) as typeof sortBy)} selectedKey={sortBy}>
+              <Label className="sr-only">Sort</Label>
+              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="recent" textValue="Most recent">Most recent<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="name" textValue="Name A–Z">Name A–Z<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="plan" textValue="Plan">Plan<ListBox.ItemIndicator /></ListBox.Item>
+                  <ListBox.Item id="country" textValue="Country">Country<ListBox.ItemIndicator /></ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+            <SearchField aria-label="Search by name or email" className="um-search" onChange={(v) => reset(() => setQuery(v))} value={query}>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Search by name or email" />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
+          </div>
+
+          {loading ? (
+            <div className="um-rows-skel">
+              {Array.from({ length: 7 }).map((_, i) => <Skeleton className="h-12 w-full rounded-lg" key={i} />)}
+            </div>
+          ) : (
+            <Table aria-label="Users" variant="secondary">
+              <Table.ScrollContainer className="um-table-wrap">
+                <Table.Content aria-label="Users" className="um-table">
+                  <Table.Header>
+                    <Table.Column isRowHeader>User</Table.Column>
+                    <Table.Column>Contact</Table.Column>
+                    <Table.Column>Country</Table.Column>
+                    <Table.Column>Plan</Table.Column>
+                    <Table.Column>City</Table.Column>
+                    <Table.Column>Controls</Table.Column>
+                  </Table.Header>
+                  <Table.Body renderEmptyState={() => (
+                    <div className="um-empty"><p>No paid users yet. They appear here once a payment is approved.</p></div>
+                  )}>
+                    {shown.map((u) => (
+                      <Table.Row className="um-trow" id={u.id} key={u.id}>
+                        <Table.Cell>
+                          <div className="um-person">
+                            <Avatar className="size-8">
+                              <Avatar.Fallback className="text-[11px]">{initials(u.full_name)}</Avatar.Fallback>
+                            </Avatar>
+                            <div className="um-person-id">
+                              <span className="um-person-name">
+                                {u.full_name || "Unnamed"}
+                                {u.banned && <Chip color="danger" size="sm" variant="soft">Suspended</Chip>}
+                              </span>
+                              <span className="um-person-num">{awu(u.user_number)}</span>
+                            </div>
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="um-contact">
+                            <span>{u.email || "—"}</span>
+                            {u.whatsapp_number && <em>{`${u.whatsapp_country_code ?? ""}${u.whatsapp_number}`}</em>}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>{u.destination_country ? (countryByCode(u.destination_country)?.name ?? u.destination_country) : "—"}</Table.Cell>
+                        <Table.Cell>
+                          <Select
+                            className="um-select" onSelectionChange={(k) => askPlanChange(u, String(k))}
+                            selectedKey={u.plan ?? undefined}
+                          >
+                            <Label className="sr-only">Plan</Label>
+                            <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                            <Select.Popover>
+                              <ListBox>
+                                <ListBox.Item id="self_service" textValue="Self Service">Self Service<ListBox.ItemIndicator /></ListBox.Item>
+                                <ListBox.Item id="full_service" textValue="Full Service">Full Service<ListBox.ItemIndicator /></ListBox.Item>
+                              </ListBox>
+                            </Select.Popover>
+                          </Select>
+                        </Table.Cell>
+                        <Table.Cell>{u.city || "—"}</Table.Cell>
+                        <Table.Cell>
+                          <div className="um-controls">
+                            <Tooltip>
+                              <Tooltip.Trigger>
+                                <Button aria-label="View details" isIconOnly onPress={() => setTrack(u)} size="sm" variant="tertiary"><Eye size={14} /></Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Content>View details</Tooltip.Content>
+                            </Tooltip>
+                            <Tooltip>
+                              <Tooltip.Trigger>
+                                <Button aria-label="Edit details" isIconOnly onPress={() => setEdit(u)} size="sm" variant="secondary"><Pencil size={14} /></Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Content>Edit details</Tooltip.Content>
+                            </Tooltip>
+                            <Tooltip>
+                              <Tooltip.Trigger>
+                                <Button aria-label="Change program" isIconOnly onPress={() => setProgram(u)} size="sm" variant="secondary"><GraduationCap size={14} /></Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Content>Change program / major</Tooltip.Content>
+                            </Tooltip>
+                            {onOpenChat && (
+                              <Tooltip>
+                                <Tooltip.Trigger>
+                                  <Button aria-label="Chat" isIconOnly onPress={() => onOpenChat(u.id)} size="sm" variant="secondary"><MessageCircle size={14} /></Button>
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>Chat</Tooltip.Content>
+                              </Tooltip>
+                            )}
+                            <Tooltip>
+                              <Tooltip.Trigger>
+                                <Button
+                                  aria-label="Email" isDisabled={!u.email} isIconOnly size="sm" variant="tertiary"
+                                  onPress={() => { if (u.email) window.location.href = `mailto:${u.email}`; }}
+                                >
+                                  <Mail size={14} />
+                                </Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Content>Email</Tooltip.Content>
+                            </Tooltip>
+                            <Tooltip>
+                              <Tooltip.Trigger>
+                                <Button aria-label={u.banned ? "Unban" : "Ban"} isIconOnly onPress={() => askBan(u)} size="sm" variant="danger-soft"><Ban size={14} /></Button>
+                              </Tooltip.Trigger>
+                              <Tooltip.Content>{u.banned ? "Unban" : "Ban"}</Tooltip.Content>
+                            </Tooltip>
+                          </div>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
+          )}
+        </Card.Content>
+
+        {!loading && pages > 1 && (
+          <Card.Footer className="um-tx-foot">
+            <Pagination size="sm">
+              <Pagination.Summary>
+                {(current - 1) * PER_PAGE + 1}–{Math.min(current * PER_PAGE, sorted.length)} of {sorted.length}
+              </Pagination.Summary>
+              <Pagination.Content>
+                <Pagination.Item>
+                  <Pagination.Previous isDisabled={current === 1} onPress={() => setPage(current - 1)}><Pagination.PreviousIcon /></Pagination.Previous>
+                </Pagination.Item>
+                {pageNumbers(current, pages).map((n, i) => n === "gap" ? (
+                  <Pagination.Item key={`gap-${i}`}><Pagination.Ellipsis /></Pagination.Item>
+                ) : (
+                  <Pagination.Item key={n}><Pagination.Link isActive={n === current} onPress={() => setPage(n)}>{n}</Pagination.Link></Pagination.Item>
+                ))}
+                <Pagination.Item>
+                  <Pagination.Next isDisabled={current === pages} onPress={() => setPage(current + 1)}><Pagination.NextIcon /></Pagination.Next>
+                </Pagination.Item>
+              </Pagination.Content>
+            </Pagination>
+          </Card.Footer>
+        )}
+      </Card>
 
       {edit && (
-        <Modal title="Edit user" onClose={() => setEdit(null)} onSave={saveEdit}>
-          <Input label="Full name" icon={fieldIcon("name")} value={edit.full_name ?? ""} onChange={(e) => setEdit({ ...edit, full_name: e.target.value })} />
-          <Input label="City" icon={fieldIcon("city")} value={edit.city ?? ""} onChange={(e) => setEdit({ ...edit, city: e.target.value })} />
-          <Input label="WhatsApp number" icon={fieldIcon("phone")} value={edit.whatsapp_number ?? ""} onChange={(e) => setEdit({ ...edit, whatsapp_number: e.target.value })} />
+        <Modal>
+          <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) setEdit(null); }}>
+            <Modal.Container>
+              <Modal.Dialog className="sm:max-w-[440px]">
+                <Modal.CloseTrigger />
+                <Modal.Header>
+                  <Modal.Icon className="um-modal-ico"><Pencil className="size-5" /></Modal.Icon>
+                  <Modal.Heading>Edit user</Modal.Heading>
+                </Modal.Header>
+                <Modal.Body>
+                  <div className="um-modal-form">
+                    <TextField fullWidth onChange={(v) => setEdit({ ...edit, full_name: v })} value={edit.full_name ?? ""}>
+                      <Label>Full name</Label>
+                      <Input variant="secondary" />
+                    </TextField>
+                    <TextField fullWidth onChange={(v) => setEdit({ ...edit, city: v })} value={edit.city ?? ""}>
+                      <Label>City</Label>
+                      <Input variant="secondary" />
+                    </TextField>
+                    <TextField fullWidth onChange={(v) => setEdit({ ...edit, whatsapp_number: v })} value={edit.whatsapp_number ?? ""}>
+                      <Label>WhatsApp number</Label>
+                      <Input variant="secondary" />
+                    </TextField>
+                  </div>
+                </Modal.Body>
+                <Modal.Footer className="um-modal-foot">
+                  <Button onPress={() => setEdit(null)} size="sm" variant="tertiary">Cancel</Button>
+                  <Button onPress={saveEdit} size="sm" variant="primary">Save</Button>
+                </Modal.Footer>
+              </Modal.Dialog>
+            </Modal.Container>
+          </Modal.Backdrop>
         </Modal>
       )}
-      {/* One shared User Details module, identical in every table. */}
+
       {track && (
         <UserDetails
+          onClose={() => setTrack(null)} onOpenChat={onOpenChat}
           user={{
             id: track.id, user_number: track.user_number, full_name: track.full_name, email: track.email,
             plan: track.plan, city: track.city, destination_country: track.destination_country,
             whatsapp_country_code: track.whatsapp_country_code, whatsapp_number: track.whatsapp_number,
             banned: track.banned,
           }}
-          onClose={() => setTrack(null)}
-          onOpenChat={onOpenChat}
         />
       )}
-      {program && <ProgramModal user={program} onClose={() => setProgram(null)} onSaved={() => { setProgram(null); }} />}
+      {program && <ProgramModal onClose={() => setProgram(null)} onSaved={() => setProgram(null)} user={program} />}
       {confirm && (
-        <Portal>
-        <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ width: "100%", maxWidth: 420, background: "var(--card)", border: `1px solid ${confirm.tone === "orange" ? "var(--amber-line)" : "var(--red-line)"}`, borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
-            <div style={{ background: confirm.tone === "orange" ? "var(--amber-tint)" : "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <TriangleAlert size={20} />
-              <span style={{ font: "700 15px/20px var(--font-sans)", color: confirm.tone === "orange" ? "var(--amber)" : "var(--red)" }}>{confirm.title}</span>
-            </div>
-            <div style={{ padding: 20 }}>
-              <p style={{ font: "400 13.5px/20px var(--font-sans)", color: "var(--ink)", margin: 0 }}>{confirm.body}</p>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-                <button type="button" onClick={() => setConfirm(null)} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
-                <button type="button" onClick={confirm.onYes} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "none", background: confirm.tone === "orange" ? "var(--amber)" : "var(--red)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Yes, continue</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        </Portal>
+        <ConfirmDialog
+          body={confirm.body} iconClassName={`um-modal-ico um-modal-ico--${confirm.tone}`}
+          onClose={() => setConfirm(null)} onYes={confirm.onYes} title={confirm.title} tone={confirm.tone}
+        />
       )}
     </div>
   );
 }
 
 /* Program change: browse the real programs dataset (like onboarding) OR add a
-   custom program name + price. Saved onto the user's profile so it shows in their
-   Settings/Profile. Sent as a change requested by the user's field request. */
+   custom program name + price. Saved onto the user's profile so it shows in
+   their Settings/Profile. */
 function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_name: string | null }; onClose: () => void; onSaved: () => void }) {
   const [tab, setTab] = useState<"browse" | "custom">("browse");
   const [q, setQ] = useState("");
@@ -378,75 +551,73 @@ function ProgramModal({ user, onClose, onSaved }: { user: { id: string; full_nam
   }
 
   return (
-    <Portal>
-    <div style={{ position: "fixed", inset: 0, zIndex: 65, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 560, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 22, display: "flex", flexDirection: "column", maxHeight: "88vh" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            <h2 style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Change program</h2>
-            <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)" }}>{user.full_name || "User"} · pick from the data or add a custom one</div>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" style={{ ...ctrl, cursor: "pointer" }}><X size={16} /></button>
-        </div>
+    <Modal>
+      <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onClose(); }}>
+        <Modal.Container>
+          <Modal.Dialog className="sm:max-w-[560px]">
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Icon className="um-modal-ico"><GraduationCap className="size-5" /></Modal.Icon>
+              <Modal.Heading>Change program</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <p className="um-head-sub" style={{ margin: "-4px 0 10px" }}>{user.full_name || "User"} · pick from the data or add a custom one</p>
 
-        <div style={{ display: "flex", gap: 6, background: "var(--subtle)", borderRadius: 12, padding: 4, margin: "14px 0" }}>
-          {(["browse", "custom"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => setTab(t)} style={{ flex: 1, height: 34, borderRadius: 9, border: "none", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)", background: tab === t ? "var(--card)" : "transparent", color: tab === t ? "var(--indigo-600)" : "var(--ink-soft)", boxShadow: tab === t ? "var(--shadow-card)" : "none" }}>{t === "browse" ? "Browse programs" : "Add custom"}</button>
-          ))}
-        </div>
-
-        {tab === "browse" ? (
-          <>
-            <div style={{ marginBottom: 10 }}>
-              <Input icon={fieldIcon("search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search program, university or field" aria-label="Search programs" />
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", border: "1px solid var(--line-soft)", borderRadius: 12, minHeight: 180 }}>
-              {results.map((p) => (
-                <button key={p.id} type="button" onClick={() => setPicked(p.id)} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "10px 12px", border: "none", borderBottom: "1px solid var(--line-soft)", background: picked === p.id ? "var(--indigo-tint)" : "transparent", cursor: "pointer" }}>
-                  <span style={{ width: 26, height: 26, borderRadius: 8, flex: "none", background: "var(--indigo-tint)", color: "var(--indigo-600)", display: "flex", alignItems: "center", justifyContent: "center" }}><GraduationCap size={15} /></span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", font: "600 13px/17px var(--font-sans)", color: "var(--ink)" }}>{p.name}</span>
-                    <span style={{ display: "block", font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.university} · {p.degree} · {p.tuition_eur ? `${p.tuition_eur} €/yr` : "—"}</span>
-                  </span>
-                  {picked === p.id && <Check size={16} color="var(--indigo-600)" />}
-                </button>
-              ))}
-              {results.length === 0 && <div style={{ padding: 16, font: "400 13px var(--font-sans)", color: "var(--ink-faint)", textAlign: "center" }}>No matching programs.</div>}
-            </div>
-          </>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Input label="Program name" icon={fieldIcon("program")} value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="e.g. MSc Data Science" />
-            <Input label="University (optional)" icon={fieldIcon("university")} value={customUni} onChange={(e) => setCustomUni(e.target.value)} placeholder="e.g. Vilnius University" />
-            <Input label="Tuition price" icon={fieldIcon("payment")} value={customPrice} onChange={(e) => setCustomPrice(e.target.value)} placeholder="e.g. 4000 €/yr" />
-          </div>
-        )}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 16 }}>
-          {saved && <span style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "600 12.5px/1 var(--font-sans)", color: "var(--green)" }}><Check size={15} />Saved to the user</span>}
-          <button type="button" onClick={onClose} style={{ height: 42, padding: "0 18px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "var(--ink)" }}>Cancel</button>
-          <button type="button" onClick={save} disabled={!canSave || saving} style={{ height: 42, padding: "0 18px", borderRadius: 14, border: "none", background: "var(--indigo-600)", cursor: canSave && !saving ? "pointer" : "not-allowed", opacity: canSave && !saving ? 1 : 0.5, font: "600 14px/1 var(--font-sans)", color: "#fff" }}>{saving ? "Saving…" : "Save program"}</button>
-        </div>
-      </div>
-    </div>
-    </Portal>
-  );
-}
-
-
-function Modal({ title, children, onClose, onSave }: { title: string; children: React.ReactNode; onClose: () => void; onSave?: () => void }) {
-  return (
-    <Portal>
-    <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", padding: 24 }}>
-        <h2 style={{ font: "700 18px/24px var(--font-sans)", color: "var(--ink)", margin: "0 0 16px" }}>{title}</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <button type="button" onClick={onClose} style={{ height: 42, padding: "0 18px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "var(--ink)" }}>{onSave ? "Cancel" : "Close"}</button>
-          {onSave && <button type="button" onClick={onSave} style={{ height: 42, padding: "0 18px", borderRadius: 14, border: "none", background: "var(--indigo-600)", cursor: "pointer", font: "600 14px/1 var(--font-sans)", color: "#fff" }}>Save</button>}
-        </div>
-      </div>
-    </div>
-    </Portal>
+              <Tabs className="um-program-tabs" onSelectionChange={(k) => setTab(String(k) as "browse" | "custom")} selectedKey={tab}>
+                <Tabs.ListContainer>
+                  <Tabs.List aria-label="Program source">
+                    <Tabs.Tab id="browse">Browse programs<Tabs.Indicator /></Tabs.Tab>
+                    <Tabs.Tab id="custom">Add custom<Tabs.Indicator /></Tabs.Tab>
+                  </Tabs.List>
+                </Tabs.ListContainer>
+                <Tabs.Panel id="browse" style={{ paddingTop: 12 }}>
+                  <TextField fullWidth onChange={setQ} value={q}>
+                    <Label className="sr-only">Search programs</Label>
+                    <Input placeholder="Search program, university or field" variant="secondary" />
+                  </TextField>
+                  <div className="um-program-list" style={{ marginTop: 10 }}>
+                    {results.map((p) => (
+                      <button
+                        className={`um-program-row${picked === p.id ? " is-picked" : ""}`} key={p.id}
+                        onClick={() => setPicked(p.id)} type="button"
+                      >
+                        <span className="um-program-ico"><GraduationCap size={15} /></span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span className="um-program-name">{p.name}</span>
+                          <span className="um-program-meta">{p.university} · {p.degree} · {p.tuition_eur ? `${p.tuition_eur} €/yr` : "—"}</span>
+                        </span>
+                        {picked === p.id && <Check color="#2E3BC7" size={16} />}
+                      </button>
+                    ))}
+                    {results.length === 0 && <div className="um-program-empty">No matching programs.</div>}
+                  </div>
+                </Tabs.Panel>
+                <Tabs.Panel id="custom" style={{ paddingTop: 12 }}>
+                  <div className="um-modal-form">
+                    <TextField fullWidth onChange={setCustomName} value={customName}>
+                      <Label>Program name</Label>
+                      <Input placeholder="e.g. MSc Data Science" variant="secondary" />
+                    </TextField>
+                    <TextField fullWidth onChange={setCustomUni} value={customUni}>
+                      <Label>University (optional)</Label>
+                      <Input placeholder="e.g. Vilnius University" variant="secondary" />
+                    </TextField>
+                    <TextField fullWidth onChange={setCustomPrice} value={customPrice}>
+                      <Label>Tuition price</Label>
+                      <Input placeholder="e.g. 4000 €/yr" variant="secondary" />
+                    </TextField>
+                  </div>
+                </Tabs.Panel>
+              </Tabs>
+            </Modal.Body>
+            <Modal.Footer className="um-modal-foot">
+              {saved && <span className="um-saved"><Check size={15} />Saved to the user</span>}
+              <Button onPress={onClose} size="sm" variant="tertiary">Cancel</Button>
+              <Button isDisabled={!canSave || saving} onPress={save} size="sm" variant="primary">{saving ? "Saving…" : "Save program"}</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 }

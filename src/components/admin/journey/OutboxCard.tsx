@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Bell, Check, MessageCircle, Send, Clock3, TriangleAlert, Mail } from "lucide-react";
-import { Loader, Status } from "@/components/ds";
-import { JrButton } from "@/components/student/workspace/journey/parts";
+import { Button, Chip, Skeleton, Tooltip } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
 import { whatsappLink, whatsappNumber, markWhatsAppSent, type WhatsAppRow } from "@/lib/whatsapp";
 
@@ -27,13 +26,13 @@ const CHANNEL_ICON: Record<string, typeof Bell> = {
   platform: Bell, chat: MessageCircle, whatsapp: Send, email: Mail,
 };
 
-/** How each queue state reads, in the shared status vocabulary. */
-const STATE: Record<string, { label: string; state: "completed" | "waiting" | "pending" | "rejected" | "cancelled" }> = {
-  sent: { label: "Sent", state: "completed" },
-  ready: { label: "Waiting to send", state: "waiting" },
-  pending: { label: "Scheduled", state: "pending" },
-  failed: { label: "Failed", state: "rejected" },
-  cancelled: { label: "Withdrawn", state: "cancelled" },
+/** How each queue state reads, in HeroUI's Chip colour vocabulary. */
+const STATE: Record<string, { label: string; color: "success" | "warning" | "default" | "danger" }> = {
+  sent: { label: "Sent", color: "success" },
+  ready: { label: "Waiting to send", color: "warning" },
+  pending: { label: "Scheduled", color: "default" },
+  failed: { label: "Failed", color: "danger" },
+  cancelled: { label: "Withdrawn", color: "default" },
 };
 
 const when = (iso: string | null) =>
@@ -68,52 +67,55 @@ export function OutboxCard({ userId, phone }: { userId: string; phone: string })
     setBusy(null);
   };
 
-  if (loading) return <Loader block />;
+  if (loading) return <Skeleton className="h-24 w-full rounded-2xl" />;
 
   const waiting = rows.filter((r) => r.state === "ready").length;
 
   return (
-    <div className="jm-block">
-      <div className="jm-req-head" style={{ marginBottom: 10 }}>
-        <span className="jm-ico tone-amber"><Send size={15} /></span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="jm-req-title">Automated messages</div>
-          <div className="jm-req-sub">
-            {rows.length === 0
-              ? "Nothing has been queued for this student yet."
-              : waiting > 0
-                ? `${waiting} waiting for a channel that is not connected yet. Send those by hand below.`
-                : "Everything queued has been delivered or scheduled."}
+    <div className="afq-mini-card">
+      <div className="afq-mini-head">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <Chip color="warning" size="sm" variant="soft"><Send size={13} /></Chip>
+          <div style={{ minWidth: 0 }}>
+            <div className="afq-mini-title">Automated messages</div>
+            <div className="afq-mini-sub">
+              {rows.length === 0
+                ? "Nothing has been queued for this student yet."
+                : waiting > 0
+                  ? `${waiting} waiting for a channel that is not connected yet.`
+                  : "Everything queued has been delivered or scheduled."}
+            </div>
           </div>
         </div>
       </div>
 
       {rows.length > 0 && (
-        <ul className="jm-outbox">
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
           {rows.map((row) => {
             const Icon = CHANNEL_ICON[row.channel] ?? Bell;
-            const meta = STATE[row.state] ?? { label: row.state, state: "pending" as const };
+            const meta = STATE[row.state] ?? { label: row.state, color: "default" as const };
             const sendable = row.channel === "whatsapp" && (row.state === "ready" || row.state === "failed");
             return (
-              <li key={row.id} className="jm-outbox-row">
-                <span className="jm-outbox-ico"><Icon size={14} /></span>
-                <span className="jm-outbox-main">
-                  <span className="jm-outbox-title">{row.title || row.event}</span>
-                  <span className="jm-outbox-body">{row.body.split("\n").filter(Boolean)[0]}</span>
-                  <span className="jm-outbox-meta">
+              <li className="afq-queue-row" key={row.id} style={{ cursor: "default" }}>
+                <span aria-hidden style={{ flex: "none", color: "#8695AB" }}><Icon size={14} /></span>
+                <span className="afq-queue-id">
+                  <span className="afq-queue-name">{row.title || row.event}</span>
+                  <span className="afq-queue-meta">{row.body.split("\n").filter(Boolean)[0]}</span>
+                  <span className="afq-mini-sub">
                     {row.channel} · {row.state === "sent" ? `sent ${when(row.sent_at)}` : `due ${when(row.due_at)}`}
                     {row.error && ` · ${row.error}`}
                   </span>
                 </span>
-                <Status state={meta.state} label={meta.label} size="xs" />
+                <Chip color={meta.color} size="sm" variant="soft">{meta.label}</Chip>
                 {sendable && (
-                  <JrButton
-                    tone="outline" icon={<Check size={13} />} disabled={busy === row.id || !phone}
-                    title={phone ? undefined : "This student has no WhatsApp number on file."}
-                    onClick={() => sendByHand(row)}
-                  >
-                    {busy === row.id ? "Opening…" : "Send now"}
-                  </JrButton>
+                  <Tooltip isDisabled={!!phone}>
+                    <Tooltip.Trigger>
+                      <Button isDisabled={busy === row.id || !phone} onPress={() => sendByHand(row)} size="sm" variant="secondary">
+                        <Check size={13} /> {busy === row.id ? "Opening…" : "Send now"}
+                      </Button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>This student has no WhatsApp number on file.</Tooltip.Content>
+                  </Tooltip>
                 )}
               </li>
             );
@@ -122,14 +124,10 @@ export function OutboxCard({ userId, phone }: { userId: string; phone: string })
       )}
 
       {waiting > 0 && !phone && (
-        <p className="be-hint">
-          <TriangleAlert size={13} /> No WhatsApp number on this profile, so the waiting messages cannot be sent by hand.
-        </p>
+        <p className="afq-dialog-desc"><TriangleAlert size={13} /> No WhatsApp number on this profile, so the waiting messages cannot be sent by hand.</p>
       )}
       {rows.some((r) => r.state === "pending") && (
-        <p className="be-hint">
-          <Clock3 size={13} /> Scheduled messages are delivered by the database sweep, every five minutes.
-        </p>
+        <p className="afq-dialog-desc"><Clock3 size={13} /> Scheduled messages are delivered by the database sweep, every five minutes.</p>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { t as translate, type OnbLang } from "./darija";
 
 /* Which language the onboarding is being read in.
@@ -21,16 +21,30 @@ type Ctx = { lang: OnbLang; setLang: (l: OnbLang) => void; t: (s: string | undef
 const LangCtx = createContext<Ctx>({ lang: "en", setLang: () => {}, t: (s) => s ?? "" });
 
 export function LangProvider({ children }: { children: React.ReactNode }) {
-  /* Read once, lazily, rather than in an effect: an effect would render the
-     English pass first and visibly re-flow the whole card to Darija. */
-  const [lang, setLangState] = useState<OnbLang>(() => {
-    if (typeof window === "undefined") return "en";
+  /* Always starts "en", on the server AND on the very first client render —
+     the two must render byte-identical text or React calls it a hydration
+     failure and throws the whole tree away to regenerate it, which is far
+     worse than the language being briefly wrong for one frame. Reading
+     localStorage synchronously in a lazy initializer was the previous
+     shape: it let the CLIENT'S first render start as "ar" while the SERVER
+     (which cannot see localStorage at all) had already rendered "en", and
+     that mismatch was reproducing on every reload for a student who had
+     picked Darija — sometimes leaving the page stuck showing the server's
+     English pass rather than recovering to the saved choice. The saved
+     language is adopted a moment later, in an effect, once hydration has
+     already settled on a state both sides agree about. */
+  const [lang, setLangState] = useState<OnbLang>("en");
+
+  // Reading localStorage is the "subscribe to an external system" case; the
+  // state set here is adopting that system's value, not derived render state.
+  useEffect(() => {
     try {
-      return window.localStorage.getItem(KEY) === "ar" ? "ar" : "en";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (window.localStorage.getItem(KEY) === "ar") setLangState("ar");
     } catch {
-      return "en"; // private mode, or storage blocked. English is the safe default.
+      /* private mode, or storage blocked — English is already showing */
     }
-  });
+  }, []);
 
   const setLang = useCallback((l: OnbLang) => {
     setLangState(l);

@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarDays, CircleCheck, Clock3, Download, ExternalLink, Eye, FileText, GraduationCap,
-  History, Mail, MapPin, Phone, Route, TriangleAlert, X,
+  History, Mail, MapPin, Phone, Route, TriangleAlert,
 } from "lucide-react";
-import { DialogFoot, DialogHead } from "@/components/ds";
-import { AnimatedModal, Input, Loader, Select, UserAvatar, ImageZoom, Status } from "@/components/ds";
-import { fileUrl } from "@/lib/storage/client";
+import { UserAvatar } from "@/components/ds";
+import { Button, Chip, Input, Label, ListBox, Modal, SearchField, Select, Skeleton, TextField } from "@heroui/react";
+import { AdminDialog } from "@/components/admin/AdminDialog";
+import { fileUrl, openFilePreview } from "@/lib/storage/client";
 import { useIsOnline } from "@/lib/presence";
-import { assembleRoadmap, roadmapProgress, type JourneyStage, DOC_STATUS, STATE_BADGE, STATE_STATUS } from "@/lib/journey";
+import { assembleRoadmap, roadmapProgress, type JourneyStage, DOC_STATUS, STATE_BADGE } from "@/lib/journey";
+import type { PillTone } from "@/components/ds/Pill";
 import { TrpStatusCard } from "@/components/admin/journey/TrpStatusCard";
 import { OutboxCard, outboxPhone } from "@/components/admin/journey/OutboxCard";
 import {
@@ -17,15 +19,22 @@ import {
   reviewDocument, stepRequirements, subscribeJourney,
   type DbDocument, type DbEvent, type DbStep, type DocStatus, type Plan,
 } from "@/lib/journeyDb";
-import { JrButton } from "@/components/student/workspace/journey/parts";
 import { ScheduleManager } from "@/components/schedule/ScheduleManager";
+import { refreshReviewAlerts } from "@/lib/reviewAlerts";
 
 /* The one User Details module.
 
    Rendered identically from every users table and from the chat profile panel.
    There is no second implementation and no per-page variant: give it a user id
    and it reads the live Journey Engine, the Documents module and the schedule
-   for that person. */
+   for that person.
+
+   The bespoke pieces — the profile header's fact grid, the timeline — have
+   no HeroUI equivalent and stay exactly as they were; the modal shell, tabs,
+   toolbar, chips and buttons around them now speak the same HeroUI +
+   .afq-hui language as the rest of the workspace, because this module is
+   also what opens over the chat's info panel. Previewing a document opens it
+   in a new tab, the platform's one "Preview" action. */
 
 export type UserDetailsUser = {
   id: string;
@@ -50,9 +59,18 @@ export type UserDetailsUser = {
 
 type Tab = "journey" | "documents" | "schedule";
 
-
 const stamp = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+/** The journey's tones, translated once into the tokens the timeline's small
+ *  state dots paint themselves with. */
+const TONE_VAR: Record<PillTone, string> = {
+  green: "var(--success)", amber: "var(--warning)", red: "var(--danger)",
+  indigo: "var(--accent)", purple: "var(--accent)", grey: "var(--ink-faint)",
+};
+const DOC_CHIP: Record<DocStatus, "default" | "accent" | "warning" | "danger" | "success"> = {
+  pending: "default", uploaded: "accent", under_review: "warning", needs_changes: "danger", approved: "success",
+};
 
 /** A document row joined with the step that asked for it. */
 type DocRow = {
@@ -75,7 +93,6 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
   const [docQuery, setDocQuery] = useState("");
   const [docFilter, setDocFilter] = useState<"all" | DocStatus>("all");
   const [docSort, setDocSort] = useState<"recent" | "name" | "status">("recent");
-  const [preview, setPreview] = useState<DbDocument | null>(null);
   /* Which document is being sent back, and why. A rejection without a reason
      tells the student nothing, so the comment is asked for rather than
      optional. */
@@ -150,6 +167,11 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
     try {
       await reviewDocument(doc.id, status, comment);
       await load();
+      // Same reasoning as the step/stage decisions: drop the sidebar badge
+      // right away rather than depending on this table's Realtime event.
+      // TEMP DEBUG line below — remove alongside the rest of the [badge-debug] tracing.
+      console.log("[badge-debug] UserDetails.decide: document decision written, calling refreshReviewAlerts()");
+      void refreshReviewAlerts();
     } finally {
       setBusyDoc(null);
       setRejecting(null);
@@ -159,282 +181,280 @@ export function UserDetails({ user, onClose, onOpenChat, onNavigate }: {
 
   const phone = `${user.whatsapp_country_code ?? ""}${user.whatsapp_number ?? ""}`.trim();
 
+  const TABS: { id: Tab; label: string; Icon: typeof Route }[] = [
+    { id: "journey", label: "Journey", Icon: Route },
+    { id: "documents", label: "Documents", Icon: FileText },
+    { id: "schedule", label: "Schedule", Icon: CalendarDays },
+  ];
+
   return (
-    <AnimatedModal open onClose={onClose} className="jr-modal usr" ariaLabel={`${user.full_name ?? "User"} details`}>
-      {/* ── Profile header ── */}
-      <header className="usr-head">
-        <UserAvatar user={{ id: user.id, name: user.full_name, avatarUrl: user.avatar_url ?? null, online }} size={62} />
-        <div className="usr-id">
-          <div className="usr-name">
-            {user.full_name || "Unnamed student"}
-            <Status state={online ? "online" : "offline"} />
-          </div>
-          <div className="usr-contact">
-            {user.email && <span><Mail size={13} />{user.email}</span>}
-            {phone && <span><Phone size={13} />{phone}</span>}
-            {user.city && <span><MapPin size={13} />{user.city}</span>}
-          </div>
-        </div>
-        <button type="button" className="dv-tool" onClick={onClose} aria-label="Close"><X size={16} /></button>
+    <Modal>
+      <Modal.Backdrop isOpen onOpenChange={(v) => { if (!v) onClose(); }}>
+        <Modal.Container>
+          <Modal.Dialog aria-label={`${user.full_name ?? "User"} details`} className="sm:max-w-[980px]">
+            <Modal.CloseTrigger />
 
-        <dl className="usr-facts">
-          <div><dt>Plan</dt><dd>{user.plan === "full_service" ? "Full Service" : user.plan === "self_service" ? "Self Service" : "—"}</dd></div>
-          <div><dt>Nationality</dt><dd>{user.nationality || "Morocco"}</dd></div>
-          <div><dt>University</dt><dd>{user.university || user.program || "Not assigned"}</dd></div>
-          <div><dt>Current stage</dt><dd>{currentStage ? `${currentStage.index}. ${currentStage.title}` : "Not started"}</dd></div>
-          <div><dt>Progress</dt><dd>{overall.pct}% · {overall.done}/{overall.total}</dd></div>
-          <div><dt>Status</dt><dd>{user.banned ? "Suspended" : "Active"}</dd></div>
-          <div><dt>Advisor</dt><dd>{user.advisor || "Unassigned"}</dd></div>
-          <div><dt>Joined</dt><dd>{stamp(user.created_at)}</dd></div>
-        </dl>
-
-        <div className="usr-bar"><span style={{ width: `${overall.pct}%` }} /></div>
-
-        <nav className="stp-seg" role="tablist" aria-label="User sections">
-          {([
-            { id: "journey" as Tab, label: "Journey", Icon: Route },
-            { id: "documents" as Tab, label: "Documents", Icon: FileText },
-            { id: "schedule" as Tab, label: "Schedule", Icon: CalendarDays },
-          ]).map(({ id, label, Icon }) => (
-            <button
-              key={id} type="button" role="tab" aria-selected={tab === id}
-              className={`stp-segbtn${tab === id ? " active" : ""}`} onClick={() => setTab(id)}
-            >
-              <Icon size={14} />{label}
-              {id === "documents" && docs.length > 0 && <span className="stp-segcount">{docs.filter((d) => d.status === "approved").length}/{docs.length}</span>}
-            </button>
-          ))}
-        </nav>
-      </header>
-
-      <div className="jr-modal-body stp-body">
-        {loading ? <Loader block /> : tab === "journey" ? (
-          <>
-            <div className="usr-tiles">
-              <span><b>{completed.length}</b>Completed</span>
-              <span><b>{waiting.length}</b>Pending review</span>
-              <span><b>{rejected.length}</b>Rejected</span>
-              <span><b>{overall.total - completed.length}</b>Remaining</span>
-            </div>
-
-            <div className="usr-shortcuts">
-              {onNavigate && <JrButton tone="outline" icon={<Route size={14} />} onClick={() => onNavigate("journey-manager")}>Journey Manager</JrButton>}
-              {onNavigate && <JrButton tone="outline" icon={<Clock3 size={14} />} onClick={() => onNavigate("review-queue")}>Review Queue</JrButton>}
-              <JrButton tone="outline" icon={<FileText size={14} />} onClick={() => setTab("documents")}>Documents</JrButton>
-              {onOpenChat && <JrButton tone="outline" icon={<ExternalLink size={14} />} onClick={() => onOpenChat(user.id)}>Open chat</JrButton>}
-            </div>
-
-            {currentStep && (
-              <p className="stp-hint stp-hint-grey">
-                <Clock3 size={14} />Current step: <b style={{ marginLeft: 4 }}>{currentStep.title}</b>
-              </p>
-            )}
-
-            {/* The Full Service half of the final decision: for those students
-                the Excel gives the outcome entirely to an administrator. */}
-            <TrpStatusCard userId={user.id} plan={user.plan ?? null} degree={user.target_degree} />
-
-            {/* What the journey has said, or is queued to say, on every channel.
-                The WhatsApp rows have no sender yet, so they are sent by hand
-                from here rather than sitting in a table nobody looks at. */}
-            <OutboxCard userId={user.id} phone={outboxPhone(user)} />
-
-            <h4 className="lrn-sub">Journey timeline</h4>
-            {stages.length === 0 ? (
-              <p className="stp-hint stp-hint-grey"><Route size={14} />No journey published for this plan yet.</p>
-            ) : (
-              <ol className="usr-timeline">
-                {stages.map((stage) => (
-                  <li key={stage.id} className={`usr-stage ${stage.state}`}>
-                    <div className="usr-stage-head">
-                      <b>{stage.index}. {stage.title}</b>
-                      <span className="usr-stage-count">{stage.done}/{stage.total}</span>
-                    </div>
-                    <ul className="usr-steps">
-                      {stage.steps.map((step) => (
-                        <li key={step.id}>
-                          {/* Dot only: the timeline is a dense list and the
-                              title carries the meaning; the state reaches a
-                              screen reader through the indicator's label. */}
-                          <Status state={STATE_STATUS[step.state]} label={STATE_BADGE[step.state].label} dotOnly />
-                          <span>{step.title}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ol>
-            )}
-
-            <h4 className="lrn-sub" style={{ marginTop: 18 }}><History size={14} style={{ verticalAlign: -2, marginRight: 6 }} />Recent activity</h4>
-            {events.length === 0
-              ? <p className="stp-hint stp-hint-grey"><History size={14} />No activity recorded yet.</p>
-              : (
-                <ul className="usr-activity">
-                  {events.slice(0, 10).map((e) => (
-                    <li key={e.id}>
-                      <span className={`usr-act-dot actor-${e.actor}`} />
-                      <span className="usr-act-main">
-                        <b>{e.kind.replace(/_/g, " ")}</b>
-                        {e.message && <em>{e.message.split("\n")[0]}</em>}
-                      </span>
-                      <time>{stamp(e.created_at)}</time>
-                    </li>
-                  ))}
-                </ul>
-              )}
-          </>
-        ) : tab === "documents" ? (
-          <>
-            <div className="usr-docbar">
-              <Input value={docQuery} onChange={(e) => setDocQuery(e.target.value)} placeholder="Search documents" aria-label="Search documents" containerStyle={{ flex: 1, minWidth: 160 }} />
-              <Select
-                value={docFilter} onChange={(v) => setDocFilter(v as typeof docFilter)} ariaLabel="Filter by status"
-                containerStyle={{ minWidth: 150 }}
-                options={[
-                  { value: "all", label: "All statuses" }, { value: "approved", label: "Verified" },
-                  { value: "uploaded", label: "Uploaded" }, { value: "under_review", label: "Under review" },
-                  { value: "needs_changes", label: "Rejected" }, { value: "pending", label: "Pending" },
-                ]}
-              />
-              <Select
-                value={docSort} onChange={(v) => setDocSort(v as typeof docSort)} ariaLabel="Sort"
-                containerStyle={{ minWidth: 140 }}
-                options={[{ value: "recent", label: "Most recent" }, { value: "name", label: "Name" }, { value: "status", label: "Status" }]}
-              />
-            </div>
-
-            {visibleDocs.length === 0 ? (
-              <p className="stp-hint stp-hint-grey"><FileText size={14} />No documents match this view.</p>
-            ) : (
-              <ul className="stp-docs">
-                {visibleDocs.map((d) => (
-                  <li key={d.key} className="stp-doc">
-                    <span className={`stp-doc-ico tone-${DOC_STATUS[d.status].state}`}>
-                      {d.status === "approved" ? <CircleCheck size={16} />
-                        : d.status === "needs_changes" ? <TriangleAlert size={16} />
-                        : d.status === "under_review" ? <Clock3 size={16} /> : <FileText size={16} />}
-                    </span>
-                    <span className="stp-doc-main">
-                      <span className="stp-doc-name">{d.name}</span>
-                      <span className="stp-doc-sub">{d.stageTitle} · {d.stepTitle}</span>
-                      <span className="stp-doc-sub">
-                        Uploaded {stamp(d.upload?.created_at)}
-                        {d.upload?.reviewed_at && ` · verified ${stamp(d.upload.reviewed_at)}`}
-                      </span>
-                      {d.upload?.review_comment && <span className="stp-doc-msg">{d.upload.review_comment}</span>}
-                    </span>
-                    <Status state={DOC_STATUS[d.status].state} label={DOC_STATUS[d.status].label} className="stp-doc-pill" />
-                    <span className="stp-doc-acts">
-                      {d.upload?.file_path && (
-                        <>
-                          <JrButton icon={<Eye size={14} />} onClick={() => setPreview(d.upload)}>Preview</JrButton>
-                          <JrButton icon={<Download size={14} />} onClick={() => openStored(d.upload!.file_path, d.upload!.file_name, true)}>Download</JrButton>
-                        </>
-                      )}
-                      {/* An uploaded document can be decided here. Approved
-                          documents keep a way back, because a mistaken
-                          approval otherwise has no undo. */}
-                      {d.upload?.file_path && d.status !== "approved" && (
-                        <JrButton
-                          disabled={busyDoc === d.upload.id} icon={<CircleCheck size={14} />}
-                          tone="success" onClick={() => void decide(d.upload!, "approved")}
-                        >
-                          Approve
-                        </JrButton>
-                      )}
-                      {d.upload?.file_path && d.status !== "needs_changes" && (
-                        <JrButton
-                          disabled={busyDoc === d.upload.id} icon={<TriangleAlert size={14} />}
-                          tone={d.status === "approved" ? "quiet" : "danger"}
-                          onClick={() => { setRejecting(d.upload); setRejectWhy(""); }}
-                        >
-                          {d.status === "approved" ? "Undo" : "Request changes"}
-                        </JrButton>
-                      )}
-                      {!d.upload?.file_path && <span className="stp-doc-sub">Not uploaded</span>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {rejecting && (
-              <AnimatedModal
-                ariaLabel="Request changes" className="dlg" open
-                onClose={() => setRejecting(null)}
-              >
-                <DialogHead title="Send this document back?">
-                  The student is notified straight away and can re-upload. Tell them what needs
-                  fixing — a rejection with no reason just sends them round again.
-                </DialogHead>
-                <Input
-                  value={rejectWhy} onChange={(e) => setRejectWhy(e.target.value)}
-                  placeholder="e.g. The scan is cut off at the bottom — please re-upload the full page."
-                  aria-label="Reason"
-                />
-                <DialogFoot>
-                  <JrButton size="md" tone="quiet" onClick={() => setRejecting(null)}>Cancel</JrButton>
-                  <JrButton
-                    disabled={!rejectWhy.trim() || busyDoc === rejecting.id}
-                    size="md" tone="danger"
-                    onClick={() => void decide(rejecting, "needs_changes", rejectWhy.trim())}
-                  >
-                    Request changes
-                  </JrButton>
-                </DialogFoot>
-              </AnimatedModal>
-            )}
-
-            {preview && (
-              <div className="usr-preview">
-                <div className="dv-bar">
-                  <span className="dv-name">{preview.file_name}</span>
-                  <button type="button" className="dv-tool" onClick={() => setPreview(null)} aria-label="Close preview"><X size={15} /></button>
+            <Modal.Header>
+              {/* ── Profile header ── */}
+              <div className="usr-head">
+                <UserAvatar size={62} user={{ id: user.id, name: user.full_name, avatarUrl: user.avatar_url ?? null, online }} />
+                <div className="usr-id">
+                  <div className="usr-name">
+                    {user.full_name || "Unnamed student"}
+                    <Chip color={online ? "success" : "default"} size="sm" variant="soft">{online ? "Online" : "Offline"}</Chip>
+                  </div>
+                  <div className="usr-contact">
+                    {user.email && <span><Mail size={13} />{user.email}</span>}
+                    {phone && <span><Phone size={13} />{phone}</span>}
+                    {user.city && <span><MapPin size={13} />{user.city}</span>}
+                  </div>
                 </div>
-                <DocFrame doc={preview} />
+
+                <dl className="usr-facts">
+                  <div><dt>Plan</dt><dd>{user.plan === "full_service" ? "Full Service" : user.plan === "self_service" ? "Self Service" : "—"}</dd></div>
+                  <div><dt>Nationality</dt><dd>{user.nationality || "Morocco"}</dd></div>
+                  <div><dt>University</dt><dd>{user.university || user.program || "Not assigned"}</dd></div>
+                  <div><dt>Current stage</dt><dd>{currentStage ? `${currentStage.index}. ${currentStage.title}` : "Not started"}</dd></div>
+                  <div><dt>Progress</dt><dd>{overall.pct}% · {overall.done}/{overall.total}</dd></div>
+                  <div><dt>Status</dt><dd>{user.banned ? "Suspended" : "Active"}</dd></div>
+                  <div><dt>Advisor</dt><dd>{user.advisor || "Unassigned"}</dd></div>
+                  <div><dt>Joined</dt><dd>{stamp(user.created_at)}</dd></div>
+                </dl>
+
+                <div className="usr-bar"><span style={{ width: `${overall.pct}%` }} /></div>
+
+                <div aria-label="User sections" className="stp-seg" role="group">
+                  {TABS.map(({ id, label, Icon }) => (
+                    <Button key={id} onPress={() => setTab(id)} size="sm" variant={tab === id ? "secondary" : "tertiary"}>
+                      <Icon size={14} />{label}
+                      {id === "documents" && docs.length > 0 && (
+                        <Chip color="default" size="sm" variant="soft">{docs.filter((d) => d.status === "approved").length}/{docs.length}</Chip>
+                      )}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            )}
-          </>
-        ) : (
-          <ScheduleManager userId={user.id} role="advisor" />
-        )}
-      </div>
+            </Modal.Header>
 
-      <footer className="jr-modal-foot">
-        <JrButton tone="quiet" size="md" onClick={onClose}>Close</JrButton>
-        {onOpenChat && (
-          <JrButton tone="primary" size="md" icon={<GraduationCap size={15} />} onClick={() => onOpenChat(user.id)}>
-            Message this student
-          </JrButton>
-        )}
-      </footer>
-    </AnimatedModal>
-  );
-}
+            <Modal.Body>
+              <div className="stp-body">
+                {loading ? <Skeleton className="h-48 w-full rounded-2xl" /> : tab === "journey" ? (
+                  <>
+                    <div className="usr-tiles">
+                      <span><b>{completed.length}</b>Completed</span>
+                      <span><b>{waiting.length}</b>Pending review</span>
+                      <span><b>{rejected.length}</b>Rejected</span>
+                      <span><b>{overall.total - completed.length}</b>Remaining</span>
+                    </div>
 
-/** Signed inline preview of one stored file. */
-function DocFrame({ doc }: { doc: DbDocument }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const load = useCallback(async () => { setUrl(await fileUrl(doc.file_path)); }, [doc.file_path]);
-  // Fetching the signed URL is the "subscribe to an external system" case.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load(); }, [load]);
+                    <div className="usr-shortcuts">
+                      {onNavigate && <Button onPress={() => onNavigate("journey-manager")} size="sm" variant="secondary"><Route size={14} /> Journey Manager</Button>}
+                      {onNavigate && <Button onPress={() => onNavigate("review-queue")} size="sm" variant="secondary"><Clock3 size={14} /> Review Queue</Button>}
+                      <Button onPress={() => setTab("documents")} size="sm" variant="secondary"><FileText size={14} /> Documents</Button>
+                      {onOpenChat && <Button onPress={() => onOpenChat(user.id)} size="sm" variant="secondary"><ExternalLink size={14} /> Open chat</Button>}
+                    </div>
 
-  if (!url) return <div className="dv-stage"><Loader block /></div>;
-  const isImage = /\.(png|jpe?g|gif|webp|avif)$/i.test(doc.file_name);
-  return (
-    <div className="dv-stage">
-      {/* Read-only, but still zoomable: an administrator reading a passport
-          here needs the same gestures as one reviewing it. */}
-      <ImageZoom zoom={zoom} onZoomChange={setZoom} label={doc.file_name}>
-        {isImage
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img className="dv-img" src={url} alt={doc.file_name} />
-          : <iframe className="dv-pdf" src={`${url}#toolbar=0`} title={doc.file_name} />}
-      </ImageZoom>
-    </div>
+                    {currentStep && (
+                      <p className="stp-hint stp-hint-grey">
+                        <Clock3 size={14} />Current step: <b style={{ marginLeft: 4 }}>{currentStep.title}</b>
+                      </p>
+                    )}
+
+                    {/* The Full Service half of the final decision: for those students
+                        the Excel gives the outcome entirely to an administrator. */}
+                    <TrpStatusCard degree={user.target_degree} plan={user.plan ?? null} userId={user.id} />
+
+                    {/* What the journey has said, or is queued to say, on every channel.
+                        The WhatsApp rows have no sender yet, so they are sent by hand
+                        from here rather than sitting in a table nobody looks at. */}
+                    <OutboxCard phone={outboxPhone(user)} userId={user.id} />
+
+                    <h4 className="lrn-sub">Journey timeline</h4>
+                    {stages.length === 0 ? (
+                      <p className="stp-hint stp-hint-grey"><Route size={14} />No journey published for this plan yet.</p>
+                    ) : (
+                      <ol className="usr-timeline">
+                        {stages.map((stage) => (
+                          <li className={`usr-stage ${stage.state}`} key={stage.id}>
+                            <div className="usr-stage-head">
+                              <b>{stage.index}. {stage.title}</b>
+                              <span className="usr-stage-count">{stage.done}/{stage.total}</span>
+                            </div>
+                            <ul className="usr-steps">
+                              {stage.steps.map((step) => (
+                                <li key={step.id}>
+                                  {/* Dot only: the timeline is a dense list and the
+                                      title carries the meaning; the state still
+                                      reaches a screen reader through the hidden label. */}
+                                  <span aria-hidden className="usr-act-dot" style={{ background: TONE_VAR[STATE_BADGE[step.state].tone] }} />
+                                  <span className="sr-only">{STATE_BADGE[step.state].label}</span>
+                                  <span>{step.title}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+
+                    <h4 className="lrn-sub" style={{ marginTop: 18 }}><History size={14} style={{ verticalAlign: -2, marginRight: 6 }} />Recent activity</h4>
+                    {events.length === 0
+                      ? <p className="stp-hint stp-hint-grey"><History size={14} />No activity recorded yet.</p>
+                      : (
+                        <ul className="usr-activity">
+                          {events.slice(0, 10).map((e) => (
+                            <li key={e.id}>
+                              <span className={`usr-act-dot actor-${e.actor}`} />
+                              <span className="usr-act-main">
+                                <b>{e.kind.replace(/_/g, " ")}</b>
+                                {e.message && <em>{e.message.split("\n")[0]}</em>}
+                              </span>
+                              <time>{stamp(e.created_at)}</time>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                  </>
+                ) : tab === "documents" ? (
+                  <>
+                    <div className="usr-docbar">
+                      <SearchField aria-label="Search documents" onChange={setDocQuery} style={{ flex: 1, minWidth: 160 }} value={docQuery}>
+                        <SearchField.Group>
+                          <SearchField.SearchIcon />
+                          <SearchField.Input placeholder="Search documents" />
+                          <SearchField.ClearButton />
+                        </SearchField.Group>
+                      </SearchField>
+                      <Select onSelectionChange={(k) => setDocFilter(String(k) as typeof docFilter)} selectedKey={docFilter} style={{ minWidth: 150 }}>
+                        <Label className="sr-only">Filter by status</Label>
+                        <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {[
+                              { value: "all", label: "All statuses" }, { value: "approved", label: "Verified" },
+                              { value: "uploaded", label: "Uploaded" }, { value: "under_review", label: "Under review" },
+                              { value: "needs_changes", label: "Rejected" }, { value: "pending", label: "Pending" },
+                            ].map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                      <Select onSelectionChange={(k) => setDocSort(String(k) as typeof docSort)} selectedKey={docSort} style={{ minWidth: 140 }}>
+                        <Label className="sr-only">Sort</Label>
+                        <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {[{ value: "recent", label: "Most recent" }, { value: "name", label: "Name" }, { value: "status", label: "Status" }]
+                              .map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                    </div>
+
+                    {visibleDocs.length === 0 ? (
+                      <p className="stp-hint stp-hint-grey"><FileText size={14} />No documents match this view.</p>
+                    ) : (
+                      <ul className="stp-docs">
+                        {visibleDocs.map((d) => (
+                          <li className="stp-doc" key={d.key}>
+                            <span className={`stp-doc-ico tone-${DOC_STATUS[d.status].state}`}>
+                              {d.status === "approved" ? <CircleCheck size={16} />
+                                : d.status === "needs_changes" ? <TriangleAlert size={16} />
+                                : d.status === "under_review" ? <Clock3 size={16} /> : <FileText size={16} />}
+                            </span>
+                            <span className="stp-doc-main">
+                              <span className="stp-doc-name">{d.name}</span>
+                              <span className="stp-doc-sub">{d.stageTitle} · {d.stepTitle}</span>
+                              <span className="stp-doc-sub">
+                                Uploaded {stamp(d.upload?.created_at)}
+                                {/* reviewed_at/review_comment survive a re-upload on purpose — the
+                                    guard preserves the prior decision's audit trail rather than
+                                    wiping it — but that only describes a FILE THAT'S GONE the
+                                    moment status is back to uploaded/under_review. Showing them
+                                    here for a document sitting in the queue right now reads as
+                                    "this was already handled," which is exactly backwards. */}
+                                {d.upload?.reviewed_at && (d.status === "approved" || d.status === "needs_changes") &&
+                                  ` · verified ${stamp(d.upload.reviewed_at)}`}
+                              </span>
+                              {d.upload?.review_comment && (d.status === "approved" || d.status === "needs_changes") && (
+                                <span className="stp-doc-msg">{d.upload.review_comment}</span>
+                              )}
+                            </span>
+                            <Chip className="stp-doc-pill" color={DOC_CHIP[d.status]} size="sm" variant="soft">{DOC_STATUS[d.status].label}</Chip>
+                            <span className="stp-doc-acts">
+                              {d.upload?.file_path && (
+                                <>
+                                  <Button onPress={() => void openFilePreview(d.upload!.file_path)} size="sm" variant="tertiary"><Eye size={14} /> Preview</Button>
+                                  <Button onPress={() => openStored(d.upload!.file_path, d.upload!.file_name, true)} size="sm" variant="tertiary"><Download size={14} /> Download</Button>
+                                </>
+                              )}
+                              {/* An uploaded document can be decided here. Approved
+                                  documents keep a way back, because a mistaken
+                                  approval otherwise has no undo. */}
+                              {d.upload?.file_path && d.status !== "approved" && (
+                                <Button isDisabled={busyDoc === d.upload.id} onPress={() => void decide(d.upload!, "approved")} size="sm" variant="primary">
+                                  <CircleCheck size={14} /> Approve
+                                </Button>
+                              )}
+                              {d.upload?.file_path && d.status !== "needs_changes" && (
+                                <Button
+                                  isDisabled={busyDoc === d.upload.id} onPress={() => { setRejecting(d.upload); setRejectWhy(""); }}
+                                  size="sm" variant={d.status === "approved" ? "tertiary" : "danger-soft"}
+                                >
+                                  <TriangleAlert size={14} /> {d.status === "approved" ? "Undo" : "Request changes"}
+                                </Button>
+                              )}
+                              {!d.upload?.file_path && <span className="stp-doc-sub">Not uploaded</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {rejecting && (
+                      <AdminDialog
+                        description="The student is notified straight away and can re-upload."
+                        footer={(
+                          <>
+                            <Button onPress={() => setRejecting(null)} size="sm" variant="tertiary">Cancel</Button>
+                            <Button
+                              isDisabled={!rejectWhy.trim() || busyDoc === rejecting.id}
+                              onPress={() => void decide(rejecting, "needs_changes", rejectWhy.trim())} size="sm" variant="danger"
+                            >
+                              Request changes
+                            </Button>
+                          </>
+                        )}
+                        icon={<TriangleAlert className="size-5" />}
+                        onClose={() => setRejecting(null)}
+                        size="sm"
+                        title="Send this document back?"
+                        tone="warning"
+                      >
+                        <TextField fullWidth onChange={setRejectWhy} value={rejectWhy}>
+                          <Label>Reason</Label>
+                          <Input placeholder="e.g. The scan is cut off at the bottom — please re-upload the full page." variant="secondary" />
+                          <p className="afq-mini-sub">A rejection with no reason just sends the student round again.</p>
+                        </TextField>
+                      </AdminDialog>
+                    )}
+
+                  </>
+                ) : (
+                  <ScheduleManager role="advisor" userId={user.id} />
+                )}
+              </div>
+            </Modal.Body>
+
+            <Modal.Footer>
+              <Button onPress={onClose} size="sm" variant="tertiary">Close</Button>
+              {onOpenChat && (
+                <Button onPress={() => onOpenChat(user.id)} size="sm" variant="primary"><GraduationCap size={15} /> Message this student</Button>
+              )}
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 }
 

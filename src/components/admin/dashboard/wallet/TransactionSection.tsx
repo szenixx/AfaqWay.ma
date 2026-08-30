@@ -15,21 +15,10 @@ import { ArrowDownLeft, ArrowUpRight, Receipt } from "lucide-react";
 import type { Payment } from "@/components/admin/dashboard/kit";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { planById } from "@/lib/plans";
+import { pageNumbers } from "@/lib/pageNumbers";
 import { dateShort, initials, isCredit, methodName, money, planLabel, reference, statusOf } from "./parts";
 
 const PER_PAGE = 8;
-
-/* First, last, and the window around the current page. Anything longer gets an
-   ellipsis rather than a row of numbers nobody reads. */
-function pageNumbers(current: number, total: number): (number | "gap")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const out: (number | "gap")[] = [1];
-  if (current > 3) out.push("gap");
-  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) out.push(i);
-  if (current < total - 2) out.push("gap");
-  out.push(total);
-  return out;
-}
 
 const STATUS_FILTERS = [
   { id: "all", label: "All statuses" },

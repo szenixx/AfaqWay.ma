@@ -4,12 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Archive, ChevronDown, Copy, Eye, GripVertical, History, Pencil, Plus, Route, Trash2, Undo2,
 } from "lucide-react";
-import { Input, TextArea, Select, Toggle, Loader, AnimatedModal, Pill, Status, type StatusState } from "@/components/ds";
+import {
+  Button, Chip, Input, Label, ListBox, Select, Skeleton, Switch, TextArea, TextField, Tooltip,
+} from "@heroui/react";
 import {
   deleteStage, deleteStep, duplicateStage, fetchStages, fetchSteps, fetchVersions,
   journeyReady, reorder, saveStage, saveStep, subscribeJourney,
   type DbStage, type DbStep, type Plan, type PublishState,
 } from "@/lib/journeyDb";
+import { AdminDialog } from "@/components/admin/AdminDialog";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { StepEditor } from "./StepEditor";
 
 /* Journey Manager — the administrator's control panel for one plan's roadmap.
@@ -24,12 +28,11 @@ const STATUSES: { value: PublishState; label: string }[] = [
   { value: "draft", label: "Draft" }, { value: "published", label: "Published" }, { value: "archived", label: "Archived" },
 ];
 
-/* A publish state is a status, so it speaks the platform's status vocabulary
-   rather than carrying a colour of its own. */
-const STATUS_PILL: Record<PublishState, { state: StatusState; label: string }> = {
-  draft: { state: "draft", label: "Draft" },
-  published: { state: "approved", label: "Published" },
-  archived: { state: "cancelled", label: "Archived" },
+/** A publish state, in HeroUI's Chip colour vocabulary. */
+const STATUS_CHIP: Record<PublishState, { color: "default" | "success" | "warning"; label: string }> = {
+  draft: { color: "default", label: "Draft" },
+  published: { color: "success", label: "Published" },
+  archived: { color: "warning", label: "Archived" },
 };
 
 /** True when this stage came from the Excel importer rather than by hand. */
@@ -46,6 +49,7 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
   const [editing, setEditing] = useState<DbStep | null>(null);
   const [history, setHistory] = useState<{ entity: string; id: string; rows: Record<string, unknown>[] } | null>(null);
   const [drag, setDrag] = useState<{ kind: "stage" | "step"; id: string } | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{ title: string; body: string; onYes: () => void } | null>(null);
 
   const load = useCallback(async () => {
     const ok = await journeyReady();
@@ -72,10 +76,10 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
     setStageForm(null); await load(); setBusy(false);
   };
   const setStageStatus = async (s: DbStage, status: PublishState) => { await saveStage({ id: s.id, status }, `Stage ${status}`); await load(); };
-  const removeStage = async (s: DbStage) => {
-    if (!confirm(`Delete "${s.title}" and all of its steps? This cannot be undone.`)) return;
-    await deleteStage(s.id); await load();
-  };
+  const askRemoveStage = (s: DbStage) => setConfirmRemove({
+    title: `Delete "${s.title}"?`, body: "This removes the stage and all of its steps. This cannot be undone.",
+    onYes: () => { void deleteStage(s.id).then(load); setConfirmRemove(null); },
+  });
   const copyStage = async (s: DbStage) => { setBusy(true); await duplicateStage(s); await load(); setBusy(false); };
 
   /* ── Step actions ── */
@@ -86,7 +90,10 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
     setStepForm(null); await load(); setBusy(false);
   };
   const setStepStatus = async (s: DbStep, status: PublishState) => { await saveStep({ id: s.id, status }, `Step ${status}`); await load(); };
-  const removeStep = async (s: DbStep) => { if (confirm(`Delete step "${s.title}"?`)) { await deleteStep(s.id); await load(); } };
+  const askRemoveStep = (s: DbStep) => setConfirmRemove({
+    title: `Delete step "${s.title}"?`, body: "This cannot be undone.",
+    onYes: () => { void deleteStep(s.id).then(load); setConfirmRemove(null); },
+  });
   const copyStep = async (s: DbStep) => {
     await saveStep({ stage_id: s.stage_id, sort_order: s.sort_order + 1, title: `${s.title} (copy)`, subtitle: s.subtitle, description: s.description, status: "draft", required: s.required, estimated_time: s.estimated_time, document_keys: s.document_keys, rules: s.rules }, "Step duplicated");
     await load();
@@ -111,123 +118,122 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
     setHistory({ entity, id, rows: (await fetchVersions(entity, id)) as Record<string, unknown>[] });
   };
 
-  if (ready === null) return <Loader size={40} block label="Loading Journey Manager" />;
+  if (ready === null) return <Skeleton className="h-40 w-full rounded-2xl" />;
   if (!ready) {
     return (
-      <div className="jm-empty">
-        <span className="jr-empty-ico"><Route size={26} /></span>
-        <h3 className="jr-empty-title">Journey engine not installed</h3>
-        <p className="jr-empty-text">
-          Run <code>supabase/migrations/journey/00_run_all.sql</code> in the Supabase SQL editor,
-          then reload this page. Everything else is ready.
-        </p>
+      <div className="afq-empty">
+        <Route size={22} />
+        <p><b>Journey engine not installed.</b> Run <code>supabase/migrations/journey/00_run_all.sql</code> in the Supabase SQL editor, then reload this page.</p>
       </div>
     );
   }
 
   return (
-    <section className="jm">
-      <header className="jm-head">
+    <div className="afq-mini-card" style={{ gap: 14 }}>
+      <div className="afq-mini-head">
         <div>
-          <h2 className="jm-title">Journey Manager</h2>
-          <p className="jm-sub">
-            {plan === "full_service" ? "Full Service" : "Self Service"} · Lithuania — {stages.length} stage(s),
-            {" "}{steps.length} step(s). Students see published items only.
-          </p>
+          <div className="afq-mini-title" style={{ fontSize: 14 }}>Journey Manager</div>
+          <div className="afq-mini-sub">
+            {plan === "full_service" ? "Full Service" : "Self Service"} · Lithuania — {stages.length} stage(s), {steps.length} step(s).
+            Students see published items only.
+          </div>
         </div>
-        <button type="button" className="chat-send" onClick={() => setStageForm({ status: "draft", icon: "route", tone: "blue" })}>
-          <Plus size={15} />New stage
-        </button>
-      </header>
+        <Button onPress={() => setStageForm({ status: "draft", icon: "route", tone: "blue" })} size="sm" variant="primary">
+          <Plus size={14} /> New stage
+        </Button>
+      </div>
 
       {stages.length === 0 ? (
-        <div className="jm-empty">
-          <span className="jr-empty-ico"><Route size={26} /></span>
-          <h3 className="jr-empty-title">No stages yet</h3>
-          <p className="jr-empty-text">Create the first stage of the {plan === "full_service" ? "Full Service" : "Self Service"} roadmap.</p>
+        <div className="afq-empty">
+          <Route size={20} />
+          <p>No stages yet. Create the first stage of the {plan === "full_service" ? "Full Service" : "Self Service"} roadmap.</p>
         </div>
       ) : (
-        <div className="jm-stages">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {stages.map((stage) => {
             const list = stepsOf(stage.id);
             const isOpen = open === stage.id;
             return (
               <article
-                key={stage.id} className={`jm-stage${isOpen ? " open" : ""}`}
-                draggable onDragStart={() => setDrag({ kind: "stage", id: stage.id })}
-                onDragOver={(e) => e.preventDefault()} onDrop={() => dropStage(stage)}
+                className="afq-mini-card" draggable key={stage.id}
+                onDragOver={(e) => e.preventDefault()} onDragStart={() => setDrag({ kind: "stage", id: stage.id })} onDrop={() => dropStage(stage)}
               >
-                <div className="jm-stage-head">
-                  <span className="jm-grip" title="Drag to reorder"><GripVertical size={16} /></span>
-                  <span className={`jm-ico tone-${stage.tone}`}><Route size={17} /></span>
-                  <button type="button" className="jm-stage-main" onClick={() => setOpen(isOpen ? null : stage.id)}>
-                    <span className="jm-stage-num">Stage {stage.sort_order + 1}</span>
-                    <span className="jm-stage-title">{stage.title}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span aria-hidden style={{ cursor: "grab", color: "#B7C0D1" }}><GripVertical size={16} /></span>
+                  <Chip color="accent" size="sm" variant="soft"><Route size={13} /></Chip>
+                  <button
+                    onClick={() => setOpen(isOpen ? null : stage.id)}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", flex: 1, minWidth: 120, border: "none", background: "transparent", cursor: "pointer", textAlign: "left", padding: 0 }}
+                    type="button"
+                  >
+                    <span className="afq-mini-sub">Stage {stage.sort_order + 1}</span>
+                    <span className="afq-mini-title">{stage.title}</span>
                   </button>
-                  <Status state={STATUS_PILL[stage.status].state} label={STATUS_PILL[stage.status].label} />
-                  {/* Imported stages stay fully editable; the pill is a warning
+                  <Chip color={STATUS_CHIP[stage.status].color} size="sm" variant="soft">{STATUS_CHIP[stage.status].label}</Chip>
+                  {/* Imported stages stay fully editable; the chip is a warning
                       that a re-import will overwrite what you change here. */}
                   {fromExcel(stage) && (
-                    <Pill tone="indigo" className="jm-src" title="Imported from the Excel source of truth. Re-running scripts/import-journey.mjs overwrites the title, order, description and Learn content of this stage.">
-                      From Excel
-                    </Pill>
+                    <Tooltip>
+                      <Tooltip.Trigger><Chip color="accent" size="sm" variant="soft">From Excel</Chip></Tooltip.Trigger>
+                      <Tooltip.Content>Imported from the Excel source of truth. Re-running scripts/import-journey.mjs overwrites the title, order, description and Learn content of this stage.</Tooltip.Content>
+                    </Tooltip>
                   )}
-                  <span className="jm-count">{list.length} step(s)</span>
-                  <div className="jm-actions">
-                    <button type="button" className="chat-act" title="Edit" onClick={() => setStageForm(stage)}><Pencil size={14} /></button>
-                    <button type="button" className="chat-act" title="Duplicate" onClick={() => copyStage(stage)}><Copy size={14} /></button>
-                    <button type="button" className="chat-act" title="Version history" onClick={() => showHistory("stage", stage.id)}><History size={14} /></button>
+                  <span className="afq-mini-sub">{list.length} step(s)</span>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <Tooltip><Tooltip.Trigger><Button aria-label="Edit" isIconOnly onPress={() => setStageForm(stage)} size="sm" variant="secondary"><Pencil size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Edit</Tooltip.Content></Tooltip>
+                    <Tooltip><Tooltip.Trigger><Button aria-label="Duplicate" isIconOnly onPress={() => copyStage(stage)} size="sm" variant="tertiary"><Copy size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Duplicate</Tooltip.Content></Tooltip>
+                    <Tooltip><Tooltip.Trigger><Button aria-label="Version history" isIconOnly onPress={() => showHistory("stage", stage.id)} size="sm" variant="tertiary"><History size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Version history</Tooltip.Content></Tooltip>
                     {stage.status !== "published"
-                      ? <button type="button" className="chat-chip on" onClick={() => setStageStatus(stage, "published")}>Publish</button>
-                      : <button type="button" className="chat-chip" onClick={() => setStageStatus(stage, "draft")}>Unpublish</button>}
+                      ? <Button onPress={() => setStageStatus(stage, "published")} size="sm" variant="primary">Publish</Button>
+                      : <Button onPress={() => setStageStatus(stage, "draft")} size="sm" variant="secondary">Unpublish</Button>}
                     {stage.status !== "archived"
-                      ? <button type="button" className="chat-act" title="Archive" onClick={() => setStageStatus(stage, "archived")}><Archive size={14} /></button>
-                      : <button type="button" className="chat-act" title="Restore" onClick={() => setStageStatus(stage, "draft")}><Undo2 size={14} /></button>}
-                    <button type="button" className="chat-act" title="Delete" onClick={() => removeStage(stage)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
-                    <button type="button" className="chat-act" title={isOpen ? "Collapse" : "Expand"} onClick={() => setOpen(isOpen ? null : stage.id)}>
+                      ? <Tooltip><Tooltip.Trigger><Button aria-label="Archive" isIconOnly onPress={() => setStageStatus(stage, "archived")} size="sm" variant="tertiary"><Archive size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Archive</Tooltip.Content></Tooltip>
+                      : <Tooltip><Tooltip.Trigger><Button aria-label="Restore" isIconOnly onPress={() => setStageStatus(stage, "draft")} size="sm" variant="tertiary"><Undo2 size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Restore</Tooltip.Content></Tooltip>}
+                    <Tooltip><Tooltip.Trigger><Button aria-label="Delete" isIconOnly onPress={() => askRemoveStage(stage)} size="sm" variant="danger-soft"><Trash2 size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Delete</Tooltip.Content></Tooltip>
+                    <Button aria-label={isOpen ? "Collapse" : "Expand"} isIconOnly onPress={() => setOpen(isOpen ? null : stage.id)} size="sm" variant="tertiary">
                       <ChevronDown size={15} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 200ms" }} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {isOpen && (
-                  <div className="jm-stage-body">
-                    {stage.description && <p className="jm-desc">{stage.description}</p>}
+                  <div style={{ marginTop: 4 }}>
+                    {stage.description && <p className="afq-dialog-desc">{stage.description}</p>}
 
-                    <div className="jm-steps">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
                       {list.map((step) => (
                         <div
-                          key={step.id} className="jm-step"
-                          draggable onDragStart={() => setDrag({ kind: "step", id: step.id })}
-                          onDragOver={(e) => e.preventDefault()} onDrop={() => dropStep(step)}
+                          className="afq-mini-card" draggable key={step.id}
+                          onDragOver={(e) => e.preventDefault()} onDragStart={() => setDrag({ kind: "step", id: step.id })} onDrop={() => dropStep(step)}
+                          style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}
                         >
-                          <span className="jm-grip"><GripVertical size={14} /></span>
-                          <span className="jm-step-num">{step.sort_order + 1}</span>
-                          <div className="jm-step-main">
-                            <div className="jm-step-title">{step.title}</div>
-                            <div className="jm-step-sub">
+                          <span aria-hidden style={{ cursor: "grab", color: "#B7C0D1" }}><GripVertical size={14} /></span>
+                          <span className="afq-mini-sub" style={{ minWidth: 18 }}>{step.sort_order + 1}</span>
+                          <div style={{ flex: 1, minWidth: 140 }}>
+                            <div className="afq-mini-title">{step.title}</div>
+                            <div className="afq-mini-sub">
                               {step.required ? "Required" : "Optional"}
                               {step.estimated_time ? ` · ${step.estimated_time}` : ""}
                               {step.document_keys?.length ? ` · ${step.document_keys.length} document(s)` : ""}
                             </div>
                           </div>
-                          <Status state={STATUS_PILL[step.status].state} label={STATUS_PILL[step.status].label} />
-                          <div className="jm-actions">
-                            <button type="button" className="chat-chip" onClick={() => setEditing(step)}>Content</button>
-                            <button type="button" className="chat-act" title="Edit" onClick={() => setStepForm(step)}><Pencil size={14} /></button>
-                            <button type="button" className="chat-act" title="Duplicate" onClick={() => copyStep(step)}><Copy size={14} /></button>
-                            <button type="button" className="chat-act" title="Version history" onClick={() => showHistory("step", step.id)}><History size={14} /></button>
+                          <Chip color={STATUS_CHIP[step.status].color} size="sm" variant="soft">{STATUS_CHIP[step.status].label}</Chip>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                            <Button onPress={() => setEditing(step)} size="sm" variant="secondary">Content</Button>
+                            <Tooltip><Tooltip.Trigger><Button aria-label="Edit" isIconOnly onPress={() => setStepForm(step)} size="sm" variant="tertiary"><Pencil size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Edit</Tooltip.Content></Tooltip>
+                            <Tooltip><Tooltip.Trigger><Button aria-label="Duplicate" isIconOnly onPress={() => copyStep(step)} size="sm" variant="tertiary"><Copy size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Duplicate</Tooltip.Content></Tooltip>
+                            <Tooltip><Tooltip.Trigger><Button aria-label="Version history" isIconOnly onPress={() => showHistory("step", step.id)} size="sm" variant="tertiary"><History size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Version history</Tooltip.Content></Tooltip>
                             {step.status !== "published"
-                              ? <button type="button" className="chat-act" title="Publish" onClick={() => setStepStatus(step, "published")}><Eye size={14} /></button>
-                              : <button type="button" className="chat-act" title="Unpublish" onClick={() => setStepStatus(step, "draft")}><Archive size={14} /></button>}
-                            <button type="button" className="chat-act" title="Delete" onClick={() => removeStep(step)} style={{ color: "var(--red)" }}><Trash2 size={14} /></button>
+                              ? <Tooltip><Tooltip.Trigger><Button aria-label="Publish" isIconOnly onPress={() => setStepStatus(step, "published")} size="sm" variant="tertiary"><Eye size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Publish</Tooltip.Content></Tooltip>
+                              : <Tooltip><Tooltip.Trigger><Button aria-label="Unpublish" isIconOnly onPress={() => setStepStatus(step, "draft")} size="sm" variant="tertiary"><Archive size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Unpublish</Tooltip.Content></Tooltip>}
+                            <Tooltip><Tooltip.Trigger><Button aria-label="Delete" isIconOnly onPress={() => askRemoveStep(step)} size="sm" variant="danger-soft"><Trash2 size={14} /></Button></Tooltip.Trigger><Tooltip.Content>Delete</Tooltip.Content></Tooltip>
                           </div>
                         </div>
                       ))}
 
-                      <button type="button" className="jm-addstep" onClick={() => setStepForm({ stage_id: stage.id, status: "draft", required: true })}>
-                        <Plus size={15} />Add step
-                      </button>
+                      <Button onPress={() => setStepForm({ stage_id: stage.id, status: "draft", required: true })} size="sm" style={{ alignSelf: "flex-start" }} variant="tertiary">
+                        <Plus size={14} /> Add step
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -239,106 +245,175 @@ export function JourneyManager({ plan, country = "LT" }: { plan: Plan; country?:
 
       {/* ── Stage form ── */}
       {stageForm && (
-        <AnimatedModal open onClose={() => setStageForm(null)} className="jr-modal" ariaLabel="Stage">
-          <header className="jr-modal-head"><div style={{ flex: 1 }}><div className="jr-modal-title">{stageForm.id ? "Edit stage" : "New stage"}</div><div className="jr-modal-sub">{plan === "full_service" ? "Full Service" : "Self Service"} · Lithuania</div></div></header>
-          <div className="jr-modal-body">
-            <Input label="Stage title" value={stageForm.title ?? ""} onChange={(e) => setStageForm({ ...stageForm, title: e.target.value })} placeholder="e.g. University Application" />
-            <TextArea label="Description" rows={3} value={stageForm.description ?? ""} onChange={(e) => setStageForm({ ...stageForm, description: e.target.value })} />
-            <div className="sch-row2">
-              <Select label="Icon" value={stageForm.icon ?? "route"} onChange={(v) => setStageForm({ ...stageForm, icon: v })} options={ICONS} />
-              <Select label="Accent colour" value={stageForm.tone ?? "blue"} onChange={(v) => setStageForm({ ...stageForm, tone: v })} options={TONES} />
+        <AdminDialog
+          description={`${plan === "full_service" ? "Full Service" : "Self Service"} · Lithuania`}
+          footer={(
+            <>
+              <Button onPress={() => setStageForm(null)} size="sm" variant="tertiary">Cancel</Button>
+              <Button isDisabled={busy || !stageForm.title?.trim()} onPress={submitStage} size="sm" variant="primary">{busy ? "Saving…" : "Save stage"}</Button>
+            </>
+          )}
+          icon={<Route className="size-5" />}
+          onClose={() => setStageForm(null)}
+          title={stageForm.id ? "Edit stage" : "New stage"}
+        >
+          <div className="afq-form">
+            <TextField fullWidth onChange={(v) => setStageForm({ ...stageForm, title: v })} value={stageForm.title ?? ""}>
+              <Label>Stage title</Label>
+              <Input placeholder="e.g. University Application" variant="secondary" />
+            </TextField>
+            <TextField fullWidth onChange={(v) => setStageForm({ ...stageForm, description: v })} value={stageForm.description ?? ""}>
+              <Label>Description</Label>
+              <TextArea rows={3} variant="secondary" />
+            </TextField>
+            <div className="afq-form-row">
+              <Select onSelectionChange={(k) => setStageForm({ ...stageForm, icon: String(k) })} selectedKey={stageForm.icon ?? "route"}>
+                <Label>Icon</Label>
+                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                <Select.Popover><ListBox>{ICONS.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+              </Select>
+              <Select onSelectionChange={(k) => setStageForm({ ...stageForm, tone: String(k) })} selectedKey={stageForm.tone ?? "blue"}>
+                <Label>Accent colour</Label>
+                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                <Select.Popover><ListBox>{TONES.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+              </Select>
             </div>
-            <Select label="Status" value={stageForm.status ?? "draft"} onChange={(v) => setStageForm({ ...stageForm, status: v as PublishState })} options={STATUSES} containerStyle={{ marginBottom: 12 }} />
-            <div className="sch-block">
-              <div className="sch-toggle-row">
-                <div style={{ flex: 1 }}>
-                  <div className="sch-toggle-title">Require advisor approval</div>
-                  <div className="sch-toggle-sub">The next stage stays locked until an advisor approves this one.</div>
-                </div>
-                <Toggle
-                  checked={(stageForm.rules as { requireAdvisorApproval?: boolean } | undefined)?.requireAdvisorApproval ?? true}
-                  onChange={(v) => setStageForm({ ...stageForm, rules: { ...(stageForm.rules ?? {}), requireAdvisorApproval: v } })}
-                  ariaLabel="Require advisor approval"
-                />
+            <Select onSelectionChange={(k) => setStageForm({ ...stageForm, status: k as PublishState })} selectedKey={stageForm.status ?? "draft"}>
+              <Label>Status</Label>
+              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+              <Select.Popover><ListBox>{STATUSES.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+            </Select>
+            <div className="afq-mini-card" style={{ flexDirection: "row", alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <div className="afq-mini-title">Require advisor approval</div>
+                <div className="afq-mini-sub">The next stage stays locked until an advisor approves this one.</div>
               </div>
+              <Switch
+                aria-label="Require advisor approval"
+                isSelected={(stageForm.rules as { requireAdvisorApproval?: boolean } | undefined)?.requireAdvisorApproval ?? true}
+                onChange={(v) => setStageForm({ ...stageForm, rules: { ...(stageForm.rules ?? {}), requireAdvisorApproval: v } })}
+              >
+                <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
+              </Switch>
             </div>
           </div>
-          <footer className="jr-modal-foot">
-            <button type="button" className="chat-chip" onClick={() => setStageForm(null)}>Cancel</button>
-            <button type="button" className="chat-send" disabled={busy || !stageForm.title?.trim()} onClick={submitStage}>{busy ? "Saving…" : "Save stage"}</button>
-          </footer>
-        </AnimatedModal>
+        </AdminDialog>
       )}
 
       {/* ── Step form ── */}
       {stepForm && (
-        <AnimatedModal open onClose={() => setStepForm(null)} className="jr-modal" ariaLabel="Step">
-          <header className="jr-modal-head"><div style={{ flex: 1 }}><div className="jr-modal-title">{stepForm.id ? "Edit step" : "New step"}</div><div className="jr-modal-sub">Students see published steps only</div></div></header>
-          <div className="jr-modal-body">
-            <Input label="Step title" value={stepForm.title ?? ""} onChange={(e) => setStepForm({ ...stepForm, title: e.target.value })} placeholder="e.g. Upload transcript" />
-            <Input label="Subtitle" value={stepForm.subtitle ?? ""} onChange={(e) => setStepForm({ ...stepForm, subtitle: e.target.value })} />
-            <TextArea label="Description / instructions" rows={4} value={stepForm.description ?? ""} onChange={(e) => setStepForm({ ...stepForm, description: e.target.value })} />
-            <div className="sch-row2">
-              <Input label="Estimated time" value={stepForm.estimated_time ?? ""} onChange={(e) => setStepForm({ ...stepForm, estimated_time: e.target.value })} placeholder="e.g. 20 minutes" />
-              <Input label="Due date" type="date" value={(stepForm.due_at ?? "").slice(0, 10)} onChange={(e) => setStepForm({ ...stepForm, due_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+        <AdminDialog
+          description="Students see published steps only"
+          footer={(
+            <>
+              <Button onPress={() => setStepForm(null)} size="sm" variant="tertiary">Cancel</Button>
+              <Button isDisabled={busy || !stepForm.title?.trim()} onPress={submitStep} size="sm" variant="primary">{busy ? "Saving…" : "Save step"}</Button>
+            </>
+          )}
+          icon={<Pencil className="size-5" />}
+          onClose={() => setStepForm(null)}
+          size="lg"
+          title={stepForm.id ? "Edit step" : "New step"}
+        >
+          <div className="afq-form">
+            <TextField fullWidth onChange={(v) => setStepForm({ ...stepForm, title: v })} value={stepForm.title ?? ""}>
+              <Label>Step title</Label>
+              <Input placeholder="e.g. Upload transcript" variant="secondary" />
+            </TextField>
+            <TextField fullWidth onChange={(v) => setStepForm({ ...stepForm, subtitle: v })} value={stepForm.subtitle ?? ""}>
+              <Label>Subtitle</Label>
+              <Input variant="secondary" />
+            </TextField>
+            <TextField fullWidth onChange={(v) => setStepForm({ ...stepForm, description: v })} value={stepForm.description ?? ""}>
+              <Label>Description / instructions</Label>
+              <TextArea rows={4} variant="secondary" />
+            </TextField>
+            <div className="afq-form-row">
+              <TextField fullWidth onChange={(v) => setStepForm({ ...stepForm, estimated_time: v })} value={stepForm.estimated_time ?? ""}>
+                <Label>Estimated time</Label>
+                <Input placeholder="e.g. 20 minutes" variant="secondary" />
+              </TextField>
+              <TextField fullWidth onChange={(v) => setStepForm({ ...stepForm, due_at: v ? new Date(v).toISOString() : null })} value={(stepForm.due_at ?? "").slice(0, 10)}>
+                <Label>Due date</Label>
+                <Input type="date" variant="secondary" />
+              </TextField>
             </div>
-            <Input
-              label="Document keys (comma separated)" value={(stepForm.document_keys ?? []).join(", ")}
-              onChange={(e) => setStepForm({ ...stepForm, document_keys: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })}
-              placeholder="passport, transcript"
-            />
-            <Select label="Status" value={stepForm.status ?? "draft"} onChange={(v) => setStepForm({ ...stepForm, status: v as PublishState })} options={STATUSES} containerStyle={{ marginBottom: 12 }} />
-            <div className="sch-block">
-              <div className="sch-toggle-row">
-                <div style={{ flex: 1 }}>
-                  <div className="sch-toggle-title">Required step</div>
-                  <div className="sch-toggle-sub">Optional steps do not block the stage from completing.</div>
-                </div>
-                <Toggle checked={stepForm.required ?? true} onChange={(v) => setStepForm({ ...stepForm, required: v })} ariaLabel="Required step" />
+            <TextField
+              fullWidth
+              onChange={(v) => setStepForm({ ...stepForm, document_keys: v.split(",").map((x) => x.trim()).filter(Boolean) })}
+              value={(stepForm.document_keys ?? []).join(", ")}
+            >
+              <Label>Document keys (comma separated)</Label>
+              <Input placeholder="passport, transcript" variant="secondary" />
+            </TextField>
+            <Select onSelectionChange={(k) => setStepForm({ ...stepForm, status: k as PublishState })} selectedKey={stepForm.status ?? "draft"}>
+              <Label>Status</Label>
+              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+              <Select.Popover><ListBox>{STATUSES.map((o) => <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+            </Select>
+            <div className="afq-mini-card" style={{ flexDirection: "row", alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <div className="afq-mini-title">Required step</div>
+                <div className="afq-mini-sub">Optional steps do not block the stage from completing.</div>
               </div>
+              <Switch aria-label="Required step" isSelected={stepForm.required ?? true} onChange={(v) => setStepForm({ ...stepForm, required: v })}>
+                <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control></Switch.Content>
+              </Switch>
             </div>
           </div>
-          <footer className="jr-modal-foot">
-            <button type="button" className="chat-chip" onClick={() => setStepForm(null)}>Cancel</button>
-            <button type="button" className="chat-send" disabled={busy || !stepForm.title?.trim()} onClick={submitStep}>{busy ? "Saving…" : "Save step"}</button>
-          </footer>
-        </AnimatedModal>
+        </AdminDialog>
       )}
 
       {/* ── Step content editor ── */}
-      {editing && <StepEditor step={editing} onClose={() => { setEditing(null); void load(); }} />}
+      {editing && <StepEditor onClose={() => { setEditing(null); void load(); }} step={editing} />}
 
       {/* ── Version history ── */}
       {history && (
-        <AnimatedModal open onClose={() => setHistory(null)} className="jr-modal" ariaLabel="Version history">
-          <header className="jr-modal-head"><div style={{ flex: 1 }}><div className="jr-modal-title">Version history</div><div className="jr-modal-sub">{history.rows.length} change(s) recorded</div></div></header>
-          <div className="jr-modal-body">
-            {history.rows.length === 0 ? (
-              <p className="jr-sec-text">No changes recorded yet.</p>
-            ) : history.rows.map((r) => (
-              <div key={String(r.id)} className="jm-version">
-                <div className="jm-version-top">
-                  <b>{String(r.summary || r.field || "Change")}</b>
-                  <span>{new Date(String(r.created_at)).toLocaleString("en-GB")}</span>
+        <AdminDialog
+          description={`${history.rows.length} change(s) recorded`}
+          footer={<Button onPress={() => setHistory(null)} size="sm" variant="primary">Close</Button>}
+          icon={<History className="size-5" />}
+          onClose={() => setHistory(null)}
+          size="lg"
+          title="Version history"
+        >
+          {history.rows.length === 0 ? (
+            <p className="afq-mini-sub">No changes recorded yet.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {history.rows.map((r) => (
+                <div className="afq-mini-card" key={String(r.id)}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <b className="afq-mini-title">{String(r.summary || r.field || "Change")}</b>
+                    <span className="afq-mini-sub">{new Date(String(r.created_at)).toLocaleString("en-GB")}</span>
+                  </div>
+                  <div className="afq-mini-sub">{String(r.editor_email ?? "unknown editor")} · field: {String(r.field ?? "—")}</div>
+                  <Button
+                    onPress={async () => {
+                      const next = r.next as Record<string, unknown>;
+                      if (!next) return;
+                      if (history.entity === "stage") await saveStage({ ...(next as Partial<DbStage>), id: history.id }, "Restored from history");
+                      else await saveStep({ ...(next as Partial<DbStep>), id: history.id }, "Restored from history");
+                      setHistory(null); await load();
+                    }}
+                    size="sm" style={{ alignSelf: "flex-start" }} variant="secondary"
+                  >
+                    Restore this version
+                  </Button>
                 </div>
-                <div className="jm-version-meta">{String(r.editor_email ?? "unknown editor")} · field: {String(r.field ?? "—")}</div>
-                <button
-                  type="button" className="chat-chip"
-                  onClick={async () => {
-                    const next = r.next as Record<string, unknown>;
-                    if (!next) return;
-                    if (history.entity === "stage") await saveStage({ ...(next as Partial<DbStage>), id: history.id }, "Restored from history");
-                    else await saveStep({ ...(next as Partial<DbStep>), id: history.id }, "Restored from history");
-                    setHistory(null); await load();
-                  }}
-                >Restore this version</button>
-              </div>
-            ))}
-          </div>
-          <footer className="jr-modal-foot"><button type="button" className="chat-chip" onClick={() => setHistory(null)}>Close</button></footer>
-        </AnimatedModal>
+              ))}
+            </div>
+          )}
+        </AdminDialog>
       )}
-    </section>
+
+      {confirmRemove && (
+        <ConfirmDialog
+          body={confirmRemove.body} iconClassName="afq-dialog-ico afq-dialog-ico--danger"
+          onClose={() => setConfirmRemove(null)} onYes={confirmRemove.onYes} title={confirmRemove.title} tone="danger"
+        />
+      )}
+    </div>
   );
 }
 

@@ -166,6 +166,72 @@
 .onb-pop-item:disabled { cursor: not-allowed; color: var(--onb-ink-3); }
 .onb-pop-tag { margin-left: auto; font: 500 10.5px/14px var(--font-sans); color: var(--onb-brand); }
 .onb-pop-soon { color: var(--onb-ink-3); }
+
+/* The neutral, generic trigger — a globe and the word "Language", never the
+   current pick, so opening the switcher does not first require reading a
+   label that keeps changing. Muted ink rather than brand blue: it is a
+   utility, not a call to action competing with Continue. */
+.onb-pill-neutral { color: var(--onb-ink-3); }
+.onb-pill-neutral:hover { background: #F4F5F8; }
+
+/* Phone-only "checking" pill — the exact same pill, pulsing, not a spinner
+   standing in for it. A ring breathes outward from it every ~1.4s so it
+   reads as "here, notice me" rather than "please wait", and settles into
+   the identical static pill with nothing to swap and nothing to shift. */
+.onb-pill-attn { position: relative; cursor: default; animation: onbPillBreathe 1.4s var(--onb-ease) infinite; }
+.onb-pill-attn::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, .9);
+  animation: onbPillRing 1.4s var(--onb-ease) infinite;
+}
+@keyframes onbPillBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes onbPillRing { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); opacity: 1; } 100% { box-shadow: 0 0 0 9px rgba(255, 255, 255, 0); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .onb-pill-attn, .onb-pill-attn::after { animation: none; } }
+
+/* Phone-only full-screen language picker. Portaled straight to <body> (see
+   Portal's own doc comment) — .onb-card carries a transform for the plan
+   step's zoom, and a plain position:fixed div nested under it would size
+   itself against that card instead of the viewport, the exact bug already
+   fixed once for the plan-features sheet. */
+.onb-lang-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  padding: 24px;
+  /* The blur itself does the obscuring, not a dark tint over it — the field
+     behind the two frames should read as heavily blurred, not dimmed. */
+  background: rgba(18, 22, 84, .5);
+  animation: onbFade 160ms var(--onb-ease);
+}
+/* backdrop-filter is what .onb-payoverlay already learned not to trust —
+   several browsers quietly clamp it, which is exactly the "not blurred"
+   this looked like. `filter` on the CONTENT behind the overlay is the
+   proven fix there, and it works the same way here even though this
+   overlay is portaled straight to <body>: .onb-root is body's other child,
+   so a :has() reaching from body still finds it. */
+body:has(> .onb-lang-overlay) .onb-root {
+  filter: blur(7px);
+  pointer-events: none;
+}
+.onb-lang-opts { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; }
+.onb-lang-opt {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; min-height: 48px; padding: 10px 18px;
+  border: none; border-radius: 15px; background: #FFFFFF;
+  box-shadow: 0 12px 30px rgba(10, 14, 60, .22);
+  font: 600 16px/1 var(--font-sans); color: var(--onb-ink); cursor: pointer;
+  transition: transform 140ms var(--onb-ease), box-shadow 140ms var(--onb-ease),
+    background 140ms var(--onb-ease), color 140ms var(--onb-ease), opacity 140ms var(--onb-ease);
+}
+.onb-lang-opt:active { transform: scale(.97); }
+.onb-lang-opt[aria-current] { box-shadow: 0 0 0 2px var(--onb-brand), 0 14px 34px rgba(10, 14, 60, .22); }
+/* The pick, confirmed — briefly filled solid before the sheet closes, so the
+   tap reads as "chosen" rather than the sheet just vanishing on its own. */
+.onb-lang-opt-picked {
+  background: var(--onb-brand); color: #fff; transform: scale(1.04);
+  box-shadow: 0 14px 34px rgba(46, 59, 199, .4);
+}
+.onb-lang-opt:disabled:not(.onb-lang-opt-picked) { opacity: .4; }
+@media (prefers-reduced-motion: reduce) { .onb-lang-overlay { animation: none; } }
 /* Anchored to the info button's right edge and running leftward, so it stays
    inside the card instead of hanging off it. */
 .onb-pop-help {
@@ -311,12 +377,21 @@
 .onb-root .onb-prochoice { display: block; }
 .onb-root .onb-prorow .onb-opt-in { position: relative; overflow: hidden; padding-right: 52px; }
 
-/* The university's own mark, sunk into the corner of its row. */
+/* The university's own mark, sunk into the corner of its row — a background
+   texture, not an illustration. Centred on the row's vertical midpoint with
+   `top: 50%` rather than pinned to a fixed offset from the top edge: rows
+   are not all the same height (some carry a fee and a meta line, some
+   don't), and a fixed top offset put the mark at a different apparent
+   height per row, which is what read as "jumping" while scrolling past a
+   list of them. Grayscale is never removed — an earlier state revealed each
+   university's real brand colour on hover/selection, which is exactly the
+   "too colourful" clutter across a list of a dozen different institutions. */
 .onb-prowatermark {
-  position: absolute; top: -10px; left: -12px; z-index: 0;
-  width: 78px; height: 78px; object-fit: contain;
-  opacity: .11; filter: grayscale(1); pointer-events: none; user-select: none;
-  transition: opacity var(--onb-fast) var(--onb-ease), filter var(--onb-fast) var(--onb-ease);
+  position: absolute; top: 50%; left: -10px; z-index: 0;
+  transform: translateY(-50%);
+  width: 52px; height: 52px; object-fit: contain;
+  opacity: .05; filter: grayscale(1); pointer-events: none; user-select: none;
+  transition: opacity var(--onb-fast) var(--onb-ease);
 }
 .onb-root .onb-prorow .onb-opt-in > *:not(.onb-prowatermark) { position: relative; z-index: 1; }
 .onb-root .onb-prorow .onb-opt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -328,8 +403,8 @@
   font: 400 11.5px/16px var(--font-sans); color: var(--onb-ink-3);
   letter-spacing: 0;
 }
-.onb-root .onb-prorow .onb-opt-in:hover .onb-prowatermark { opacity: .15; }
-.onb-root .onb-prorow .onb-opt-in[data-on] .onb-prowatermark { opacity: .18; filter: none; }
+.onb-root .onb-prorow .onb-opt-in:hover .onb-prowatermark { opacity: .07; }
+.onb-root .onb-prorow .onb-opt-in[data-on] .onb-prowatermark { opacity: .08; }
 .onb-proinfo {
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 2;
   width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
@@ -741,7 +816,7 @@
 .onb-summary { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .onb-summary-body {
   flex: 1; min-height: 0; overflow-y: auto;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
   padding: 0 4px 8px;
 }
 .onb-summary-body .onb-q-big { max-width: 520px; }
@@ -1038,7 +1113,7 @@
   .onb-root .onb-prorow .onb-score { gap: 5px; padding: 4px 8px 4px 5px; font-size: 11.5px; }
   .onb-root .onb-prorow .onb-score-ring { width: 14px; height: 14px; }
   .onb-proinfo { right: 8px; width: 28px; height: 28px; }
-  .onb-prowatermark { width: 66px; height: 66px; top: -8px; left: -10px; }
+  .onb-prowatermark { width: 44px; height: 44px; left: -8px; }
 
   .onb-payfoot { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
   .onb-cardart[data-step="pay"] { bottom: calc(52px + 10px + 19px + var(--onb-card-pad)); }
@@ -1401,10 +1476,15 @@
 .onb-root[lang="ary"] .onb-opt-emoji,
 .onb-root[lang="ary"] .onb-input-emoji { order: -1; }
 
-/* The programme rows carry an absolutely-positioned score on the right, so
-   they keep the English arrangement rather than colliding with it. */
+/* The programme list stays English + LTR outright — university and
+   programme names, never translated or mirrored. `.onb-opts .onb-opt-text`
+   above sets text-align: right for every other option row's Arabic label;
+   that rule matches here too (a programme row is still inside .onb-opts),
+   direction: ltr alone doesn't cancel it, and it was winning silently,
+   which is what read as the name "starting from the right". Every property
+   that rule sets needs its own countermand here, not just direction. */
 .onb-root[lang="ary"] .onb-prorow .onb-opt-in { flex-direction: row; text-align: left; }
-.onb-root[lang="ary"] .onb-prorow .onb-opt-text { direction: ltr; align-items: stretch; }
+.onb-root[lang="ary"] .onb-prorow .onb-opt-text { direction: ltr; align-items: stretch; text-align: left; }
 
 /* The phone control is marked unchanged by the translation review: dial code,
    digits and placeholder spacing are identical in both languages, so it is

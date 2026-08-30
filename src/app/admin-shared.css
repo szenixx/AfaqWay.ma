@@ -1,0 +1,68 @@
+/* ══ Admin Workspace — shared mini-module primitives ═══════════════════════
+
+   The handful of small patterns every converted dialog/mini-module reuses,
+   rather than each redefining its own copy the way the first five pages
+   still do (am-modal-ico, pr-modal-ico, um-modal-ico, wa-modal-ico are all
+   the same three rules under different names). Tokens still come from
+   `.afq-hui` in admin-overview.css; this file only names shapes built from
+   them. Messages/Chat does not wear `.afq-hui` and never touches these. */
+
+/* ── Dialog header (AdminDialog) ─────────────────────────────────────────── */
+.afq-hui .afq-dialog-ico { background: var(--accent-soft); color: var(--accent-soft-foreground); }
+.afq-hui .afq-dialog-ico--success { background: var(--success-soft); color: var(--success-soft-foreground); }
+.afq-hui .afq-dialog-ico--warning { background: var(--warning-soft); color: var(--warning-soft-foreground); }
+.afq-hui .afq-dialog-ico--danger { background: var(--danger-soft); color: var(--danger-soft-foreground); }
+.afq-dialog-desc { margin: 2px 0 0; font: 400 12.5px/18px var(--font-sans); color: #5A6B85; }
+.afq-dialog-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.afq-form { display: flex; flex-direction: column; gap: 12px; }
+.afq-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.afq-form-err { margin: 0; font: 500 12.5px/18px var(--font-sans); color: #B23B27; }
+
+/* ── Compact info card — a small piece of information stays visually small.
+   One card shape for status panels, summary blocks and settings sections
+   that don't need a full HeroUI Card's header/content/footer ceremony. */
+.afq-mini-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.afq-mini-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.afq-mini-title { font: 600 13px/18px var(--font-sans); color: #17233A; }
+.afq-mini-sub { font: 400 11.5px/16px var(--font-sans); color: #8695AB; }
+
+/* ── Detail rows — label/value pairs, the shape every "person/payment/admin
+   details" panel needs. Matches TransactionDetails' own `dl` rows exactly. */
+.afq-rows { margin: 0; display: flex; flex-direction: column; gap: 9px; }
+.afq-rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.afq-rows dt { font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+.afq-rows dd { margin: 0; font: 600 12.5px/17px var(--font-sans); color: #17233A; text-align: right; }
+
+/* ── Queue row — a clickable list item inside a card, same shape Overview's
+   Payment Reviews card and Wallet's Needs Attention card already use. */
+.afq-queue-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 10px; border-radius: 12px; border: none; background: transparent; cursor: pointer;
+  transition: background 120ms ease;
+}
+.afq-queue-row:hover { background: var(--default); }
+.afq-queue-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.afq-queue-name { font: 600 12.5px/17px var(--font-sans); color: #17233A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.afq-queue-meta { font: 400 11.5px/16px var(--font-sans); color: #8695AB; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Update History popover ──────────────────────────────────────────────── */
+.afq-uh-pop { width: 320px; max-width: calc(100vw - 32px); }
+.afq-uh-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.afq-uh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
+.afq-uh-item { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; border: none; background: transparent; cursor: pointer; padding: 0; }
+
+/* ── Empty state — one shape, used everywhere something has nothing to show. */
+.afq-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 22px 16px; text-align: center; color: #8695AB;
+}
+.afq-empty p { margin: 0; font: 400 12px/17px var(--font-sans); }
+
+/* ── Responsive: no dialog exceeds the viewport, no field grid forces
+   horizontal scroll on a phone. */
+@media (max-width: 480px) {
+  .afq-form-row { grid-template-columns: 1fr; }
+}

@@ -36,6 +36,7 @@ export type DbEventRow = {
   description: string;
   event_date: string;
   event_time: string | null;
+  event_end_time: string | null;
   category: string;
   university: string;
   mode: string;
@@ -55,6 +56,8 @@ export type DbEventRow = {
 /** A schedule event as the calendar UI wants it, plus the fields only it has. */
 export type FullEvent = ScheduleEvent & {
   userId: string;
+  /** When the event ends, e.g. a meeting's block runs longer than one instant. */
+  endTime?: string;
   repeatRule: RepeatRule;
   repeatUntil?: string;
   colour?: string;
@@ -69,6 +72,7 @@ const toEvent = (r: DbEventRow): FullEvent => ({
   description: r.description || undefined,
   date: r.event_date,
   time: r.event_time || undefined,
+  endTime: r.event_end_time || undefined,
   createdBy: (r.created_by as FullEvent["createdBy"]) ?? "student",
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -94,6 +98,7 @@ const toRow = (e: Partial<FullEvent> & { userId: string }) => ({
   description: e.description ?? "",
   event_date: e.date,
   event_time: e.time ?? null,
+  event_end_time: e.endTime ?? null,
   category: e.category ?? "",
   university: e.university ?? "",
   mode: e.mode ?? "",

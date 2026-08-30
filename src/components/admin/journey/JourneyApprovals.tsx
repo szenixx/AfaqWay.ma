@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CircleCheck, Eye, Inbox, RotateCcw, XCircle, MessageCircle } from "lucide-react";
+import { Button, Chip, Skeleton, Tooltip } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
-import { Loader, Pill } from "@/components/ds";
 import { stepApproveOnly, stepIsSupport, subscribeJourney, type DbStep, type Plan } from "@/lib/journeyDb";
 import { whatsappLink } from "@/lib/whatsapp";
 import { deriveStudy } from "@/lib/studyApplication";
-import { JrButton } from "@/components/student/workspace/journey/parts";
 import { ReviewModal, type ReviewTarget } from "./ReviewModal";
 import { ReplyDialog, type ReplyAction } from "./ReplyDialog";
 import { reviewStep } from "@/lib/journeyDb";
 import { notifyReview } from "@/lib/journeyNotify";
 import { emailJourneyDecision } from "@/lib/email/client";
+import { refreshReviewAlerts } from "@/lib/reviewAlerts";
 
 /* Journey review queue.
 
@@ -170,6 +170,10 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
     }
     setAction(null);
     await load();
+    // The sidebar badge counts this same row: dropping it here means the dot
+    // clears the moment the decision lands, instead of waiting on a Realtime
+    // event that depends on this table's replication being live.
+    void refreshReviewAlerts();
     setBusy(null);
   };
 
@@ -182,57 +186,63 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
       reviewed_at: new Date().toISOString(),
     }).eq("id", row.id);
     await load();
+    void refreshReviewAlerts();
     setBusy(null);
   };
 
-  if (loading) return <section className="jm"><Loader block label="Loading the review queue" /></section>;
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton className="h-16 w-full rounded-2xl" key={i} />)}
+      </div>
+    );
+  }
 
   const empty = steps.length === 0 && stages.length === 0;
 
   return (
-    <section className="jm">
-      <header className="jm-head">
+    <div className="afq-mini-card" style={{ gap: 12 }}>
+      <div className="afq-mini-head">
         <div style={{ minWidth: 0 }}>
-          <h2 className="jm-title">Review queue</h2>
-          <p className="jm-sub">
-            Steps and stages students have submitted. A step only turns completed once you approve it here.
-          </p>
+          <div className="afq-mini-title" style={{ fontSize: 14 }}>Review queue</div>
+          <div className="afq-mini-sub">Steps and stages students have submitted. A step only turns completed once you approve it here.</div>
         </div>
-        <span className="jm-count">{steps.length + stages.length} waiting</span>
-      </header>
+        <Chip color={steps.length + stages.length > 0 ? "warning" : "default"} size="sm" variant="soft">
+          {steps.length + stages.length} waiting
+        </Chip>
+      </div>
 
       {empty ? (
-        <div className="jm-empty">
-          <span className="jm-empty-ico"><Inbox size={24} /></span>
-          <div className="jm-empty-title">Nothing waiting for review</div>
-          <p className="jm-empty-text">Submitted steps and stage approval requests appear here.</p>
+        <div className="afq-empty">
+          <Inbox size={20} />
+          <p>Nothing waiting for review. Submitted steps and stage approval requests appear here.</p>
         </div>
       ) : (
-        <>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {stages.map((row) => (
-            <div key={row.id} className="jm-review">
-              <Pill tone="amber" className="jm-review-tag">Stage</Pill>
-              <div className="jm-review-body">
-                <div className="jm-review-title">{row.stage_title}</div>
-                <div className="jm-review-sub">{row.student} asked for stage approval</div>
+            <div className="afq-mini-card" key={row.id} style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+              <Chip color="warning" size="sm" variant="soft">Stage</Chip>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div className="afq-mini-title">{row.stage_title}</div>
+                <div className="afq-mini-sub">{row.student} asked for stage approval</div>
               </div>
-              <JrButton icon={<XCircle size={14} />} disabled={busy === row.id} onClick={() => decideStage(row, false)}>
-                Request changes
-              </JrButton>
-              <JrButton tone="success" icon={<CircleCheck size={14} />} disabled={busy === row.id} onClick={() => decideStage(row, true)}>
-                Approve stage
-              </JrButton>
+              <Button isDisabled={busy === row.id} onPress={() => decideStage(row, false)} size="sm" variant="secondary">
+                <XCircle size={14} /> Request changes
+              </Button>
+              <Button isDisabled={busy === row.id} onPress={() => decideStage(row, true)} size="sm" variant="primary">
+                <CircleCheck size={14} /> Approve stage
+              </Button>
             </div>
           ))}
 
           {steps.map((row) => (
-            <div key={row.id} className={`jm-review${row.supportRequest ? " support" : ""}`}>
-              <Pill tone={row.supportRequest ? "amber" : "indigo"} className="jm-review-tag">
+            <div className="afq-mini-card" key={row.id} style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+              <Chip color={row.supportRequest ? "warning" : "accent"} size="sm" variant="soft">
                 {row.supportRequest ? "Support" : "Step"}
-              </Pill>
-              <div className="jm-review-body">
-                <div className="jm-review-title">{row.step_title}</div>
-                <div className="jm-review-sub">
+              </Chip>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div className="afq-mini-title">{row.step_title}</div>
+                <div className="afq-mini-sub">
                   {row.student} · {row.stage_title}
                   {/* The Excel asks the request to carry who is asking, from
                       where, and on what number, so the reply needs no lookup. */}
@@ -241,25 +251,29 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
                 </div>
               </div>
 
-              <JrButton tone="outline" icon={<Eye size={14} />} onClick={() => setReview(row.target)}>
-                View Details
-              </JrButton>
+              <Button onPress={() => setReview(row.target)} size="sm" variant="tertiary">
+                <Eye size={14} /> View Details
+              </Button>
 
               {row.supportRequest && (
-                <JrButton
-                  icon={<MessageCircle size={14} />}
-                  disabled={!row.target.whatsapp}
-                  title={row.target.whatsapp ? undefined : "This student has no WhatsApp number on file."}
-                  onClick={() => row.target.whatsapp && window.open(
-                    whatsappLink(
-                      row.target.whatsapp,
-                      `Hello ${row.student}, welcome to Lithuania! This is the AfaqWay support team. How can we help you settle in?`,
-                    ),
-                    "_blank", "noopener,noreferrer",
-                  )}
-                >
-                  Chat with Student
-                </JrButton>
+                <Tooltip isDisabled={!!row.target.whatsapp}>
+                  <Tooltip.Trigger>
+                    <Button
+                      isDisabled={!row.target.whatsapp}
+                      onPress={() => row.target.whatsapp && window.open(
+                        whatsappLink(
+                          row.target.whatsapp,
+                          `Hello ${row.student}, welcome to Lithuania! This is the AfaqWay support team. How can we help you settle in?`,
+                        ),
+                        "_blank", "noopener,noreferrer",
+                      )}
+                      size="sm" variant="secondary"
+                    >
+                      <MessageCircle size={14} /> Chat with Student
+                    </Button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>This student has no WhatsApp number on file.</Tooltip.Content>
+                </Tooltip>
               )}
 
               {/* "Do NOT display a Reject button." A request for help is not
@@ -267,43 +281,43 @@ export function JourneyApprovals({ plan }: { plan: Plan }) {
                   for changes is offered on one. */}
               {!row.approveOnly && (
                 <>
-                  <JrButton icon={<RotateCcw size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "changes" })}>
-                    Request Changes
-                  </JrButton>
-                  <JrButton tone="danger" icon={<XCircle size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "reject" })}>
-                    Reject
-                  </JrButton>
+                  <Button isDisabled={busy === row.id} onPress={() => setAction({ row, kind: "changes" })} size="sm" variant="secondary">
+                    <RotateCcw size={14} /> Request Changes
+                  </Button>
+                  <Button isDisabled={busy === row.id} onPress={() => setAction({ row, kind: "reject" })} size="sm" variant="danger-soft">
+                    <XCircle size={14} /> Reject
+                  </Button>
                 </>
               )}
 
-              <JrButton tone="success" icon={<CircleCheck size={14} />} disabled={busy === row.id} onClick={() => setAction({ row, kind: "approve" })}>
-                Approve
-              </JrButton>
+              <Button isDisabled={busy === row.id} onPress={() => setAction({ row, kind: "approve" })} size="sm" variant="primary">
+                <CircleCheck size={14} /> Approve
+              </Button>
             </div>
           ))}
-        </>
+        </div>
       )}
 
       {/* Read-only information. */}
-      {review && <ReviewModal target={review} onClose={() => setReview(null)} />}
+      {review && <ReviewModal onClose={() => setReview(null)} target={review} />}
 
       {/* One dialog per decision, all sharing the same layout. */}
       {action && (
         <ReplyDialog
           action={action.kind}
-          student={action.row.student}
-          stageTitle={action.row.stage_title}
-          stepTitle={action.row.step_title}
-          stageId={action.row.target.stageId}
-          stepId={action.row.step_id}
           initialNote={action.row.target.advisorNote}
-          whatsappNumber={action.row.target.whatsapp}
-          studentEmail={action.row.target.studentEmail}
           onCancel={() => setAction(null)}
           onConfirm={confirmAction}
+          stageId={action.row.target.stageId}
+          stageTitle={action.row.stage_title}
+          stepId={action.row.step_id}
+          stepTitle={action.row.step_title}
+          student={action.row.student}
+          studentEmail={action.row.target.studentEmail}
+          whatsappNumber={action.row.target.whatsapp}
         />
       )}
-    </section>
+    </div>
   );
 }
 

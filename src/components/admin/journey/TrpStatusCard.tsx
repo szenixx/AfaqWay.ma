@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CircleCheck, CircleX, ShieldQuestion } from "lucide-react";
-import { Loader, Select } from "@/components/ds";
+import { Button, Chip, Label, ListBox, Select, Skeleton } from "@heroui/react";
 import { supabase } from "@/lib/supabase/client";
 import { emitJourneyEvent } from "@/lib/journeyEvents";
 import { reviewStep, logEvent, fetchStages, fetchSteps, type Plan } from "@/lib/journeyDb";
-import { JrButton } from "@/components/student/workspace/journey/parts";
+import { refreshReviewAlerts } from "@/lib/reviewAlerts";
 
 /* The administrator's half of the residence permit decision.
  *
@@ -30,10 +30,13 @@ const OPTIONS = [
   { value: "none", label: "No decision recorded" },
   { value: "approved", label: "Residence Permit Approved" },
   { value: "rejected", label: "Residence Permit Rejected" },
-];
+] as const;
 
 const ICON: Record<TrpStatus, typeof CircleCheck> = {
   none: ShieldQuestion, approved: CircleCheck, rejected: CircleX,
+};
+const TONE: Record<TrpStatus, "default" | "success" | "danger"> = {
+  none: "default", approved: "success", rejected: "danger",
 };
 
 export function TrpStatusCard({ userId, plan, degree }: {
@@ -107,43 +110,51 @@ export function TrpStatusCard({ userId, plan, degree }: {
         : choice === "rejected" ? "Recorded. A support conversation has been opened with the student."
         : "Decision cleared.",
     );
+    // This decides a step outside JourneyApprovals' own flow, so it needs the
+    // same explicit badge refresh — otherwise an approval recorded here never
+    // clears the sidebar dot.
+    void refreshReviewAlerts();
     setBusy(false);
   };
 
-  if (loading) return <Loader block />;
+  if (loading) return <Skeleton className="h-24 w-full rounded-2xl" />;
 
   const Icon = ICON[status];
   const dirty = choice !== status;
 
   return (
-    <div className="jm-block">
-      <div className="jm-req-head" style={{ marginBottom: 10 }}>
-        <span className={`jm-ico tone-${status === "approved" ? "green" : status === "rejected" ? "red" : "blue"}`}>
-          <Icon size={15} />
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="jm-req-title">Residence permit decision</div>
-          <div className="jm-req-sub">
-            Recording this completes the final journey step, opens the next stage when approved, and
-            sends the student the platform, chat, email and WhatsApp messages.
+    <div className="afq-mini-card">
+      <div className="afq-mini-head">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <Chip color={TONE[status]} size="sm" variant="soft"><Icon size={13} /></Chip>
+          <div style={{ minWidth: 0 }}>
+            <div className="afq-mini-title">Residence permit decision</div>
+            <div className="afq-mini-sub">Completes the final step, opens the next stage when approved.</div>
           </div>
         </div>
       </div>
 
-      <Select
-        label="Application status" value={choice} options={OPTIONS}
-        onChange={(v) => setChoice(v as TrpStatus)}
-      />
+      <Select onSelectionChange={(k) => setChoice(String(k) as TrpStatus)} selectedKey={choice}>
+        <Label className="sr-only">Application status</Label>
+        <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            {OPTIONS.map((o) => (
+              <ListBox.Item id={o.value} key={o.value} textValue={o.label}>{o.label}<ListBox.ItemIndicator /></ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-        <JrButton tone="primary" disabled={busy || !dirty} onClick={record}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <Button isDisabled={busy || !dirty} onPress={record} size="sm" variant="primary">
           {busy ? "Recording…" : "Record decision"}
-        </JrButton>
-        {note && <span className="jm-saved">{note}</span>}
+        </Button>
+        {note && <span className="afq-mini-sub">{note}</span>}
       </div>
 
       {choice === "rejected" && dirty && (
-        <p className="be-hint">
+        <p className="afq-dialog-desc">
           The journey step stays open on purpose. The student is asked for their rejection letter so an
           advisor can review the case with them.
         </p>

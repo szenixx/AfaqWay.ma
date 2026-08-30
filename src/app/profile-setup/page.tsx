@@ -301,7 +301,13 @@ function ProfileSetupScreen() {
          only the words change. `lang` is still set so the browser picks an
          Arabic face and shapes the script properly; `dir` deliberately is not. */
       lang={lang === "ar" ? "ary" : "en"}
-      data-wide={screen.kind === "program" || isPricing || undefined}
+      /* Wide is for the two-plan comparison and the programme list, both of
+         which genuinely need the extra width. isPricing alone used to widen
+         the payment sub-step too (and the "under review" state inside it,
+         same card) — a bank-detail form and a receipt upload have no more
+         content than any other question, so the 960px frame just read as
+         oversized next to it. */
+      data-wide={screen.kind === "program" || (isPricing && priceSub === 0) || undefined}
       /* Names the one screen whose mobile composition differs beyond spacing,
          so the phone rules can reach the step header from outside the answer. */
       data-step={isPricing ? (priceSub === 0 ? "plans" : "pay") : undefined}

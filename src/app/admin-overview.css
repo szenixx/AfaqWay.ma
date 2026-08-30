@@ -29,6 +29,37 @@
   --warning: #B0790B;   --warning-foreground: #FFFFFF;
   --danger:  #B23B27;   --danger-foreground: #FFFFFF;
 
+  /* ── Soft (tinted) variants — the actual "invisible text" bug lived here.
+     Chip's `variant="soft"` and Button's `variant="danger-soft"` both read
+     these by name; none of them existed anywhere in the app. An undefined
+     custom property doesn't fall back to a sane default — `color` reverts
+     to whatever the nearest ancestor's text colour happens to be, which on
+     some cards was a near-white, on a near-white card. Same tint-on-light
+     pattern the KPI cards in Payments Review / User Management already use,
+     made canonical here so every soft Chip/Button/Button--secondary reads
+     correctly by construction, on every admin page including Overview and
+     Wallet, not patched card by card. */
+  --accent-soft: rgba(46, 59, 199, .10);   --accent-soft-foreground: var(--brand-primary);
+  --success-soft: rgba(63, 140, 99, .12);  --success-soft-foreground: #256B49;
+  --warning-soft: rgba(176, 121, 11, .12); --warning-soft-foreground: #8A5A08;
+  --danger-soft: rgba(178, 59, 39, .12);   --danger-soft-foreground: #8C2E1E;
+  --default-soft: #F2F4F8;                 --default-soft-foreground: #5A6B85;
+
+  /* ── Hover backgrounds — Button and Switch read these for press/hover;
+     also undefined before this, so a hover had no defined feedback colour. */
+  --accent-hover: #262FB4;
+  --default-hover: #EAEDF4;
+  --danger-hover: #9A2F20;
+  --danger-soft-hover: rgba(178, 59, 39, .16);
+
+  /* ── Field border/focus — Input reads these three directly; without them
+     a focused field's border and background fell back to unpredictable
+     values instead of a deliberate one. */
+  --field-border: var(--border);
+  --field-border-hover: #D7DAE5;
+  --field-border-focus: var(--brand-primary);
+  --field-focus: #FFFFFF;
+
   /* ── Surfaces — white leads; the field behind it is a light neutral ──── */
   --background: #F6F7FB;
   --foreground: #17233A;
@@ -349,3 +380,13 @@
   }
   .afq-hui .ao-kpi:hover { transform: none; }
 }
+
+/* ══ Shared confirm dialog ═══════════════════════════════════════════════
+   One "are you sure" shape (ConfirmDialog, in components/admin) is reused
+   across every admin page — ban a user, remove an admin, change a plan — so
+   its two generic parts live once, here, alongside the tokens every one of
+   those pages already depends on. The icon tile's tone colour stays a
+   page-scoped class (am-modal-ico--danger, pr-modal-ico--warning, …) so
+   unrelated pages never share a literal CSS dependency for that part. */
+.afq-confirm-body { margin: 0; font: 400 13.5px/20px var(--font-sans); color: #5A6B85; }
+.afq-confirm-foot { display: flex; gap: 8px; justify-content: flex-end; }

@@ -1,0 +1,122 @@
+/* ══ Payments Review — HeroUI, wearing AfaqWay ═════════════════════════════
+
+   The theme lives in admin-overview.css: `.afq-hui` declares every semantic
+   token HeroUI reads, and this page wears the same class, so it cannot drift
+   from the rest of the admin workspace on colour, radius or depth. Only
+   layout lives here.
+
+   Composed like the Wallet: KPIs on top, then one card holding the tabs,
+   filters and the table, with only the table scrolling. Opening a payment
+   is a Modal, exactly like the Wallet's transaction details, but with the
+   actual review actions on it — this page is where a decision is made,
+   Wallet's copy of the same modal only points back here. */
+
+.pr-root {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+  height: calc(var(--adm-vh, 100vh) - 52px);
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 26px;
+  box-shadow: 0 20px 54px rgba(23, 35, 58, .12);
+  font-family: var(--font-sans);
+}
+.adm-main:has(.pr-root) { padding: 4px; }
+.pr-head, .pr-kpis, .pr-card { min-height: 0; }
+
+/* ══ Header ════════════════════════════════════════════════════════════════ */
+.pr-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 48px;
+}
+.pr-head-title { margin: 0; font: 700 19px/25px var(--font-sans); color: #17233A; letter-spacing: -.02em; }
+.pr-head-sub { margin: 2px 0 0; font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+
+/* ══ KPIs ══════════════════════════════════════════════════════════════════
+   Same instrument-panel language as Overview's own KPI row — one card each —
+   but each card's own surface also carries a very light tint of its tone
+   now, so the four read apart at a glance rather than only by their icon. */
+.pr-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; flex: none; }
+.afq-hui .pr-kpi { padding: 14px 16px; gap: 10px; }
+.pr-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pr-kpi-label { font: 600 11.5px/15px var(--font-sans); color: #5A6B85; }
+.pr-kpi-ico {
+  display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+  border-radius: 10px; background: var(--pr-tone-soft, rgba(46, 59, 199, .10)); color: var(--pr-tone, #2E3BC7);
+}
+.pr-kpi-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pr-kpi-value { font: 700 24px/28px var(--font-sans); color: #17233A; letter-spacing: -.01em; }
+/* The icon tile stays saturated enough to read as an icon; the card
+   background is the same hue at a fraction of the opacity — subtle,
+   professional, never a strong colour block. */
+.afq-hui .pr-kpi.pr-t-blue   { --pr-tone: #2E3BC7; --pr-tone-soft: rgba(46, 59, 199, .10); background: rgba(46, 59, 199, .05); border-color: rgba(46, 59, 199, .12); }
+.afq-hui .pr-kpi.pr-t-green  { --pr-tone: #256B49; --pr-tone-soft: rgba(63, 140, 99, .12); background: rgba(63, 140, 99, .05); border-color: rgba(63, 140, 99, .12); }
+.afq-hui .pr-kpi.pr-t-amber  { --pr-tone: #8A5A08; --pr-tone-soft: rgba(176, 121, 11, .12); background: rgba(176, 121, 11, .05); border-color: rgba(176, 121, 11, .12); }
+.afq-hui .pr-kpi.pr-t-red    { --pr-tone: #8C2E1E; --pr-tone-soft: rgba(178, 59, 39, .12); background: rgba(178, 59, 39, .05); border-color: rgba(178, 59, 39, .12); }
+
+/* ══ The review card ═══════════════════════════════════════════════════════ */
+.pr-card { flex: 1; display: flex; flex-direction: column; }
+.pr-card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.pr-tabs { flex: none; }
+.pr-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: none; }
+.pr-search { flex: 1 1 220px; max-width: 320px; }
+.pr-select { min-width: 150px; }
+/* The flag/logo lives only inside the open dropdown's own options — the
+   filter's closed trigger keeps showing plain text exactly as before,
+   since Select.Value renders the item's textValue, not its children. */
+.pr-opt { display: inline-flex; align-items: center; gap: 8px; }
+.pr-opt-logo { width: 16px; height: 16px; object-fit: contain; flex: none; }
+.afq-hui .pr-table-wrap { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+.pr-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pr-person-id { display: flex; flex-direction: column; min-width: 0; }
+.pr-person-name { font: 600 13.5px/18px var(--font-sans); color: #17233A; }
+.pr-person-mail { font: 400 12px/16px var(--font-sans); color: #8695AB; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-amount { font: 600 13.5px/18px var(--font-sans); color: #17233A; }
+.pr-row.is-new { position: relative; }
+.pr-new-dot { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: #B0790B; margin-left: 6px; }
+
+.pr-tx-foot { display: flex; justify-content: center; padding-top: 10px; flex: none; }
+
+/* ══ Empty / loading ═══════════════════════════════════════════════════════ */
+.pr-rows-skel { display: flex; flex-direction: column; gap: 8px; padding: 2px 0; }
+.pr-skel-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pr-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 26px 16px; text-align: center; color: #8695AB;
+}
+.pr-empty p { margin: 0; font: 400 12px/17px var(--font-sans); }
+
+/* ══ Detail modal ══════════════════════════════════════════════════════════ */
+.afq-hui .pr-modal-ico { background: rgba(46, 59, 199, .10); color: #2E3BC7; }
+.pr-modal-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pr-modal-amount { font: 700 22px/28px var(--font-sans); color: #17233A; letter-spacing: -.01em; }
+.pr-modal-person { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.pr-modal-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.pr-modal-rows { margin: 0; display: flex; flex-direction: column; gap: 9px; }
+.pr-modal-rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.pr-modal-rows dt { font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+.pr-modal-rows dd { margin: 0; font: 600 12.5px/17px var(--font-sans); color: #17233A; text-align: right; }
+.pr-modal-reason { margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(178, 59, 39, .07); font: 400 12.5px/18px var(--font-sans); color: #8C2E1E; }
+.pr-modal-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pr-modal-timeline li { display: flex; align-items: center; gap: 8px; font: 400 12.5px/18px var(--font-sans); color: #5A6B85; }
+.pr-modal-timeline b { color: #17233A; font-weight: 600; }
+.pr-modal-reject-field { margin-top: 4px; }
+.pr-modal-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ══ Responsive ════════════════════════════════════════════════════════════ */
+@media (max-width: 1279px) {
+  .pr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .pr-root { height: auto; overflow: visible; padding: 14px; gap: 14px; border-radius: 18px; }
+  .afq-hui .pr-table-wrap { overflow: visible; }
+  .afq-hui .pr-table { min-width: 620px; }
+  .pr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .afq-hui .pr-kpi { padding: 12px 14px; }
+  .pr-kpi-value { font-size: 20px; line-height: 24px; }
+}

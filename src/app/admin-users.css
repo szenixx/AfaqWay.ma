@@ -1,0 +1,125 @@
+/* ══ User Management — HeroUI, wearing AfaqWay ═════════════════════════════
+
+   The theme lives in admin-overview.css: `.afq-hui` declares every semantic
+   token HeroUI reads, and this page wears the same class, so it cannot drift
+   from the rest of the admin workspace on colour, radius or depth. Only
+   layout lives here.
+
+   Composed like Payments Review: KPIs on top (skipped entirely on a locked,
+   per-plan view — there is only one roster to see there), then one card
+   holding the filters and the table, with only the table scrolling. */
+
+.um-root {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+  height: calc(var(--adm-vh, 100vh) - 52px);
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 26px;
+  box-shadow: 0 20px 54px rgba(23, 35, 58, .12);
+  font-family: var(--font-sans);
+}
+.adm-main:has(.um-root) { padding: 4px; }
+.um-root.is-locked { grid-template-rows: auto minmax(0, 1fr); }
+.um-head, .um-top, .um-kpis, .um-card { min-height: 0; }
+/* One grid child, always — see the comment at its call site in
+   UserManagement.tsx for why this wrapper exists at all. */
+.um-top { display: flex; flex-direction: column; gap: 12px; }
+
+/* ══ Header ════════════════════════════════════════════════════════════════ */
+.um-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; }
+.um-head-title { margin: 0; font: 700 19px/25px var(--font-sans); color: #17233A; letter-spacing: -.02em; }
+.um-head-sub { margin: 2px 0 0; font: 400 12px/17px var(--font-sans); color: #5A6B85; }
+
+/* ══ KPIs — same instrument-panel language as every other admin page ═══════ */
+.um-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; flex: none; }
+.afq-hui .um-kpi { padding: 14px 16px; gap: 10px; }
+.um-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.um-kpi-label { font: 600 11.5px/15px var(--font-sans); color: #5A6B85; }
+.um-kpi-ico {
+  display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+  border-radius: 10px; background: var(--um-tone-soft, rgba(46, 59, 199, .10)); color: var(--um-tone, #2E3BC7);
+}
+.um-kpi-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.um-kpi-value { font: 700 24px/28px var(--font-sans); color: #17233A; letter-spacing: -.01em; }
+/* The icon tile stays saturated enough to read as an icon; the card
+   background is the same hue at a fraction of the opacity — subtle,
+   professional, never a strong colour block. Same treatment as Payments
+   Review's KPI row. */
+.afq-hui .um-kpi.um-t-blue  { --um-tone: #2E3BC7; --um-tone-soft: rgba(46, 59, 199, .10); background: rgba(46, 59, 199, .05); border-color: rgba(46, 59, 199, .12); }
+.afq-hui .um-kpi.um-t-green { --um-tone: #256B49; --um-tone-soft: rgba(63, 140, 99, .12); background: rgba(63, 140, 99, .05); border-color: rgba(63, 140, 99, .12); }
+.afq-hui .um-kpi.um-t-red   { --um-tone: #8C2E1E; --um-tone-soft: rgba(178, 59, 39, .12); background: rgba(178, 59, 39, .05); border-color: rgba(178, 59, 39, .12); }
+.um-kpi-year { margin-top: 2px; }
+
+.um-countries { display: flex; gap: 8px; flex-wrap: wrap; flex: none; }
+
+/* ══ The roster card ═══════════════════════════════════════════════════════ */
+.um-card { flex: 1; display: flex; flex-direction: column; }
+.um-card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.um-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: none; }
+.um-search { flex: 1 1 200px; max-width: 300px; }
+.um-select { min-width: 150px; }
+.afq-hui .um-table-wrap { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+.um-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.um-person-id { display: flex; flex-direction: column; min-width: 0; }
+.um-person-name { display: inline-flex; align-items: center; gap: 6px; font: 600 13.5px/18px var(--font-sans); color: #17233A; }
+.um-person-num { font: 400 12px/16px var(--font-sans); color: #8695AB; }
+.um-contact { display: flex; flex-direction: column; min-width: 0; }
+.um-contact span { font: 400 12.5px/17px var(--font-sans); color: #17233A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.um-contact em { font: 400 12px/16px var(--font-sans); color: #8695AB; font-style: normal; }
+.um-controls { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+
+.um-tx-foot { display: flex; justify-content: center; padding-top: 10px; flex: none; }
+
+/* ══ Empty / loading ═══════════════════════════════════════════════════════ */
+.um-rows-skel { display: flex; flex-direction: column; gap: 8px; padding: 2px 0; }
+.um-skel-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.um-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 26px 16px; text-align: center; color: #8695AB;
+}
+.um-empty p { margin: 0; font: 400 12px/17px var(--font-sans); }
+
+/* ══ Modals ════════════════════════════════════════════════════════════════ */
+.afq-hui .um-modal-ico { background: rgba(46, 59, 199, .10); color: #2E3BC7; }
+.afq-hui .um-modal-ico--danger { background: rgba(178, 59, 39, .12); color: #B23B27; }
+.afq-hui .um-modal-ico--warning { background: rgba(176, 121, 11, .12); color: #B0790B; }
+.um-modal-form { display: flex; flex-direction: column; gap: 12px; }
+.um-modal-foot { display: flex; gap: 8px; justify-content: flex-end; }
+.um-program-tabs { flex: none; }
+.um-program-list { flex: 1; min-height: 180px; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; }
+.um-program-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px;
+  border: none; border-bottom: 1px solid var(--separator); background: transparent; cursor: pointer;
+}
+.um-program-row.is-picked { background: rgba(46, 59, 199, .08); }
+.um-program-ico {
+  width: 26px; height: 26px; border-radius: 8px; flex: none; background: rgba(46, 59, 199, .10);
+  color: #2E3BC7; display: flex; align-items: center; justify-content: center;
+}
+.um-program-name { display: block; font: 600 13px/17px var(--font-sans); color: #17233A; }
+.um-program-meta {
+  display: block; font: 400 11.5px/16px var(--font-sans); color: #8695AB;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.um-program-empty { padding: 16px; font: 400 13px var(--font-sans); color: #8695AB; text-align: center; }
+.um-saved { display: inline-flex; align-items: center; gap: 6px; font: 600 12.5px/1 var(--font-sans); color: #256B49; }
+
+/* ══ Responsive ════════════════════════════════════════════════════════════ */
+@media (max-width: 1279px) {
+  .um-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .um-root { height: auto; overflow: visible; padding: 14px; gap: 14px; border-radius: 18px; }
+  .afq-hui .um-table-wrap { overflow: visible; }
+  .afq-hui .um-table { min-width: 700px; }
+  .um-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .afq-hui .um-kpi { padding: 12px 14px; }
+  .um-kpi-value { font-size: 20px; line-height: 24px; }
+  .um-head { flex-wrap: wrap; }
+}

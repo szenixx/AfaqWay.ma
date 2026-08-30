@@ -2,12 +2,15 @@
 
 import { usePresenceBroadcast } from "@/lib/presence";
 import { useReviewAlerts } from "@/lib/reviewAlerts";
-import { BrandLogo, Pill, Toaster, Status, Portal, AnimatedModal, DialogHead, DialogFoot } from "@/components/ds";
-import { JrButton } from "@/components/student/workspace/journey/parts";
+import { BrandLogo, Toaster } from "@/components/ds";
+import { Button, Chip, Skeleton } from "@heroui/react";
+import { AdminDialog } from "@/components/admin/AdminDialog";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { AddUpdateDialog } from "@/components/admin/AddUpdateDialog";
 import { UpdateHistory } from "@/components/admin/UpdateHistory";
 import { fetchUpdates, type PlatformUpdate } from "@/lib/notifications";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { UNSAFE_PortalProvider } from "react-aria";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Loader } from "@/components/ds";
@@ -25,7 +28,7 @@ import AdminWallet from "@/components/admin/dashboard/wallet/AdminWallet";
 import { Flag } from "@/components/ds";
 import { countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
-import { LayoutDashboard, UserCog, Receipt, CreditCard, Users, Crown, Package, Bell, MessageCircle, LogOut, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { LayoutDashboard, UserCog, Receipt, CreditCard, Users, Crown, Package, Bell, MessageCircle, LogOut, ChevronLeft, ChevronRight, Plus, Check, ShieldOff } from "lucide-react";
 
 type Page = { id: string; label: string; superOnly?: boolean };
 const PAGES: Page[] = [
@@ -106,7 +109,9 @@ function Placeholder({ title }: { title: string }) {
     <div>
       <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: "0 0 4px" }}>{title}</h1>
       <p style={{ font: "400 14px/21px var(--font-sans)", color: "var(--ink-soft)", margin: "0 0 24px" }}>This page is part of the admin workspace and is coming next.</p>
-      <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 40, textAlign: "center", color: "var(--ink-faint)", font: "500 14px/21px var(--font-sans)" }}>Coming soon</div>
+      <div className="afq-empty" style={{ border: "1px dashed var(--border)", borderRadius: 16, padding: 40 }}>
+        <p>Coming soon</p>
+      </div>
     </div>
   );
 }
@@ -150,61 +155,66 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
   }
 
   return (
-    <div style={{ width: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
+    <div className="afq-hui" style={{ width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <h1 style={{ font: "700 26px/32px var(--font-sans)", color: "var(--ink)", margin: 0 }}>Reports</h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button type="button" onClick={markAll} style={{ height: 36, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>Mark all read</button>
+          <Button onPress={markAll} size="sm" variant="tertiary">Mark all read</Button>
           {isSuper && (
-            <button type="button" className="jr-btn jr-btn-primary jr-btn-md" onClick={() => setAddUpdate(true)}>
-              <Plus size={15} />Add Update
-            </button>
+            <Button onPress={() => setAddUpdate(true)} size="sm" variant="primary">
+              <Plus size={14} /> Add Update
+            </Button>
           )}
           {/* History sits immediately to the right of Add Update. */}
-          <UpdateHistory updates={updates} onChanged={loadUpdates} canManage={isSuper} />
+          <UpdateHistory canManage={isSuper} onChanged={loadUpdates} updates={updates} />
         </div>
       </div>
 
       {/* Announcements already sent, newest first, readable by every admin. */}
       {updates.length > 0 && (
-        <section className="upd-list">
+        <section style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
           <h2 className="lrn-sub">Platform updates</h2>
           {updates.map((u) => (
-            <article key={u.id} className="upd-item">
+            <article className="afq-mini-card" key={u.id} style={{ flexDirection: "row", alignItems: "flex-start" }}>
               <BrandLogo size={26} />
-              <div style={{ minWidth: 0 }}>
-                <div className="upd-item-head">
-                  <b>{u.title}</b>
-                  <time>{new Date(u.created_at).toLocaleString()}</time>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                  <b className="afq-mini-title">{u.title}</b>
+                  <time className="afq-mini-sub">{new Date(u.created_at).toLocaleString()}</time>
                 </div>
-                {u.body && <p className="upd-item-body">{u.body}</p>}
+                {u.body && <p className="afq-dialog-desc" style={{ marginTop: 4 }}>{u.body}</p>}
                 {u.attachments?.length > 0 && (
-                  <span className="upd-item-files">{u.attachments.length} attachment(s)</span>
+                  <span className="afq-mini-sub">{u.attachments.length} attachment(s)</span>
                 )}
               </div>
             </article>
           ))}
         </section>
       )}
-      {loading ? <Loader block /> : rows.length === 0 ? (
-        <div style={{ border: "1px dashed var(--line)", borderRadius: 16, padding: 28, textAlign: "center", color: "var(--ink-soft)", font: "400 14px/21px var(--font-sans)" }}>No reports yet.</div>
+      {loading ? (
+        <div className="afq-mini-card" style={{ gap: 8 }}>
+          <Skeleton className="h-4 w-full rounded-md" />
+          <Skeleton className="h-4 w-3/4 rounded-md" />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="afq-empty"><p>No reports yet.</p></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {rows.map((r) => (
-            <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid var(--line)", borderRadius: 16, background: r.read ? "var(--card)" : "var(--indigo-tint)", padding: 14 }}>
-              {!r.read && <span aria-hidden style={{ flex: "none", width: 8, height: 8, borderRadius: 999, background: "var(--indigo-600)", marginTop: 6 }} />}
+            <div className="afq-mini-card" key={r.id} style={{ flexDirection: "row", alignItems: "flex-start", background: r.read ? "var(--surface)" : "var(--accent-soft)" }}>
+              {!r.read && <span aria-hidden style={{ flex: "none", width: 8, height: 8, borderRadius: 999, background: "var(--accent)", marginTop: 6 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <Pill tone={r.type === "ban" ? "red" : "indigo"}>{r.type.replace("_", " ")}</Pill>
-                  <span style={{ font: "600 14px/20px var(--font-sans)", color: "var(--ink)" }}>{r.title}</span>
+                  <Chip color={r.type === "ban" ? "danger" : "accent"} size="sm" variant="soft">{r.type.replace("_", " ")}</Chip>
+                  <span className="afq-mini-title">{r.title}</span>
                 </div>
-                {r.body && <div style={{ font: "400 13px/19px var(--font-sans)", color: "var(--ink-soft)", marginTop: 4 }}>{r.body}</div>}
-                <div style={{ font: "400 11.5px/16px var(--font-sans)", color: "var(--ink-faint)", marginTop: 4 }}>{new Date(r.created_at).toLocaleString()}</div>
+                {r.body && <p className="afq-dialog-desc">{r.body}</p>}
+                <div className="afq-mini-sub">{new Date(r.created_at).toLocaleString()}</div>
               </div>
               {r.target_page && (
-                <button type="button" onClick={() => check(r)} title="Go to the related page" style={{ flex: "none", display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 13, border: "none", background: "var(--indigo-600)", color: "#fff", cursor: "pointer", font: "600 12.5px/1 var(--font-sans)" }}>
-                  <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 10.5 8.5 14.5 15.5 6" /></svg>Check
-                </button>
+                <Button onPress={() => check(r)} size="sm" variant="primary">
+                  <Check size={14} /> Check
+                </Button>
               )}
             </div>
           ))}
@@ -216,45 +226,43 @@ function ReportBox({ version, onGo, onChanged, isSuper }: { version: number; onG
       )}
 
       {banPanel && (
-        <Portal>
-        <div style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(23,35,58,.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ width: "100%", maxWidth: 440, background: "var(--card)", border: "1px solid var(--red-line)", borderRadius: 16, boxShadow: "0 20px 60px rgba(23,35,58,.2)", overflow: "hidden" }}>
-            <div style={{ background: "var(--red-tint)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-              <Status state="error" label="Banned user" />
-              <span style={{ font: "700 15px/20px var(--font-sans)", color: "var(--red)" }}>{banPanel.user.full_name || "User"}</span>
-            </div>
-            <div style={{ padding: 20 }}>
-              <div style={{ font: "400 13px/20px var(--font-sans)", color: "var(--ink)" }}>
-                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Profile ID</span><b>AWU-{String(banPanel.user.user_number ?? 0).padStart(3, "0")}</b></div>
-                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Email</span><b>{banPanel.user.email || "—"}</b></div>
-                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>City</span><b>{banPanel.user.city || "—"}</b></div>
-                <div style={rowSt}><span style={{ color: "var(--ink-soft)" }}>Status</span><b style={{ color: banPanel.user.banned ? "var(--red)" : "var(--green)" }}>{banPanel.user.banned ? "Banned" : "Active"}</b></div>
-              </div>
-              {banConfirming ? (
-                <div style={{ marginTop: 18, background: "var(--amber-tint)", border: "1px solid var(--amber-line)", borderRadius: 16, padding: 14 }}>
-                  <div style={{ font: "600 13.5px/20px var(--font-sans)", color: "var(--ink)" }}>Are you sure you want to unban this user?</div>
-                  <div style={{ font: "400 12.5px/18px var(--font-sans)", color: "var(--ink-soft)", marginTop: 2 }}>They will immediately regain access to their workspace and messaging.</div>
-                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
-                    <button type="button" onClick={() => setBanConfirming(false)} style={{ height: 38, padding: "0 14px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "var(--ink)" }}>No, keep banned</button>
-                    <button type="button" onClick={unban} style={{ height: 38, padding: "0 14px", borderRadius: 14, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13px/1 var(--font-sans)", color: "#fff" }}>Yes, unban</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-                  <button type="button" onClick={closeBan} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid var(--line)", background: "var(--card)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "var(--ink)" }}>Close</button>
-                  {banPanel.user.banned && <button type="button" onClick={() => setBanConfirming(true)} style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "none", background: "var(--green)", cursor: "pointer", font: "600 13.5px/1 var(--font-sans)", color: "#fff" }}>Unban user</button>}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        </Portal>
+        <AdminDialog
+          icon={<ShieldOff className="size-5" />}
+          onClose={closeBan}
+          title={banPanel.user.full_name || "User"}
+          tone="danger"
+          footer={banConfirming ? (
+            <>
+              <Button onPress={() => setBanConfirming(false)} size="sm" variant="tertiary">No, keep banned</Button>
+              <Button onPress={unban} size="sm" variant="primary">Yes, unban</Button>
+            </>
+          ) : (
+            <>
+              <Button onPress={closeBan} size="sm" variant="tertiary">Close</Button>
+              {banPanel.user.banned && <Button onPress={() => setBanConfirming(true)} size="sm" variant="primary">Unban user</Button>}
+            </>
+          )}
+        >
+          <dl className="afq-rows">
+            <div><dt>Profile ID</dt><dd>AWU-{String(banPanel.user.user_number ?? 0).padStart(3, "0")}</dd></div>
+            <div><dt>Email</dt><dd>{banPanel.user.email || "—"}</dd></div>
+            <div><dt>City</dt><dd>{banPanel.user.city || "—"}</dd></div>
+            <div><dt>Status</dt><dd>
+              <Chip color={banPanel.user.banned ? "danger" : "success"} size="sm" variant="soft">
+                {banPanel.user.banned ? "Banned" : "Active"}
+              </Chip>
+            </dd></div>
+          </dl>
+          {banConfirming && (
+            <p className="afq-form-err" style={{ marginTop: 10 }}>
+              Are you sure? They will immediately regain access to their workspace and messaging.
+            </p>
+          )}
+        </AdminDialog>
       )}
     </div>
   );
 }
-
-const rowSt = { display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderBottom: "1px solid var(--line-soft)" } as const;
 
 
 /* Users live on one page. The plan modules point at it instead of embedding a
@@ -286,6 +294,15 @@ export default function AdminPage() {
      clamped so the sidebar can never be dragged unusably narrow or wide. */
   const [sideWidth, setSideWidth] = useState(258);
   const dragging = useRef(false);
+  /* Every HeroUI Modal/Drawer/Select popover portals to document.body by
+     default (react-aria's own Overlay, confirmed in its installed source) —
+     physically outside any `.afq-hui`-scoped div, so none of that theme's
+     tokens would reach it. Redirecting the portal target to `.adm-main`
+     itself (which now also wears `.afq-hui`) keeps every dialog and dropdown
+     on-brand without touching :root, so nothing outside the admin workspace
+     is affected. Messages/Chat renders no HeroUI portal-based component, so
+     this has no effect on it either way. */
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const saved = Number(window.localStorage.getItem("af.admin.sidebar") ?? "");
@@ -316,6 +333,11 @@ export default function AdminPage() {
   /* Pending review requests per plan: the sidebar badges, and the chime that
      plays the moment a new request arrives. */
   const reviewCounts = useReviewAlerts(status === "ready");
+  // TEMP DEBUG — confirms this component actually re-renders with the new
+  // counts. Remove once the sequence is confirmed in a real browser console.
+  useEffect(() => {
+    console.log("[badge-debug] admin/page.tsx: reviewCounts is now", reviewCounts);
+  }, [reviewCounts]);
   /* Administrators appear online to everyone else as well. */
   usePresenceBroadcast(meId, { name: email || null, role: "admin" });
   const [highlightPayment, setHighlightPayment] = useState<string | null>(null);
@@ -456,8 +478,11 @@ export default function AdminPage() {
                   {open && !collapsed && g.pages.map((p) => (
                     <button key={p.id} type="button" onClick={() => setPage(p.id)} className={cls(p.id === page, "sub")}>
                       <span className="adm-item-ico">{PAGE_ICONS[p.id]}</span>{p.label}
-                      {/* Pending review requests, live. Hidden at zero. */}
-                      {reviewCounts[p.id === "full" ? "full_service" : "self_service"] > 0 && (
+                      {/* Pending review requests, live. Hidden at zero.
+                          Self Service Users: hidden outright for now, on request —
+                          the count logic underneath is untouched, only this one
+                          nav item's dot is suppressed. */}
+                      {p.id !== "self" && reviewCounts[p.id === "full" ? "full_service" : "self_service"] > 0 && (
                         <span className="adm-badge" title="Pending review requests">
                           {reviewCounts[p.id === "full" ? "full_service" : "self_service"]}
                         </span>
@@ -498,7 +523,8 @@ export default function AdminPage() {
           </div>
         </aside>
 
-        <main className="adm-main">
+        <main className="adm-main afq-hui" ref={mainRef}>
+          <UNSAFE_PortalProvider getContainer={() => mainRef.current}>
           {page === "dash-overview" ? (
             <AdminOverview
               isSuper={isSuper}
@@ -529,7 +555,7 @@ export default function AdminPage() {
             )
             : page === "reviews" ? <PaymentReviews highlightId={highlightPayment} onHighlightDone={() => setHighlightPayment(null)} />
             : page === "admins" ? <AdminManagement />
-            : page === "methods" ? <PaymentMethodsAdmin />
+            : page === "methods" ? <PaymentMethodsAdmin isSuper={isSuper} />
             : page === "users" ? <UserManagement onOpenChat={openChat} />
             : page === "full" ? (
               <>
@@ -550,6 +576,7 @@ export default function AdminPage() {
             : page === "reports" ? <ReportBox version={reportVersion} onGo={goFromReport} onChanged={refreshUnread} isSuper={role === "superadmin"} />
             : page === "chat" ? <AdminChat initialUserId={chatUser} onOpenPlanModule={openPlanModule} />
             : <Placeholder title={[...PAGES, ...ALL_SUB_PAGES].find((p) => p.id === page)?.label ?? page} />}
+          </UNSAFE_PortalProvider>
         </main>
       </div>
 
@@ -557,18 +584,15 @@ export default function AdminPage() {
           sidebar's Log out and by the Overview header alike, so the action
           never fires on a stray click and looks the same either way. */}
       {confirmSignOut && (
-        <AnimatedModal ariaLabel="Sign out" className="dlg" open onClose={() => setConfirmSignOut(false)}>
-          <DialogHead title="Sign out of the admin console?">
-            You will need to sign in and re-enter the passcode to get back in. Nothing you have
-            reviewed or changed is lost.
-          </DialogHead>
-          <DialogFoot>
-            <JrButton size="md" tone="quiet" onClick={() => setConfirmSignOut(false)}>Stay signed in</JrButton>
-            <JrButton icon={<LogOut size={15} />} size="md" tone="danger" onClick={() => void logout(router)}>
-              Sign out
-            </JrButton>
-          </DialogFoot>
-        </AnimatedModal>
+        <ConfirmDialog
+          body="You will need to sign in and re-enter the passcode to get back in. Nothing you have reviewed or changed is lost."
+          confirmLabel="Sign out"
+          iconClassName="afq-dialog-ico afq-dialog-ico--danger"
+          onClose={() => setConfirmSignOut(false)}
+          onYes={() => void logout(router)}
+          title="Sign out of the admin console?"
+          tone="danger"
+        />
       )}
     </div>
   );

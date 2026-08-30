@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CircleCheckBig, Clock3, Download, ExternalLink, FileText, Layers, TriangleAlert, Upload,
 } from "lucide-react";
-import { Loader, Status, Portal } from "@/components/ds";
-import { fileUrl, uploadUserFile } from "@/lib/storage/client";
+import { Loader, Status } from "@/components/ds";
+import { fileUrl, openFilePreview, uploadUserFile } from "@/lib/storage/client";
 import {
   fetchApprovals, fetchDocuments, fetchProgress, fetchStages, fetchSteps, logEvent,
   saveDocument, stepRequirements, subscribeJourney,
@@ -15,7 +15,6 @@ import { assembleRoadmap, DOC_STATUS, type JourneyStep } from "@/lib/journey";
 import { autoAdvanceStepOnDocsComplete } from "@/lib/journeyEvents";
 import { JrButton } from "../journey/parts";
 import { ReplaceDialog } from "./ReplaceDialog";
-import { DocumentViewer } from "@/components/admin/journey/DocumentViewer";
 import type { WsProfile } from "../Modules";
 
 /* Documents — the single upload location for the whole platform.
@@ -55,10 +54,6 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
   const [stage, setStage] = useState<{ index: number; title: string } | null>(null);
   /* Replace opens a dialog first, never the file picker straight away. */
   const [replacing, setReplacing] = useState<Row | null>(null);
-  /* Documents open inside the workspace, in the same viewer an
-     administrator reviews them with, so the student sees their file
-     exactly as it will be read. */
-  const [preview, setPreview] = useState<DbDocument | null>(null);
   // The assembled step behind each row (state, completion rules) — kept in a
   // ref rather than state, since it's read right after load() resolves, not
   // rendered from directly.
@@ -274,7 +269,7 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
                   )}
                   {upload?.file_path && (
                     <>
-                      <JrButton icon={<ExternalLink size={14} />} onClick={() => setPreview(upload)}>View</JrButton>
+                      <JrButton icon={<ExternalLink size={14} />} onClick={() => void openFilePreview(upload.file_path)}>View</JrButton>
                       <JrButton icon={<Download size={14} />} onClick={() => open(upload.file_path, upload.file_name, true)}>Download</JrButton>
                     </>
                   )}
@@ -298,17 +293,6 @@ export function Documents({ profile, onNav }: { profile: WsProfile; onNav?: (id:
           onCancel={() => setReplacing(null)}
           onConfirm={(file) => uploadFor(replacing, file)}
         />
-      )}
-      {preview && (
-        <Portal>
-        <div className="spm-overlay" onClick={() => setPreview(null)} role="dialog" aria-modal="true" aria-label={preview.file_name}>
-          <div className="dm-preview" onClick={(e) => e.stopPropagation()}>
-            {/* Read-only: no onDecide, so the approve and reject controls
-                never render for a student. */}
-            <DocumentViewer doc={preview} onClose={() => setPreview(null)} />
-          </div>
-        </div>
-        </Portal>
       )}
     </div>
   );

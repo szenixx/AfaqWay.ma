@@ -1041,6 +1041,19 @@
 }
 .cardswap__dot.on { width: 14px; background: var(--dx-primary); }
 
+/* Phone swipe carousel — a different INTERACTION from the desktop stack
+   above, not a different size or footprint. `.cardswap__track` fills the
+   exact same box `.cardswap__card` did (position: absolute; inset: 0), and
+   the dots stay the same absolutely-positioned overlay below the deck — so
+   the card renders at its original size either way; only the auto-cycling
+   stack becomes a swipeable row underneath it. `touch-action: pan-y` is
+   what lets a vertical swipe that starts on a card keep scrolling the page
+   instead of being captured as a failed horizontal drag. */
+.cardswap__track { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
+.cardswap__row { display: flex; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
+.cardswap__row:active { cursor: grabbing; }
+.cardswap__slide { flex: 0 0 100%; width: 100%; height: 100%; min-height: 0; user-select: none; }
+
 @media (max-width: 767px) {
   /* Phone only. See the note beside .dx-welcome-glow above. */
   .dx-welcome {

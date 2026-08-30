@@ -168,8 +168,22 @@ export const PAY_METHODS: PayMethod[] = [
   { id: "attijari", name: "Attijariwafa Bank", desc: "Bank transfer or deposit", kind: "manual", available: true, logoSrc: "/pay/attijari.png", color: "#E9761E", account: AFAQ_ACCOUNT },
   { id: "simple", name: "Simple", desc: "Transfer via Simple", kind: "manual", available: true, logoSrc: "/pay/simple.png", color: "#7A3BE8", account: AFAQ_ACCOUNT },
   { id: "bank", name: "Bank Transfer", desc: "Transfer from any bank", kind: "manual", available: true, logoSrc: "/pay/bank.png", color: "#16305C", account: AFAQ_ACCOUNT },
-  { id: "paypal", name: "PayPal", desc: "Instant online payment", kind: "instant", available: false, logoSrc: "/pay/paypal.svg", color: "#0070BA" },
   { id: "card", name: "Credit / Debit Card", desc: "Visa or Mastercard", kind: "instant", available: false, logoSrc: "/pay/card.png", color: "#15171C" },
 ];
 
 export const methodById = (id: string | null | undefined) => PAY_METHODS.find((m) => m.id === id) ?? null;
+
+/** PAY_METHODS in whatever order the `payment_methods.sort` column says —
+ *  the one thing a superadmin can actually rearrange from Payment Methods
+ *  admin. Every surface that lists methods (checkout, admin, the Payments
+ *  Review filter) calls this instead of reading PAY_METHODS' own array order
+ *  directly, so reordering in one place is reordering everywhere.
+ *
+ *  A method with no row yet — never touched by an admin — sorts after every
+ *  explicitly-ordered one, keeping its position in this array; that mirrors
+ *  the `100 + index` convention Payment Methods admin seeds for exactly the
+ *  same "not configured yet" case. */
+export function orderedPayMethods(sortById: Record<string, number>): PayMethod[] {
+  const fallback = (m: PayMethod) => 100 + PAY_METHODS.indexOf(m);
+  return [...PAY_METHODS].sort((a, b) => (sortById[a.id] ?? fallback(a)) - (sortById[b.id] ?? fallback(b)));
+}
