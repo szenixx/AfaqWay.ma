@@ -5,8 +5,10 @@ import { supabase } from "@/lib/supabase/client";
 import { Input, Toggle, Flag, fieldIcon, Loader, Pill, Status } from "@/components/ds";
 import { COUNTRIES, countryByCode } from "@/components/profile-setup/countries";
 import { notify, requestNotify } from "@/lib/notify";
+import { notify as notifyStudent } from "@/lib/notifications";
 import { fileUrl, uploadUserFile } from "@/lib/storage/client";
 import { loadAvatarFields } from "@/lib/avatarProfile";
+import { advisorLabel } from "@/lib/advisor";
 import { useOnlineUsers } from "@/lib/presence";
 import { emailAdvisorMessage } from "@/lib/email/client";
 import { parseAsk, toggleReaction, markMessagesSeen, type Reactions } from "@/lib/chat";
@@ -169,6 +171,23 @@ export default function AdminChat({ initialUserId, onOpenPlanModule }: { initial
       const { data: { user } } = await supabase.auth.getUser();
       const ins = await supabase.from("messages").insert({ user_id: sel, sender: "admin", body: finalBody, file_path, file_name, pinned: pinOn, emailed: emailOn, created_by: user?.id, reply_to: replyTo?.id ?? null });
       if (ins.error) throw ins.error;
+      /* The instant "you have a new message" alert — routed through the same
+         notifications table/toast pipeline every other kind uses (see
+         sonnerNotify.ts), not a parallel system. The preview never leaks the
+         ASK:: poll encoding or shows nothing for a file-only send; the
+         advisor's own label is the same generic "Advisor #—" identity the
+         open chat already shows, never this admin's real name. Fire-and-forget:
+         the message itself is already saved by the time this runs, so a
+         failed notification must never surface as a failed send. */
+      const preview = finalBody.startsWith("ASK::") ? "Sent you a quick question"
+        : finalBody || (file_name ? `Sent a file: ${file_name}` : "Sent a message");
+      void notifyStudent(sel, {
+        kind: "message",
+        title: `New message from ${advisorLabel(user?.id)}`,
+        body: preview,
+        link: "messages",
+        meta: { sender_label: advisorLabel(user?.id) },
+      });
       if (emailOn && selUser.email) {
         /* The chat message is already saved; email is a second delivery of the
            same words. Its outcome is reported, never allowed to fail silently

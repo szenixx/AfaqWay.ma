@@ -104,19 +104,24 @@ body {
   .sw-root.af-desktop-zoom { height: calc(100dvh / 1.1); }
   .sw-root.af-desktop-zoom .sw-shell { height: calc(100dvh / 1.1); }
 
-  /* The workspace cancels browser zoom; the homepage and the auth screens
-     above keep the plain 1.1 they already had. Gated on @supports because a
-     calc that resolves invalid does NOT fall back to the rule before it — it
-     unsets the property, which would drop the workspace to zoom 1 on an
-     engine without tan()/atan2(). */
-  @supports (width: calc(1px * tan(atan2(1px, 1px)))) {
-    .sw-root.af-desktop-zoom {
-      --sw-unzoom: clamp(var(--sw-unzoom-floor), tan(atan2(100vw, var(--sw-anchor-w))), 1);
-      zoom: calc(1.1 * var(--sw-unzoom));
-      height: calc(100dvh / (1.1 * var(--sw-unzoom)));
-    }
-    .sw-root.af-desktop-zoom .sw-shell { height: calc(100dvh / (1.1 * var(--sw-unzoom))); }
-  }
+  /* The workspace used to also try to cancel browser zoom here, scaling
+     .sw-root down further on top of the flat 1.1 above whenever `100vw` read
+     narrower than a 1920px anchor. CSS cannot tell "the browser is zoomed
+     in" from "the monitor is smaller than 1920 at 100%" — both look exactly
+     like a narrower viewport — so that formula shrank the *entire* workspace
+     (text, buttons, icons, everything) on every real laptop/monitor at or
+     below ~1745px wide, which is most of them: at 1366px it rendered at
+     ~78% size, at 1280px ~73%. That directly contradicts the RESPONSIVE
+     CONTRACT at the top of this file ("desktop scale is fixed, not fluid" —
+     1366, 1920 and 2560 show the same type/button/icon sizes; extra width
+     is whitespace, never a bigger OR smaller interface).
+     The workspace now keeps the same flat 1.1 the homepage and auth screens
+     already used, unconditionally, for every width from 1024px up — 1920px
+     renders exactly as before (the ratio was already 1 there), and every
+     narrower desktop width now renders at that same fixed scale instead of
+     shrinking toward it. A component that genuinely cannot hold its shape
+     at a narrower desktop width adjusts its own layout at 1279px/1023px
+     (see dashboard.css, admin-overview.css) — never the whole shell's scale. */
 }
 
 /* Mobile-only: every workspace module fires its own entrance animation on
@@ -1012,28 +1017,10 @@ a {
    badges pinned right, tooltips on the right while collapsed. */
 :root {
   --sw-side: 224px; --sw-side-icon: 66px; --sw-head: 56px;
-
-  /* ── Browser-zoom neutralisation ──────────────────────────────────────
-     The screen this workspace is judged on. Everything below is anchored to
-     it: at this width the UI renders exactly as it does today, and browser
-     zoom stops changing its physical size.
-
-     Browsers do not expose page zoom to CSS, and devicePixelRatio conflates
-     it with OS display scaling. The one thing that does track it is `vw`:
-     the CSS viewport shrinks in exact proportion to zoom, so
-
-         100vw / --sw-anchor-w  ==  1 / browser-zoom
-
-     `tan(atan2(a, b))` is how CSS divides one length by another and gets a
-     plain number back. Multiplying the existing 1.1 by that cancels the zoom.
-
-     The floor matters: CSS cannot tell a zoomed window from a genuinely
-     narrow one, so without it a half-width browser window would scale the
-     interface down as if it were zoomed. 0.55 fully cancels zoom up to 175%
-     and stops there. Raise it to protect narrow windows, lower it to cancel
-     deeper zoom. */
-  --sw-anchor-w: 1920px;
-  --sw-unzoom-floor: 0.55;
+  /* No --sw-anchor-w / --sw-unzoom here any more — the workspace's desktop
+     scale is the flat 1.1 set on .af-desktop-zoom (see the full reasoning
+     there), the same at every width from 1024px up, never shrunk toward a
+     narrower one. */
 }
 /* Collapsed-rail geometry, in one place: the sliding pill is positioned
    from these numbers, so a change here moves the pill with the items
@@ -1260,10 +1247,20 @@ a {
 .sw-menu-row:hover { background: var(--subtle); }
 .sw-menu-row.danger { color: var(--red); }
 
-/* Notification inbox popover — a HeroUI Popover, anchored to the bell itself
-   by the library's own floating position logic, not a CSS position:absolute
+/* Notification inbox — desktop popover, anchored to the bell itself by the
+   library's own floating position logic, not a CSS position:absolute
    parent-relative offset. This is only the visual treatment now. */
 .sw-notifpop { width: 360px; max-width: calc(100vw - 24px);
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 18px 48px rgba(23,35,58,.18);
+  overflow: hidden; }
+/* Mobile — a centred Modal, not anchored to the bell (the mobile top bar is
+   itself a centred floating pill, so there is no screen-edge position to
+   anchor a dropdown to). Pushed down past the pill's own height — 24px top
+   padding + the safe-area inset + the 64px pill + a little clearance —
+   rather than hugging the very top edge the way a bare placement="top"
+   modal otherwise would. */
+.sw-notifpanel { width: 360px; max-width: calc(100vw - 24px);
+  margin-top: calc(24px + env(safe-area-inset-top, 0px) + 64px + 14px);
   background: var(--card); border: 1px solid var(--line); box-shadow: 0 18px 48px rgba(23,35,58,.18);
   overflow: hidden; }
 .sw-notifpop-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;

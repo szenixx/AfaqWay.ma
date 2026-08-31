@@ -320,41 +320,85 @@
 }
 
 /* ══ Next Steps ═══════════════════════════════════════════════════════════
-   A snapshot of the roadmap, so the rows are the Journey module's own: the
-   icon badge, its tone classes and the status pill all come from there. Only
-   the density is different — four rows in a dashboard card rather than a full
-   step with its actions. */
-.dx-next { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.dx-media-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.dx-nextlist { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+   A working window onto the roadmap — up to eight rows, scrolling inside the
+   card rather than growing the page — not a snapshot of two or three. Every
+   row still reads the Journey module's own state (the icon badge and its
+   tone classes come from there), but the status a reader actually wants —
+   Completed / In Progress / Needs Attention / Upcoming — and the per-row
+   action button are new here (see NextStepRow in journey/StepPreview.tsx).
 
-.jr-preview {
-  display: flex; align-items: center; gap: 11px; width: 100%;
-  flex: 1 1 0; min-height: 46px; max-height: 62px;
-  padding: 0 12px; border: 1px solid transparent; border-radius: var(--dx-radius-sm);
-  background: #FAFBFD; text-align: left; cursor: pointer;
-  transition: background 160ms var(--ease), border-color 160ms var(--ease);
+   Emphasis is colour, never a border: the current step gets a tinted rail,
+   a status is a soft-filled chip with no outline, and a locked row just
+   dims — nothing here is drawn with a frame. */
+.dx-next { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dx-media-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.dxs-head-copy { min-width: 0; }
+.dxs-head-sub { margin: 2px 0 0; font: 400 11.5px/15px var(--font-sans); color: var(--ink-soft); }
+.dxs-progress { margin: 10px 0 12px; }
+
+.dx-nextlist {
+  list-style: none; margin: 0; padding: 2px 2px 2px 0;
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
 }
-.jr-preview:hover { background: #F4F6FB; }
-/* The step in play is the one thing here that should be findable at a glance. */
-.jr-preview.pending:not(.shut) { background: var(--indigo-50); border-color: var(--indigo-line); }
-.jr-preview.rejected { background: var(--red-tint); border-color: var(--red-line); }
+
+/* Named .dxs-steprow, not .dxs-row: the social-card deck below (social.tsx)
+   already owns a bare .dxs-row as its 3-up grid container. Sharing the name
+   let that later, same-specificity rule silently win the cascade for these
+   rows too — display:grid instead of flex — which is why the badge and
+   button used to land in the row's middle third instead of the right edge. */
+.dxs-steprow {
+  display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; width: 100%;
+  padding: 10px 12px; border-radius: var(--dx-radius-sm);
+  background: #FAFBFD;
+  transition: background 160ms var(--ease);
+}
+.dxs-steprow:hover { background: #F4F6FB; }
+/* The step in play, and one that needs a fix: a tinted rail is enough to be
+   findable at a glance, no outline needed to say the same thing twice. */
+.dxs-steprow.current { background: var(--indigo-50); }
+.dxs-steprow.attention { background: var(--red-tint); }
 /* Locked stays visible — knowing what is coming is the point — but plainly
    unavailable, so it is never mistaken for something to act on. */
-.jr-preview.shut { opacity: .62; cursor: default; }
-.jr-preview.shut:hover { background: #FAFBFD; }
+.dxs-steprow.shut { opacity: .6; }
+.dxs-steprow.shut:hover { background: #FAFBFD; }
 
-.jr-preview-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.jr-preview-title {
+.dxs-row-hit {
+  display: flex; align-items: flex-start; gap: 11px; flex: 1; min-width: 0;
+  border: none; background: none; padding: 0; margin: 0; text-align: left;
+  cursor: pointer; font: inherit; color: inherit;
+}
+.dxs-row-hit:disabled { cursor: default; }
+/* The Journey module's icon badge, one size down. */
+.dx-next .jr-step-ico { width: 28px; height: 28px; border-radius: 9px; flex: none; margin-top: 1px; }
+
+.dxs-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding-top: 1px; }
+.dxs-row-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dxs-row-title {
   font: 600 12.5px/17px var(--font-sans); color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.jr-preview-stage {
-  font: 400 10.5px/14px var(--font-sans); color: var(--ink-soft);
+.dxs-row-desc {
+  margin-top: 1px; font: 400 11.5px/16px var(--font-sans); color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+.dxs-row-stage {
+  margin-top: 2px; display: block; font: 600 9.5px/13px var(--font-sans);
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-/* The Journey module's icon badge, one size down. */
-.dx-next .jr-step-ico { width: 28px; height: 28px; border-radius: 9px; flex: none; }
+
+/* Pinned to the row's right edge regardless of how much room the title/
+   description/stage on the left end up taking — margin-left:auto holds it
+   there even if flex's own space-distribution math doesn't, and nowrap
+   keeps the status chip and the action button on one line instead of
+   stacking if the row gets tight. */
+.dxs-row-side { display: flex; align-items: center; gap: 8px; flex: none; flex-shrink: 0; flex-wrap: nowrap; justify-content: flex-end; margin-left: auto; }
+/* One fixed width for every row's action, whatever it's labelled ("Start",
+   "Continue", "View", "Fix it") — so the buttons line up as one clean edge
+   down the right side of the list instead of each sizing to its own text. */
+.dxs-row-cta { width: 104px; justify-content: center; }
 
 /* ══ FRAME 10 · Right utility panel ════════════════════════════════════════
    One continuous column, full workspace height, 20px internal padding. */

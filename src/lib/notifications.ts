@@ -30,12 +30,14 @@ export type Notification = {
      centre itself reads. A journey decision puts its outcome here so the
      inbox can colour the row without the verdict being repeated in the
      wording; the advisor sweep puts the message id here so a reminder is
-     raised once and not once per sweep.
+     raised once and not once per sweep; an instant "advisor sent a message"
+     row puts the advisor's own label here (see lib/advisor.ts — never a
+     person's name) so the toast card can show who without a second query.
 
      Optional on purpose: rows written before the column existed come back
      without it, and every reader treats that as "no extra information"
      rather than breaking. */
-  meta?: { status?: "approved" | "rejected" | "changes"; message_id?: string } | null;
+  meta?: { status?: "approved" | "rejected" | "changes"; message_id?: string; sender_label?: string } | null;
 };
 
 export type PlatformUpdate = {

@@ -1,24 +1,25 @@
 "use client";
 
-/* The compact journey step row, shared between the Journey page and the
-   dashboard's Next Steps snapshot.
+/* The compact journey step row, used by the dashboard's Next Steps card.
 
    STEP_ICON_TONE lives here rather than in JourneyRoadmap so the two surfaces
    cannot drift: a step that is amber on the Journey page is amber on the
    dashboard because they read the same map, not because someone kept two
-   copies in step. The row uses the Journey module's own `.jr-step-*` classes
-   for the same reason — this is the existing design, at a smaller size, not a
-   second one. */
+   copies in step.
 
-import { Lock } from "lucide-react";
-import { STATE_BADGE, STATE_STATUS, type StepState } from "@/lib/journey";
+   The four-way status a card reader actually wants (Completed, In Progress,
+   Needs Attention, Upcoming) is a presentation label over the Journey
+   engine's own six-state model, built here rather than in lib/journey.ts —
+   the engine's own vocabulary (pending/locked/submitted/rejected/completed/
+   skipped) is what every guard, trigger and other screen reads, and stays
+   exactly as it is. This is a card labelling its shared truth, not a second
+   status system to keep in sync. */
+
+import { Lock, Play, Eye, TriangleAlert } from "lucide-react";
+import { Button, Chip } from "@heroui/react";
+import { type StepState } from "@/lib/journey";
 import { StepIcon } from "@/lib/journeyStepIcons";
-import { Status } from "@/components/ds";
 
-/* Grey while it is still on the student (pending, or locked behind an earlier
-   step), amber once it is with an advisor, red if it came back needing
-   changes, green once it is settled — completed or skipped, both nothing more
-   to do. */
 export const STEP_ICON_TONE: Record<StepState, "grey" | "amber" | "red" | "green"> = {
   pending: "grey",
   locked: "grey",
@@ -28,38 +29,83 @@ export const STEP_ICON_TONE: Record<StepState, "grey" | "amber" | "red" | "green
   skipped: "green",
 };
 
-export function StepPreviewRow({ title, stageTitle, state, blocked, onOpen }: {
+type CardStatus = "completed" | "in_progress" | "needs_attention" | "upcoming";
+
+const CARD_STATUS: Record<StepState, CardStatus> = {
+  completed: "completed",
+  skipped: "completed",
+  submitted: "in_progress",
+  rejected: "needs_attention",
+  pending: "upcoming",
+  locked: "upcoming",
+};
+
+const STATUS_META: Record<CardStatus, { label: string; color: "success" | "warning" | "danger" | "default" }> = {
+  completed: { label: "Completed", color: "success" },
+  in_progress: { label: "In Progress", color: "warning" },
+  needs_attention: { label: "Needs Attention", color: "danger" },
+  upcoming: { label: "Upcoming", color: "default" },
+};
+
+export function NextStepRow({ title, description, stageTitle, state, blocked, highlighted, onOpen }: {
   title: string;
+  description: string;
   stageTitle: string;
   state: StepState;
+  /** Held shut by the stage's own order. Still shown — knowing what is coming
+      is the point of the card — but plainly unavailable. */
   blocked: boolean;
+  /** The one step the student should act on next — the only row a solid
+      button and a tinted rail earn, so it stands out without every row
+      shouting for attention. */
+  highlighted: boolean;
   onOpen: () => void;
 }) {
   const tone = STEP_ICON_TONE[state] ?? "grey";
-  /* Held shut by the stage's own order. Still shown — knowing what is coming
-     is the point of the snapshot — but plainly unavailable. */
   const shut = blocked || state === "locked";
+  const status = CARD_STATUS[state];
+  const meta = STATUS_META[status];
+  const settled = status === "completed";
+
+  /* A settled step has nothing left to do; a shut one has nothing to do
+     yet — neither earns a button. Everything else (upcoming-and-open,
+     in progress, needs attention) gets one, worded for what it actually is. */
+  const actionLabel = settled || shut ? null
+    : status === "needs_attention" ? "Fix it"
+    : status === "in_progress" ? "View"
+    : highlighted ? "Start" : "Continue";
 
   return (
-    <button
-      type="button"
-      className={`jr-preview ${state}${shut ? " shut" : ""}`}
-      onClick={onOpen}
-    >
-      <span className={`jr-step-ico tone-${tone}`}>
-        {shut ? <Lock size={13} /> : <StepIcon size={14} title={title} />}
-      </span>
+    <li className={`dxs-steprow${highlighted ? " current" : ""}${status === "needs_attention" ? " attention" : ""}${shut ? " shut" : ""}`}>
+      <button className="dxs-row-hit" disabled={shut} onClick={onOpen} type="button">
+        <span className={`jr-step-ico tone-${tone}`}>
+          {shut ? <Lock size={13} /> : <StepIcon size={14} title={title} />}
+        </span>
 
-      <span className="jr-preview-body">
-        <span className="jr-preview-title">{title}</span>
-        <span className="jr-preview-stage">{stageTitle}</span>
-      </span>
+        <span className="dxs-row-body">
+          <span className="dxs-row-top">
+            <span className="dxs-row-title">{title}</span>
+            {highlighted && !shut && <Chip color="accent" size="sm" variant="soft">Up next</Chip>}
+          </span>
+          {description && <span className="dxs-row-desc">{description}</span>}
+          <span className="dxs-row-stage">{stageTitle}</span>
+        </span>
+      </button>
 
-      <Status
-        state={STATE_STATUS[state]}
-        label={shut && state === "pending" ? "Locked" : STATE_BADGE[state].label}
-        size="xs"
-      />
-    </button>
+      <span className="dxs-row-side">
+        <Chip color={shut ? "default" : meta.color} size="sm" variant="soft">
+          {shut && status === "upcoming" ? "Locked" : meta.label}
+        </Chip>
+        {actionLabel && (
+          <Button
+            className="dxs-row-cta" onPress={onOpen} size="sm"
+            variant={highlighted || status === "needs_attention" ? "primary" : "tertiary"}
+          >
+            {status === "needs_attention" ? <TriangleAlert size={13} /> : highlighted ? <Play size={13} /> : <Eye size={13} />}
+            {actionLabel}
+          </Button>
+        )}
+      </span>
+    </li>
   );
 }

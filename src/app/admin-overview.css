@@ -92,6 +92,27 @@
 .afq-hui .card__title { font: 600 14px/19px var(--font-sans); color: #17233A; }
 .afq-hui .card__description { font: 400 11.5px/16px var(--font-sans); color: #5A6B85; }
 
+/* ══ Message alert (reui c-alert-19), wearing AfaqWay ═══════════════════════
+   Same reasoning as .afq-hui above, for a different borrowed library: reui/
+   shadcn read their own token names (--card-foreground, --primary, --border,
+   --muted-foreground …), which otherwise resolve to shadcn's stock neutral
+   palette (see src/app/tailwind.css). Scoped to the one card that uses it
+   (MessageAlertToast, raised by sonnerNotify.ts) rather than set globally, so
+   nothing else already reading these exact names for shadcn's own components
+   (button.tsx, accordion.tsx …) is touched. --card itself is already
+   #FFFFFF platform-wide (ds.css already wins that one name) and is left
+   alone here on purpose. */
+.afq-alert19 {
+  --card-foreground: var(--ink);
+  --muted-foreground: var(--ink-soft);
+  --border: var(--line);
+  --primary: var(--indigo-600);
+  --primary-foreground: #FFFFFF;
+  --ring: var(--indigo-600);
+  --radius: 1rem;
+  font-family: var(--font-sans);
+}
+
 /* ══ Shell ═════════════════════════════════════════════════════════════════ */
 /* One screen, fixed. The frame is rounded like every other admin surface, it
    fills the height the shell gives it, and nothing scrolls except the students

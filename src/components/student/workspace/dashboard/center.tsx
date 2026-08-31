@@ -9,13 +9,14 @@
    neutral for everything upcoming. */
 
 import { CalendarRange, Headset, MapPin, MessageCircle, Wallet } from "lucide-react";
+import { ProgressBar } from "@heroui/react";
 import { TextAnimate } from "@/components/godui/text-animate";
 import { MagicButton } from "@/components/godui/magic-button";
 import type { JourneySummary, PreviewStep } from "@/lib/useJourneySummary";
 import type { AcademicInfo, StudyApp } from "@/lib/studyApplication";
 import { UniversityBrand } from "@/components/ds";
 import { BorderBeam } from "@/components/godui/border-beam";
-import { StepPreviewRow } from "../journey/StepPreview";
+import { NextStepRow } from "../journey/StepPreview";
 
 /* ── Welcome card ─────────────────────────────────────────────────────────
    The dashboard's primary visual anchor: the one strongly branded surface on
@@ -225,9 +226,10 @@ export function MetricsRow({ j, study, academic, onChat }: {
   onChat: () => void;
 }) {
   /* Both rings read the student's real journey: steps approved out of steps
-     assigned, and documents verified out of documents required. */
+     assigned, and documents — weighted by real status, not approvals alone,
+     so uploading moves the ring and an approval moves it the rest of the way. */
   const stepsPct = j.pct;
-  const docsPct = j.docsTotal ? Math.round((j.docsApproved / j.docsTotal) * 100) : 0;
+  const docsPct = j.docsProgressPct;
 
   return (
     <div className="dx-metrics">
@@ -244,8 +246,10 @@ export function MetricsRow({ j, study, academic, onChat }: {
           <div className="dx-perf-col">
             <h3 className="dx-card-title">Your documents</h3>
             <Ring pct={docsPct} tone="green" />
-            {/* Approvals only: the ring moves when a reviewer approves a
-                document, and the caption says exactly that. */}
+            {/* The ring reflects real status the moment it changes — uploading
+                moves it, review moves it further, a flagged one pulls back —
+                while the caption keeps quoting the one number every student
+                actually cares about: how many are fully approved. */}
             <span className="dx-perf-sub">
               {j.docsTotal === 0 ? "None required yet"
                 : `${j.docsApproved} of ${j.docsTotal} approved`}
@@ -269,42 +273,78 @@ export function MetricsRow({ j, study, academic, onChat }: {
 }
 
 /* ── Next Steps ───────────────────────────────────────────────────────────
-   A four-row snapshot of the roadmap, not a second workflow. The rows are the
-   Journey module's own — same icons, same state colours, same status pills —
-   rendered through the shared StepPreviewRow so the two surfaces cannot drift.
+   A working window onto the roadmap, not a second workflow: every row here
+   is the Journey module's own step, read through the same state, so this
+   card can never say something the Journey page itself disagrees with.
 
-   The window comes from useJourneySummary, which anchors it on the step the
-   student should act on next and falls back so the card is never empty, even
-   when everything ahead is locked. */
+   The window comes from useJourneySummary, anchored on the step the student
+   should act on next and falling back so the card is never empty, even when
+   everything ahead is locked. It now runs up to eight rows deep — enough to
+   read as the shape of the journey, not a three-item teaser — and scrolls
+   inside the card rather than growing the page.
 
-export function NextSteps({ steps, loading, onOpen }: {
-  steps: PreviewStep[]; loading: boolean; onOpen: () => void;
+   .afq-hui scopes the HeroUI pieces (Chip, Button, ProgressBar) to AfaqWay's
+   own brand tokens: the student workspace carries no such scope of its own
+   the way the Admin Workspace's shell does, so without it these would
+   render in HeroUI's stock colours instead of the platform's. */
+
+export function NextSteps({ steps, loading, done, total, onOpen, onOpenStep }: {
+  steps: PreviewStep[];
+  loading: boolean;
+  /** Steps completed / total, for the header's own progress readout —
+      the same figures the Application Progress ring already shows,
+      not a second count. */
+  done: number;
+  total: number;
+  /** "View Journey" — the whole module. */
+  onOpen: () => void;
+  /** One row's own action — opens the Journey page with that exact step
+      already expanded, instead of leaving the student to find it again. */
+  onOpenStep: (step: PreviewStep) => void;
 }) {
+  const settled = (s: PreviewStep) => s.state === "completed" || s.state === "skipped";
+  const anchorId = steps.find((s) => !settled(s) && !s.blocked)?.id;
+
   return (
-    <section className="dx-card dx-next">
+    <section className="afq-hui dx-card dx-next">
       <header className="dx-media-head">
-        <h3 className="dx-card-title">Next Steps</h3>
+        <div className="dxs-head-copy">
+          <h3 className="dx-card-title">Next Steps</h3>
+          <p className="dxs-head-sub">
+            {total > 0 ? `${done} of ${total} steps complete` : "Your roadmap"}
+          </p>
+        </div>
         <button type="button" className="dx-link" onClick={onOpen}>View Journey →</button>
       </header>
 
-      <div className="dx-nextlist">
-        {loading ? (
-          <p className="dx-empty">Loading your journey…</p>
-        ) : steps.length === 0 ? (
-          <p className="dx-empty">Your roadmap is being prepared. Your next steps appear here as soon as it is ready.</p>
-        ) : (
-          steps.map((st) => (
-            <StepPreviewRow
+      {total > 0 && (
+        <ProgressBar aria-label="Journey progress" className="dxs-progress" color="accent" maxValue={total} value={done}>
+          <ProgressBar.Track>
+            <ProgressBar.Fill />
+          </ProgressBar.Track>
+        </ProgressBar>
+      )}
+
+      {loading ? (
+        <p className="dx-empty">Loading your journey…</p>
+      ) : steps.length === 0 ? (
+        <p className="dx-empty">Your roadmap is being prepared. Your next steps appear here as soon as it is ready.</p>
+      ) : (
+        <ol className="dx-nextlist">
+          {steps.map((st) => (
+            <NextStepRow
               key={st.id}
               blocked={st.blocked}
+              description={st.description}
+              highlighted={st.id === anchorId}
+              onOpen={() => onOpenStep(st)}
               stageTitle={st.stageTitle}
               state={st.state}
               title={st.title}
-              onOpen={onOpen}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

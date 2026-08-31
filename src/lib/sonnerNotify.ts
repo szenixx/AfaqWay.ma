@@ -3,15 +3,18 @@
 import { toast } from "sonner";
 import {
   CheckCircle2, XCircle, AlertTriangle, FileText, Route,
-  MessageCircle, CreditCard, Megaphone, Calendar, Bell,
+  CreditCard, Megaphone, Calendar, Bell,
 } from "lucide-react";
 import { createElement } from "react";
 import type { Notification } from "./notifications";
+import { MessageAlertToast } from "@/components/notifications/MessageAlertToast";
 
 /* Sonner is used verbatim here — its own icons, frame, type, animation, not
  * the platform design system. That's deliberate for this one surface (the
  * user asked for sonner's own look, not a re-skin), unlike the ds Toast used
- * everywhere else in the app.
+ * everywhere else in the app. The one exception is `message`: an advisor's
+ * message gets the reui c-alert-19 card (see MessageAlertToast) instead of
+ * the plain icon toast below — still raised through this exact function.
  *
  * A notification row only carries `kind` reliably; the specific outcome
  * (approved / rejected / needs changes) is folded into `title` by whichever
@@ -40,6 +43,22 @@ const HUE = { green: "#16A34A", orange: "#F97316", yellow: "#CA8A04", red: "#DC2
  *  the toast's action — a notification must never be a dead end, same rule
  *  the ds Toast followed. */
 export function raiseSonnerNotification(n: Notification, onOpen?: (link: string) => void) {
+  /* An advisor's message gets its own card — reui's c-alert-19 structure —
+     in place of the plain icon toast every other kind still gets below.
+     Same call site, same Notification row, same read/unread logic: this is
+     the one kind whose rendering changes, not a second notification path. */
+  if (n.kind === "message") {
+    return void toast.custom(
+      (id) => createElement(MessageAlertToast, {
+        n, onView: () => { onOpen?.(n.link); toast.dismiss(id); },
+      }),
+      // The default sonner skin (background/border/shadow from the
+      // Toaster's own toastOptions) is switched off for this one toast —
+      // the card supplies its complete look, so nothing doubles up.
+      { unstyled: true, style: { background: "transparent", border: "none", boxShadow: "none", padding: 0 } },
+    );
+  }
+
   const action = n.link && onOpen ? { label: "Open", onClick: () => onOpen(n.link) } : undefined;
   const opts = { description: n.body || undefined, action };
   const icon = (Glyph: typeof CheckCircle2, color: string) => createElement(Glyph, { size: ICON_SIZE, color, strokeWidth: 2.25 });
@@ -49,8 +68,9 @@ export function raiseSonnerNotification(n: Notification, onOpen?: (link: string)
   if (verdict === "rejected") return void toast(n.title, { ...opts, icon: icon(XCircle, HUE.red) });
   if (verdict === "changes") return void toast(n.title, { ...opts, icon: icon(AlertTriangle, HUE.orange) });
 
-  const ICON_BY_KIND: Record<Notification["kind"], typeof CheckCircle2> = {
-    document: FileText, journey: Route, message: MessageCircle,
+  // "message" is handled above and never reaches here.
+  const ICON_BY_KIND: Record<Exclude<Notification["kind"], "message">, typeof CheckCircle2> = {
+    document: FileText, journey: Route,
     payment: CreditCard, update: Megaphone, schedule: Calendar, system: Bell,
   };
   toast(n.title, { ...opts, icon: icon(ICON_BY_KIND[n.kind] ?? Bell, HUE.yellow) });

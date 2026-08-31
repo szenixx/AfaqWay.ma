@@ -25,10 +25,15 @@ export type JourneySummary = {
   docsApproved: number;
   docsTotal: number;
   docsPending: number;
+  /** The "Your documents" ring's value: every required document's real
+      status folded into one 0-100 number, so uploading moves the ring and
+      approval moves it further — not an approvals-only count. See
+      DOC_WEIGHT below for the scale. Zero when nothing is required yet. */
+  docsProgressPct: number;
   /** Every stage with its state, for the roadmap strip on the Overview. */
   stages: { id: string; title: string; state: StageState }[];
-  /** A four-step window onto the roadmap, for the dashboard's Next Steps
-      snapshot. Same steps the Journey page renders, just sliced. */
+  /** An eight-step window onto the roadmap, for the dashboard's Next Steps
+      card. Same steps the Journey page renders, just sliced. */
   nextSteps: PreviewStep[];
   /** The most recently touched uploads, newest first. */
   recentDocs: { id: string; name: string; status: DocStatus; updatedAt: string }[];
@@ -39,6 +44,9 @@ export type JourneySummary = {
 export type PreviewStep = {
   id: string;
   title: string;
+  /** Short line under the title — the step's own description, same text the
+      Journey page itself shows. */
+  description: string;
   stageTitle: string;
   state: StepState;
   /** Held shut by the stage's own order: an earlier step is not approved yet. */
@@ -48,10 +56,20 @@ export type PreviewStep = {
 const EMPTY: JourneySummary = {
   loading: true, pct: 0, stepsDone: 0, stepsTotal: 0,
   stageIndex: 0, stageCount: 0, stageTitle: "", docsApproved: 0, docsTotal: 0, docsPending: 0,
-  stages: [], nextSteps: [], recentDocs: [],
+  docsProgressPct: 0, stages: [], nextSteps: [], recentDocs: [],
 };
 
-/* ── The four-step window ──────────────────────────────────────────────────
+/* How far along each document status counts toward "your documents" being
+   done. A document worth doing at all is never worth zero once touched: an
+   upload is real progress even before anyone reviews it, a flagged one still
+   has the upload sitting there waiting on a fix, and only an actual approval
+   earns full credit. Applied to real per-requirement status only — nothing
+   here is invented, it just reads the same status the Documents module shows. */
+const DOC_WEIGHT: Record<DocStatus, number> = {
+  pending: 0, uploaded: .5, under_review: .5, needs_changes: .25, approved: 1,
+};
+
+/* ── The step window ────────────────────────────────────────────────────────
    Anchored on the step the student should act on next, falling back through
    progressively weaker signals so the card is never empty:
 
@@ -60,8 +78,10 @@ const EMPTY: JourneySummary = {
         one — including a locked one, since "what is coming" is still useful,
      3. otherwise the tail of the roadmap, for a student who has finished.
 
-   The window is then clamped so it always yields four rows where four exist. */
-function pickWindow(all: PreviewStep[], size = 4): PreviewStep[] {
+   The window is then clamped so it always yields as many rows as exist, up
+   to `size` — the card itself scrolls past that rather than this hook
+   deciding what's worth seeing. */
+function pickWindow(all: PreviewStep[], size = 8): PreviewStep[] {
   if (all.length === 0) return [];
 
   const settled = (s: PreviewStep) => s.state === "completed" || s.state === "skipped";
@@ -103,6 +123,11 @@ export function useJourneySummary(
       const st = byKey.get(k)?.status;
       return !st || st === "pending" || st === "uploaded" || st === "under_review";
     }).length;
+    const docsProgressPct = required.length
+      ? Math.round(
+          (required.reduce((sum, k) => sum + DOC_WEIGHT[byKey.get(k)?.status ?? "pending"], 0) / required.length) * 100,
+        )
+      : 0;
 
     /* The names the student would actually recognise on an upload, resolved
        from the requirement rather than the storage key. */
@@ -125,7 +150,7 @@ export function useJourneySummary(
       loading: false,
       pct: overall.pct, stepsDone: overall.done, stepsTotal: overall.total,
       stageIndex: current ? current.index : 0, stageCount: road.length, stageTitle: current?.title ?? "",
-      docsApproved, docsTotal: required.length, docsPending,
+      docsApproved, docsTotal: required.length, docsPending, docsProgressPct,
       stages: road.map((s) => ({ id: s.id, title: s.title, state: s.state })),
       nextSteps: pickWindow(
         /* Flattened in roadmap order, so the window reads as the journey does.
@@ -135,6 +160,7 @@ export function useJourneySummary(
           stage.steps.map((st) => ({
             id: st.id,
             title: st.title,
+            description: st.description,
             stageTitle: stage.title,
             state: st.state,
             blocked: st.blockedBy.length > 0,
